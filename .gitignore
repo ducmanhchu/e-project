@@ -38,3 +38,6 @@ mongo-data/
 # server build 
 server/lib/
 
+# Cursor
+.cursor/
+.agents/
