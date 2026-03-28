@@ -64,6 +64,7 @@ exerciseAttemptSchema.index({ userId: 1, lessonId: 1 }, { unique: true });
 exerciseAttemptSchema.index({ userId: 1, status: 1 });
 
 export const ExerciseAttempt = mongoose.model(
-  "exerciseAttempts",
+  "ExerciseAttempt",
   exerciseAttemptSchema,
+  "exerciseAttempts",
 );

@@ -1,4 +1,4 @@
-import { WritingLesson } from "@server/models/Writing";
+import { WritingLesson } from "@server/models/writing/WritingLesson";
 import { LessonDictionary } from "@server/models/LessonDictionary";
 import { ExerciseAttempt } from "@server/models/ExerciseAttempt";
 import { ApiError } from "@server/helpers/ApiError";
@@ -104,7 +104,7 @@ export async function getExercise(userId, lessonId) {
 
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  // sentences already exclude referenceAnswer (select: false)
+  // referenceAnswer stripped by toJSON transform, safe to use lesson directly
   const dictionary = await LessonDictionary.findOne({ lessonId }).lean();
 
   // Upsert attempt
@@ -137,7 +137,8 @@ export async function getExercise(userId, lessonId) {
       topic: lesson.topic,
       contentType: lesson.contentType,
       totalSentences: lesson.totalSentences,
-      sentences: lesson.sentences.map((s) => ({
+      vietnameseParagraph: lesson.content?.vietnameseParagraph || null,
+      sentences: (lesson.content?.sentences || []).map((s) => ({
         order: s.order,
         vietnameseText: s.vietnameseText,
         // explanation hidden until user submits for this sentence
@@ -163,16 +164,17 @@ export async function getExercise(userId, lessonId) {
  * Submit answer for a sentence — AI grades it
  */
 export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) {
-  // Get lesson WITH referenceAnswer (internal only)
+  // Use .lean() to get raw data including referenceAnswer (toJSON strips it)
   const lesson = await WritingLesson.findOne({
     _id: lessonId,
     isPublished: true,
     type: WRITING_TYPE.REVERSE_TRANSLATION,
-  }).select("+sentences.referenceAnswer");
+  }).lean();
 
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  const sentence = lesson.sentences.find((s) => s.order === sentenceOrder);
+  const sentences = lesson.content?.sentences || [];
+  const sentence = sentences.find((s) => s.order === sentenceOrder);
   if (!sentence)
     throw ApiError.badRequest(`Sentence order ${sentenceOrder} not found`);
 

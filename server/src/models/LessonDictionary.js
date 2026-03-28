@@ -49,6 +49,7 @@ const lessonDictionarySchema = new mongoose.Schema(
 lessonDictionarySchema.index({ lessonId: 1 });
 
 export const LessonDictionary = mongoose.model(
-  "lessonDictionaries",
+  "LessonDictionary",
   lessonDictionarySchema,
+  "lessonDictionaries",
 );

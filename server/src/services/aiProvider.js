@@ -5,15 +5,21 @@ import { genai } from "@server/config/gemini";
 const PREVIEW_PROMPT = (paragraph) =>
   `You are an English-Vietnamese translation expert for an English learning platform.
 
-Given the following English paragraph, split it into individual sentences and for each sentence:
-1. Translate it naturally into Vietnamese
-2. Extract 3-5 key vocabulary words/phrases with Vietnamese meanings and English example sentences
-3. Add a brief grammar/vocabulary note in Vietnamese if relevant
+Given the following English paragraph, you must:
+1. Create a complete Vietnamese translation of the ENTIRE paragraph (vietnameseParagraph) that:
+   - Preserves the EXACT same formatting: line breaks, paragraph breaks, commas, punctuation style
+   - Reads naturally and fluently as a cohesive Vietnamese text
+   - Matches the tone and context of the original (formal letter, casual email, etc.)
+2. Split into individual sentences and for each sentence:
+   - Provide the Vietnamese translation (must match the corresponding part in vietnameseParagraph)
+   - Extract 3-5 key vocabulary words/phrases with Vietnamese meanings and English example sentences
+   - Add a brief grammar/vocabulary note in Vietnamese if relevant
 
 Rules:
 - Split at natural sentence boundaries (., !, ?, but NOT abbreviations like Mr., Dr., U.S.)
 - Keep each sentence as a complete, standalone unit
-- Translate naturally and accurately into Vietnamese
+- The vietnameseParagraph MUST have the same line breaks and paragraph structure as the original English
+- Each sentence's vietnameseText must be consistent with the vietnameseParagraph (same wording)
 - For vocabulary, pick words/phrases that Vietnamese learners would find useful
 
 Paragraph:
@@ -45,6 +51,11 @@ async function previewWithClaude(paragraph) {
         input_schema: {
           type: "object",
           properties: {
+            vietnameseParagraph: {
+              type: "string",
+              description:
+                "Complete Vietnamese translation of the entire paragraph, preserving exact line breaks, paragraph breaks, and formatting of the original English text",
+            },
             results: {
               type: "array",
               items: {
@@ -56,7 +67,8 @@ async function previewWithClaude(paragraph) {
                   },
                   vietnameseText: {
                     type: "string",
-                    description: "Vietnamese translation of the sentence",
+                    description:
+                      "Vietnamese translation of the sentence (must be consistent with vietnameseParagraph)",
                   },
                   explanation: {
                     type: "string",
@@ -96,7 +108,7 @@ async function previewWithClaude(paragraph) {
               },
             },
           },
-          required: ["results"],
+          required: ["vietnameseParagraph", "results"],
         },
       },
     ],
@@ -104,7 +116,10 @@ async function previewWithClaude(paragraph) {
   });
 
   const toolBlock = response.content.find((b) => b.type === "tool_use");
-  return toolBlock.input.results;
+  return {
+    vietnameseParagraph: toolBlock.input.vietnameseParagraph,
+    results: toolBlock.input.results,
+  };
 }
 
 /**
@@ -117,63 +132,83 @@ async function previewWithGemini(paragraph) {
     config: {
       responseMimeType: "application/json",
       responseJsonSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            referenceAnswer: {
-              type: Type.STRING,
-              description: "The original English sentence",
-            },
-            vietnameseText: {
-              type: Type.STRING,
-              description: "Vietnamese translation of the sentence",
-            },
-            explanation: {
-              type: Type.STRING,
-              description:
-                "Brief grammar/vocabulary note in Vietnamese (empty string if none)",
-            },
-            vocabulary: {
-              type: Type.ARRAY,
-              description: "3-5 key vocabulary items from this sentence",
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  word: {
-                    type: Type.STRING,
-                    description: "The English word or phrase",
-                  },
-                  partOfSpeech: {
-                    type: Type.STRING,
-                    description: "Part of speech category",
-                    enum: PART_OF_SPEECH_VALUES,
-                  },
-                  meaning: {
-                    type: Type.STRING,
-                    description: "Vietnamese meaning",
-                  },
-                  example: {
-                    type: Type.STRING,
-                    description: "English example sentence",
+        type: Type.OBJECT,
+        properties: {
+          vietnameseParagraph: {
+            type: Type.STRING,
+            description:
+              "Complete Vietnamese translation preserving original formatting",
+          },
+          results: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                referenceAnswer: {
+                  type: Type.STRING,
+                  description: "The original English sentence",
+                },
+                vietnameseText: {
+                  type: Type.STRING,
+                  description: "Vietnamese translation of the sentence",
+                },
+                explanation: {
+                  type: Type.STRING,
+                  description:
+                    "Brief grammar/vocabulary note in Vietnamese (empty string if none)",
+                },
+                vocabulary: {
+                  type: Type.ARRAY,
+                  description: "3-5 key vocabulary items from this sentence",
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      word: {
+                        type: Type.STRING,
+                        description: "The English word or phrase",
+                      },
+                      partOfSpeech: {
+                        type: Type.STRING,
+                        description: "Part of speech category",
+                        enum: PART_OF_SPEECH_VALUES,
+                      },
+                      meaning: {
+                        type: Type.STRING,
+                        description: "Vietnamese meaning",
+                      },
+                      example: {
+                        type: Type.STRING,
+                        description: "English example sentence",
+                      },
+                    },
+                    propertyOrdering: [
+                      "word",
+                      "partOfSpeech",
+                      "meaning",
+                      "example",
+                    ],
                   },
                 },
-                propertyOrdering: ["word", "partOfSpeech", "meaning", "example"],
               },
+              propertyOrdering: [
+                "referenceAnswer",
+                "vietnameseText",
+                "explanation",
+                "vocabulary",
+              ],
             },
           },
-          propertyOrdering: [
-            "referenceAnswer",
-            "vietnameseText",
-            "explanation",
-            "vocabulary",
-          ],
         },
+        propertyOrdering: ["vietnameseParagraph", "results"],
       },
     },
   });
 
-  return JSON.parse(response.text);
+  const parsed = JSON.parse(response.text);
+  return {
+    vietnameseParagraph: parsed.vietnameseParagraph,
+    results: parsed.results,
+  };
 }
 
 /**

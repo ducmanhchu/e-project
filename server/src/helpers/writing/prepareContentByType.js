@@ -3,8 +3,8 @@ import { validateFields } from "@server/helpers/validateFields";
 import { WRITING_TYPE, EXAM_TYPE } from "@server/const/writting";
 
 /**
- * Validate type-specific fields and return cleaned data for WritingLesson.
- * Mutates nothing — returns a plain object to merge into the create payload.
+ * Validate type-specific fields and return { content, totalSentences }
+ * content gets stored in WritingLesson.content (Mixed)
  */
 export function prepareContentByType(type, body) {
   switch (type) {
@@ -22,7 +22,7 @@ export function prepareContentByType(type, body) {
 }
 
 function prepareReverseTranslation(body) {
-  const { sentences } = body;
+  const { sentences, vietnameseParagraph } = body;
 
   if (!Array.isArray(sentences) || sentences.length === 0) {
     throw ApiError.badRequest("sentences must be a non-empty array");
@@ -38,7 +38,13 @@ function prepareReverseTranslation(body) {
     };
   });
 
-  return { sentences: cleaned, totalSentences: cleaned.length };
+  return {
+    content: {
+      vietnameseParagraph: vietnameseParagraph?.trim() || null,
+      sentences: cleaned,
+    },
+    totalSentences: cleaned.length,
+  };
 }
 
 function prepareSeeAndWrite(body) {
@@ -49,11 +55,13 @@ function prepareSeeAndWrite(body) {
   }
 
   return {
-    mediaUrl: body.mediaUrl,
-    mediaType: body.mediaType,
-    ...(body.requiredKeywords && { requiredKeywords: body.requiredKeywords }),
-    ...(body.minWordCount != null && { minWordCount: body.minWordCount }),
-    ...(body.maxWordCount != null && { maxWordCount: body.maxWordCount }),
+    content: {
+      mediaUrl: body.mediaUrl,
+      mediaType: body.mediaType,
+      ...(body.requiredKeywords && { requiredKeywords: body.requiredKeywords }),
+      ...(body.minWordCount != null && { minWordCount: body.minWordCount }),
+      ...(body.maxWordCount != null && { maxWordCount: body.maxWordCount }),
+    },
     totalSentences: 1,
   };
 }
@@ -62,7 +70,9 @@ function prepareParaphrasing(body) {
   validateFields(body, ["targetSentence"]);
 
   return {
-    targetSentence: body.targetSentence.trim(),
+    content: {
+      targetSentence: body.targetSentence.trim(),
+    },
     totalSentences: 1,
   };
 }
@@ -77,10 +87,12 @@ function prepareExamSimulation(body) {
   }
 
   return {
-    examType: body.examType,
-    examPrompt: body.examPrompt.trim(),
-    examDuration: body.examDuration,
-    ...(body.sampleAnswer && { sampleAnswer: body.sampleAnswer.trim() }),
+    content: {
+      examType: body.examType,
+      examPrompt: body.examPrompt.trim(),
+      examDuration: body.examDuration,
+      ...(body.sampleAnswer && { sampleAnswer: body.sampleAnswer.trim() }),
+    },
     totalSentences: 1,
   };
 }

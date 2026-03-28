@@ -1,7 +1,7 @@
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
 import { prepareContentByType } from "@server/helpers/writing/prepareContentByType";
-import { WritingLesson } from "@server/models/Writing";
+import { WritingLesson } from "@server/models/writing/WritingLesson";
 import { LessonDictionary } from "@server/models/LessonDictionary";
 import { aiPreviewWriting } from "@server/services/aiProvider";
 
@@ -17,14 +17,14 @@ export async function previewWriting(paragraph) {
 
   const { parsed, provider } = await aiPreviewWriting(paragraph);
 
-  const sentences = parsed.map((s, i) => ({
+  const sentences = parsed.results.map((s, i) => ({
     order: i + 1,
     referenceAnswer: s.referenceAnswer.trim(),
     vietnameseText: s.vietnameseText.trim(),
     ...(s.explanation && { explanation: s.explanation.trim() }),
   }));
 
-  const vocabulary = parsed.flatMap((s, i) =>
+  const vocabulary = parsed.results.flatMap((s, i) =>
     (s.vocabulary || []).map((v) => ({
       sentenceIndex: i + 1,
       word: v.word,
@@ -34,7 +34,12 @@ export async function previewWriting(paragraph) {
     })),
   );
 
-  return { sentences, vocabulary, provider };
+  return {
+    vietnameseParagraph: parsed.vietnameseParagraph,
+    sentences,
+    vocabulary,
+    provider,
+  };
 }
 
 /**
@@ -43,7 +48,7 @@ export async function previewWriting(paragraph) {
 export async function createWriting(body, adminId) {
   validateFields(body, ["title", "type", "level"]);
 
-  const typeContent = prepareContentByType(body.type, body);
+  const { content, totalSentences } = prepareContentByType(body.type, body);
 
   const lesson = await WritingLesson.create({
     type: body.type,
@@ -53,9 +58,10 @@ export async function createWriting(body, adminId) {
     topic: body.topic,
     description: body.description,
     isPremium: body.isPremium,
-    order: body.order,
+    sortOrder: body.sortOrder,
     createdBy: adminId,
-    ...typeContent,
+    content,
+    totalSentences,
   });
 
   return lesson;
