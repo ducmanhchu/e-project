@@ -1,6 +1,6 @@
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
-import User from "@server/models/User";
+import User from "@server/models/user/User";
 import bcrypt from "bcrypt";
 
 export async function createUser(data) {

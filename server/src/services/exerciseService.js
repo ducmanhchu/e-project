@@ -1,8 +1,8 @@
 import { WritingLesson } from "@server/models/writing/WritingLesson";
-import { LessonDictionary } from "@server/models/LessonDictionary";
-import { ExerciseAttempt } from "@server/models/ExerciseAttempt";
+import { Vocabulary } from "@server/models/vocabulary/Vocabulary";
+import { ExerciseAttempt } from "@server/models/exerciseAttempt/ExerciseAttempt";
 import { ApiError } from "@server/helpers/ApiError";
-import { aiGradeAnswer } from "@server/services/aiProvider";
+import { aiGradeAnswer } from "@server/services/ai/gradingProvider";
 import { WRITING_TYPE } from "@server/const/writting";
 
 const COMPLETION_THRESHOLD = 70;
@@ -24,7 +24,9 @@ export async function listLessons(userId, filters, pagination) {
 
   const [lessons, total] = await Promise.all([
     WritingLesson.find(query)
-      .select("title level topic contentType totalSentences isPremium createdAt")
+      .select(
+        "title level topic contentType totalSentences isPremium createdAt",
+      )
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -41,9 +43,7 @@ export async function listLessons(userId, filters, pagination) {
     .select("lessonId status completedSentences totalScore")
     .lean();
 
-  const attemptMap = new Map(
-    attempts.map((a) => [a.lessonId.toString(), a]),
-  );
+  const attemptMap = new Map(attempts.map((a) => [a.lessonId.toString(), a]));
 
   let results = lessons.map((lesson) => {
     const attempt = attemptMap.get(lesson._id.toString());
@@ -72,8 +72,7 @@ export async function listLessons(userId, filters, pagination) {
       if (status === "not_started") return !r.userProgress;
       if (status === "in_progress")
         return r.userProgress?.status === "in_progress";
-      if (status === "completed")
-        return r.userProgress?.status === "completed";
+      if (status === "completed") return r.userProgress?.status === "completed";
       return true;
     });
   }
@@ -104,8 +103,10 @@ export async function getExercise(userId, lessonId) {
 
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  // referenceAnswer stripped by toJSON transform, safe to use lesson directly
-  const dictionary = await LessonDictionary.findOne({ lessonId }).lean();
+  // Get vocabulary for this lesson
+  const vocabDocs = await Vocabulary.find({
+    "lessons.lessonId": lessonId,
+  }).lean();
 
   // Upsert attempt
   let attempt = await ExerciseAttempt.findOne({ userId, lessonId });
@@ -144,12 +145,19 @@ export async function getExercise(userId, lessonId) {
         // explanation hidden until user submits for this sentence
       })),
     },
-    dictionary: dictionary
-      ? {
-          id: dictionary._id,
-          entries: dictionary.entries,
-        }
-      : null,
+    vocabulary: vocabDocs.map((v) => {
+      const lessonRef = v.lessons.find(
+        (l) => l.lessonId.toString() === lessonId.toString(),
+      );
+      return {
+        id: v._id,
+        word: v.word,
+        partOfSpeech: v.partOfSpeech,
+        meaning: v.meaning,
+        example: v.example,
+        sentenceIndex: lessonRef?.sentenceIndex ?? null,
+      };
+    }),
     attempt: {
       id: attempt._id,
       status: attempt.status,
@@ -163,7 +171,12 @@ export async function getExercise(userId, lessonId) {
 /**
  * Submit answer for a sentence — AI grades it
  */
-export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) {
+export async function submitAnswer(
+  userId,
+  lessonId,
+  sentenceOrder,
+  userAnswer,
+) {
   // Use .lean() to get raw data including referenceAnswer (toJSON strips it)
   const lesson = await WritingLesson.findOne({
     _id: lessonId,
@@ -183,6 +196,8 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
     userAnswer,
     sentence.referenceAnswer,
     sentence.vietnameseText,
+    lesson.level,
+    lesson.contentType,
   );
 
   const score = Math.min(100, Math.max(0, Math.round(grading.score)));
@@ -248,7 +263,10 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
       : 0;
 
   // Check overall completion
-  if (completedCount >= lesson.totalSentences && attempt.status !== "completed") {
+  if (
+    completedCount >= lesson.totalSentences &&
+    attempt.status !== "completed"
+  ) {
     attempt.status = "completed";
     attempt.completedAt = new Date();
   }

@@ -2,12 +2,12 @@ import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
 import { prepareContentByType } from "@server/helpers/writing/prepareContentByType";
 import { WritingLesson } from "@server/models/writing/WritingLesson";
-import { LessonDictionary } from "@server/models/LessonDictionary";
-import { aiPreviewWriting } from "@server/services/aiProvider";
+import { Vocabulary } from "@server/models/vocabulary/Vocabulary";
+import { aiPreviewWriting } from "@server/services/ai/previewProvider";
 
 /**
  * Bước 1 (Preview): Admin gửi đoạn văn tiếng Anh
- * → Gemini tách câu + dịch tiếng Việt + trả vocabulary mỗi câu
+ * → AI tách câu + dịch tiếng Việt + trả vocabulary mỗi câu
  * → Chưa lưu DB
  */
 export async function previewWriting(paragraph) {
@@ -68,9 +68,8 @@ export async function createWriting(body, adminId) {
 }
 
 /**
- * Bước 3: Admin lưu hint/dictionary pool cho lesson
- * - entries[].sentenceIndex = N → hint cho câu N
- * - entries[].sentenceIndex = null → dictionary chung cho cả bài
+ * Bước 3: Admin lưu vocabulary cho lesson
+ * Upsert mỗi entry vào Vocabulary collection, link lessonId
  */
 export async function saveDictionary(lessonId, entries) {
   const lesson = await WritingLesson.findById(lessonId);
@@ -80,14 +79,31 @@ export async function saveDictionary(lessonId, entries) {
     throw ApiError.badRequest("entries must be a non-empty array");
   }
 
-  // Upsert: nếu đã có dictionary cho lesson này thì update, chưa có thì tạo
-  const dictionary = await LessonDictionary.findOneAndUpdate(
-    { lessonId },
-    { lessonId, entries },
-    { upsert: true, new: true, runValidators: true },
+  // Remove old lesson associations first
+  await Vocabulary.updateMany(
+    { "lessons.lessonId": lessonId },
+    { $pull: { lessons: { lessonId } } },
   );
 
-  return dictionary;
+  // Upsert each entry into Vocabulary
+  const ops = entries.map((entry) =>
+    Vocabulary.findOneAndUpdate(
+      { word: entry.word.toLowerCase().trim(), meaning: entry.meaning },
+      {
+        $set: {
+          partOfSpeech: entry.partOfSpeech,
+          example: entry.example,
+        },
+        $addToSet: {
+          lessons: { lessonId, sentenceIndex: entry.sentenceIndex ?? null },
+        },
+      },
+      { upsert: true, new: true },
+    ),
+  );
+
+  const results = await Promise.all(ops);
+  return { saved: results.length };
 }
 
 /**

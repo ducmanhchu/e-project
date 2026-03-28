@@ -1,7 +1,7 @@
 import { env } from "@server/config/environment";
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
-import User from "@server/models/User";
+import User from "@server/models/user/User";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { TOKEN_LIFE } from "@server/const/auth";
