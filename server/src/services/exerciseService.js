@@ -7,6 +7,32 @@ import { WRITING_TYPE } from "@server/const/writting";
 
 const COMPLETION_THRESHOLD = 70;
 
+async function buildVocabulary(vocabRefs) {
+  if (!vocabRefs || vocabRefs.length === 0) return [];
+
+  const ids = vocabRefs.map((r) => r.vocabularyId);
+  const vocabs = await Vocabulary.find({ _id: { $in: ids } })
+    .select("word partOfSpeech meaning example")
+    .lean();
+
+  const vocabMap = new Map(vocabs.map((v) => [v._id.toString(), v]));
+
+  return vocabRefs
+    .map((ref) => {
+      const v = vocabMap.get(ref.vocabularyId.toString());
+      if (!v) return null;
+      return {
+        vocabularyId: v._id,
+        word: v.word,
+        partOfSpeech: v.partOfSpeech,
+        meaning: v.meaning,
+        example: v.example,
+        sentenceIndex: ref.sentenceIndex ?? null,
+      };
+    })
+    .filter(Boolean);
+}
+
 /**
  * List published reverse_translation lessons with user progress
  */
@@ -103,11 +129,6 @@ export async function getExercise(userId, lessonId) {
 
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  // Get vocabulary for this lesson
-  const vocabDocs = await Vocabulary.find({
-    "lessons.lessonId": lessonId,
-  }).lean();
-
   // Upsert attempt
   let attempt = await ExerciseAttempt.findOne({ userId, lessonId });
   if (!attempt) {
@@ -145,19 +166,7 @@ export async function getExercise(userId, lessonId) {
         // explanation hidden until user submits for this sentence
       })),
     },
-    vocabulary: vocabDocs.map((v) => {
-      const lessonRef = v.lessons.find(
-        (l) => l.lessonId.toString() === lessonId.toString(),
-      );
-      return {
-        id: v._id,
-        word: v.word,
-        partOfSpeech: v.partOfSpeech,
-        meaning: v.meaning,
-        example: v.example,
-        sentenceIndex: lessonRef?.sentenceIndex ?? null,
-      };
-    }),
+    vocabulary: await buildVocabulary(lesson.content?.vocabularyRefs),
     attempt: {
       id: attempt._id,
       status: attempt.status,

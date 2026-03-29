@@ -5,7 +5,7 @@ import {
   WRITING_TOPIC,
   CONTENT_TYPE,
 } from "@server/const/writting";
-import { CONTENT_SCHEMAS } from "./contentSchemas";
+// Content validation handled by prepareContentByType in service layer
 
 const writingLessonSchema = new mongoose.Schema(
   {
@@ -33,7 +33,6 @@ const writingLessonSchema = new mongoose.Schema(
     isPublished: { type: Boolean, default: false },
     sortOrder: Number,
     totalSentences: { type: Number, default: 0 },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
     content: { type: mongoose.Schema.Types.Mixed, required: true },
   },
@@ -59,15 +58,6 @@ const writingLessonSchema = new mongoose.Schema(
   },
 );
 
-// Validate content matches type before save
-writingLessonSchema.pre("validate", function () {
-  const schema = CONTENT_SCHEMAS[this.type];
-  if (!schema) throw new Error(`Unknown type: ${this.type}`);
-
-  const contentDoc = new mongoose.Document(this.content, schema);
-  const err = contentDoc.validateSync();
-  if (err) throw err;
-});
 
 export const WritingLesson = mongoose.model(
   "WritingLesson",

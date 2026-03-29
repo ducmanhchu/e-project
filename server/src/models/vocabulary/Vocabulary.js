@@ -9,14 +9,6 @@ const definitionSchema = new mongoose.Schema(
   { _id: false },
 );
 
-const lessonRefSchema = new mongoose.Schema(
-  {
-    lessonId: { type: mongoose.Schema.Types.ObjectId, ref: "WritingLesson" },
-    sentenceIndex: Number, // null = dictionary chung cho cả bài
-  },
-  { _id: false },
-);
-
 const vocabularySchema = new mongoose.Schema(
   {
     // Core word data
@@ -33,9 +25,6 @@ const vocabularySchema = new mongoose.Schema(
     relatedWords: [String],
     enrichedBy: { type: String, enum: ["claude", "gemini"] },
     enrichedAt: Date,
-
-    // Lesson associations — which lessons use this word
-    lessons: [lessonRefSchema],
   },
   {
     timestamps: true,
@@ -49,10 +38,7 @@ const vocabularySchema = new mongoose.Schema(
   },
 );
 
-// Unique per word + meaning combo (same word can have different meanings)
 vocabularySchema.index({ word: 1, meaning: 1 }, { unique: true });
-// Query by lesson
-vocabularySchema.index({ "lessons.lessonId": 1 });
 
 export const Vocabulary = mongoose.model(
   "Vocabulary",

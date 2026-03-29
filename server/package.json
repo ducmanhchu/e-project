@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "main": "lib/index.js",
   "scripts": {
-    "dev": "concurrently \"babel src --out-dir lib --copy-files --source-maps --include-dotfiles --watch\" \"node --watch lib/index.js\"",
-    "production": "babel src --out-dir lib --copy-files --include-dotfiles && node lib/index.js",
+    "dev": "rm -rf lib && babel src --out-dir lib --copy-files --source-maps --include-dotfiles && concurrently \"babel src --out-dir lib --copy-files --source-maps --include-dotfiles --watch\" \"node --watch lib/index.js\"",
+    "production": "rm -rf lib && babel src --out-dir lib --copy-files --include-dotfiles && node lib/index.js",
     "test": "jest --verbose"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "google-auth-library": "^10.5.0",
+    "googleapis": "^171.4.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.1",
     "yup": "^1.7.1"
@@ -37,6 +38,8 @@
     "prettier": "^3.8.1"
   },
   "jest": {
-    "testMatch": ["<rootDir>/tests/**/*.test.js"]
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ]
   }
 }

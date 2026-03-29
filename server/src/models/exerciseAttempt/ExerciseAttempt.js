@@ -30,12 +30,12 @@ const exerciseAttemptSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "users",
+      ref: "User",
       required: true,
     },
     lessonId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "writingLessons",
+      ref: "WritingLesson",
       required: true,
     },
     status: {

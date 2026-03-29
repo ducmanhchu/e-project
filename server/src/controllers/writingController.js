@@ -6,7 +6,7 @@ import * as writingService from "@server/services/writingService";
  */
 export async function previewWriting(req, res, next) {
   try {
-    const data = await writingService.previewWriting(req.body.paragraph);
+    const data = await writingService.previewWriting(req.body);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -19,7 +19,7 @@ export async function previewWriting(req, res, next) {
  */
 export async function createWriting(req, res, next) {
   try {
-    const data = await writingService.createWriting(req.body, req.user._id);
+    const data = await writingService.createWriting(req.body);
     res.status(201).json({ success: true, data });
   } catch (e) {
     next(e);

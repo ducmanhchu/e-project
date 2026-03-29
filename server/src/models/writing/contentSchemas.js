@@ -11,6 +11,18 @@ const sentenceSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const vocabRefSchema = new mongoose.Schema(
+  {
+    vocabularyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Vocabulary",
+      required: true,
+    },
+    sentenceIndex: Number, // null = dictionary chung cho cả bài
+  },
+  { _id: false },
+);
+
 const reverseTranslationSchema = new mongoose.Schema(
   {
     vietnameseParagraph: { type: String, required: true },
@@ -18,6 +30,7 @@ const reverseTranslationSchema = new mongoose.Schema(
       type: [sentenceSchema],
       validate: [(v) => v.length > 0, "sentences must have at least 1 item"],
     },
+    vocabularyRefs: [vocabRefSchema],
   },
   { _id: false },
 );

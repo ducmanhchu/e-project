@@ -11,11 +11,13 @@ export async function createUser(data) {
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  await User.create({
+  const user = await User.create({
     email: email.trim().toLowerCase(),
     password: hashedPassword,
     fullName: fullName.trim(),
   });
+
+  return user;
 }
 
 /**

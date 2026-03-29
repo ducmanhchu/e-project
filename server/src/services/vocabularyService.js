@@ -29,29 +29,33 @@ async function ensureEnriched(vocab) {
 
 /**
  * Add word to user's vocabulary
+ * If vocabularyId provided (from exercise), use directly. Otherwise find/create.
  */
 export async function addWord(userId, payload) {
-  const { word, partOfSpeech, meaning, example, sourceLessonId } = payload;
-  if (!word?.trim()) throw ApiError.badRequest("word is required");
+  const { vocabularyId, word, partOfSpeech, meaning, example } = payload;
 
-  const normalized = word.toLowerCase().trim();
+  let vocab;
 
-  // Find or create Vocabulary entry
-  let vocab = await Vocabulary.findOne({
-    word: normalized,
-    ...(meaning && { meaning }),
-  });
+  if (vocabularyId) {
+    vocab = await Vocabulary.findById(vocabularyId);
+    if (!vocab) throw ApiError.notFound("Vocabulary entry not found");
+  } else {
+    if (!word?.trim()) throw ApiError.badRequest("word is required");
+    const normalized = word.toLowerCase().trim();
 
-  if (!vocab) {
-    vocab = await Vocabulary.create({
+    vocab = await Vocabulary.findOne({
       word: normalized,
-      partOfSpeech,
-      meaning: meaning || normalized,
-      example,
-      ...(sourceLessonId && {
-        lessons: [{ lessonId: sourceLessonId }],
-      }),
+      ...(meaning && { meaning }),
     });
+
+    if (!vocab) {
+      vocab = await Vocabulary.create({
+        word: normalized,
+        partOfSpeech,
+        meaning: meaning || normalized,
+        example,
+      });
+    }
   }
 
   // Check duplicate in user's list
@@ -86,42 +90,52 @@ export async function listWords(userId, filters, pagination) {
   const query = { userId };
   if (status) query.status = status;
 
-  let userVocabs = await UserVocabulary.find(query)
-    .sort({ addedAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(limit)
-    .populate("vocabularyId", "word meaning partOfSpeech")
-    .lean();
+  const pipeline = [
+    { $match: query },
+    {
+      $lookup: {
+        from: "vocabularies",
+        localField: "vocabularyId",
+        foreignField: "_id",
+        as: "vocab",
+      },
+    },
+    { $unwind: "$vocab" },
+    ...(search
+      ? [{ $match: { "vocab.word": { $regex: search, $options: "i" } } }]
+      : []),
+    { $sort: { addedAt: -1 } },
+  ];
 
-  const total = await UserVocabulary.countDocuments(query);
+  const countResult = await UserVocabulary.aggregate([
+    ...pipeline,
+    { $count: "total" },
+  ]);
+  const total = countResult[0]?.total || 0;
 
-  let words = userVocabs
-    .filter((uv) => uv.vocabularyId) // skip orphans
-    .map((uv) => ({
-      id: uv._id,
-      word: uv.vocabularyId.word,
-      meaning: uv.vocabularyId.meaning,
-      partOfSpeech: uv.vocabularyId.partOfSpeech,
-      status: uv.status,
-      reviewCount: uv.reviewCount,
-      addedAt: uv.addedAt,
-    }));
+  const results = await UserVocabulary.aggregate([
+    ...pipeline,
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+  ]);
 
-  // Client-side search filter (on populated data)
-  if (search) {
-    const s = search.toLowerCase();
-    words = words.filter((w) => w.word.includes(s));
-  }
+  const words = results.map((r) => ({
+    id: r._id,
+    word: r.vocab.word,
+    meaning: r.vocab.meaning,
+    partOfSpeech: r.vocab.partOfSpeech,
+    status: r.status,
+    reviewCount: r.reviewCount,
+    addedAt: r.addedAt,
+  }));
 
   return {
     words,
     pagination: {
       page,
       limit,
-      total: search ? words.length : total,
-      totalPages: search
-        ? Math.ceil(words.length / limit)
-        : Math.ceil(total / limit),
+      total,
+      totalPages: Math.ceil(total / limit),
     },
   };
 }
@@ -141,9 +155,8 @@ export async function getWordDetail(userId, wordId) {
 
   // Enrich if not already
   if (!vocab.enrichedAt) {
-    vocab = (await ensureEnriched(vocab)).toObject
-      ? (await ensureEnriched(vocab)).toObject()
-      : await Vocabulary.findById(vocab._id).lean();
+    const enriched = await ensureEnriched(vocab);
+    vocab = enriched.toObject ? enriched.toObject() : enriched;
   }
 
   return {

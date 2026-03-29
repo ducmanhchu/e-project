@@ -10,12 +10,15 @@ import { aiPreviewWriting } from "@server/services/ai/previewProvider";
  * → AI tách câu + dịch tiếng Việt + trả vocabulary mỗi câu
  * → Chưa lưu DB
  */
-export async function previewWriting(paragraph) {
+export async function previewWriting(body) {
+  const { paragraph, type, contentType, topic, title, level, description } = body;
+
   if (!paragraph || typeof paragraph !== "string" || !paragraph.trim()) {
     throw ApiError.badRequest("paragraph is required");
   }
 
-  const { parsed, provider } = await aiPreviewWriting(paragraph);
+  const context = { type, contentType, topic, title, level, description };
+  const { result: parsed, provider } = await aiPreviewWriting(paragraph, context);
 
   const sentences = parsed.results.map((s, i) => ({
     order: i + 1,
@@ -45,7 +48,7 @@ export async function previewWriting(paragraph) {
 /**
  * Bước 2: Admin review/chỉnh sửa xong → tạo WritingLesson (draft)
  */
-export async function createWriting(body, adminId) {
+export async function createWriting(body) {
   validateFields(body, ["title", "type", "level"]);
 
   const { content, totalSentences } = prepareContentByType(body.type, body);
@@ -59,7 +62,6 @@ export async function createWriting(body, adminId) {
     description: body.description,
     isPremium: body.isPremium,
     sortOrder: body.sortOrder,
-    createdBy: adminId,
     content,
     totalSentences,
   });
@@ -69,41 +71,43 @@ export async function createWriting(body, adminId) {
 
 /**
  * Bước 3: Admin lưu vocabulary cho lesson
- * Upsert mỗi entry vào Vocabulary collection, link lessonId
+ * Upsert mỗi entry vào Vocabulary collection, lưu refs vào lesson content
  */
 export async function saveDictionary(lessonId, entries) {
-  const lesson = await WritingLesson.findById(lessonId);
-  if (!lesson) throw ApiError.notFound("Writing lesson not found");
-
   if (!Array.isArray(entries) || entries.length === 0) {
     throw ApiError.badRequest("entries must be a non-empty array");
   }
 
-  // Remove old lesson associations first
-  await Vocabulary.updateMany(
-    { "lessons.lessonId": lessonId },
-    { $pull: { lessons: { lessonId } } },
+  // Upsert each word into Vocabulary collection
+  const vocabRefs = await Promise.all(
+    entries.map(async (e) => {
+      const vocab = await Vocabulary.findOneAndUpdate(
+        { word: e.word.toLowerCase().trim(), meaning: e.meaning },
+        {
+          $set: {
+            partOfSpeech: e.partOfSpeech,
+            example: e.example,
+          },
+        },
+        { upsert: true, new: true },
+      );
+      return {
+        vocabularyId: vocab._id,
+        sentenceIndex: e.sentenceIndex ?? null,
+      };
+    }),
   );
 
-  // Upsert each entry into Vocabulary
-  const ops = entries.map((entry) =>
-    Vocabulary.findOneAndUpdate(
-      { word: entry.word.toLowerCase().trim(), meaning: entry.meaning },
-      {
-        $set: {
-          partOfSpeech: entry.partOfSpeech,
-          example: entry.example,
-        },
-        $addToSet: {
-          lessons: { lessonId, sentenceIndex: entry.sentenceIndex ?? null },
-        },
-      },
-      { upsert: true, new: true },
-    ),
+  // Save refs into lesson content using $set (avoid reading + spreading content)
+  const lesson = await WritingLesson.findByIdAndUpdate(
+    lessonId,
+    { $set: { "content.vocabularyRefs": vocabRefs } },
+    { new: true },
   );
 
-  const results = await Promise.all(ops);
-  return { saved: results.length };
+  if (!lesson) throw ApiError.notFound("Writing lesson not found");
+
+  return { saved: vocabRefs.length };
 }
 
 /**

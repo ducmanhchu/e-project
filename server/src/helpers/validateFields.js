@@ -6,8 +6,8 @@ import { ApiError } from "@server/helpers/ApiError";
  * @returns {void || Error}
  */
 export function validateFields(obj = {}, fields = []) {
-  if (!fields.length || !Object.keys(obj).length) return;
+  if (!fields.length) return;
   for (const field of fields) {
-    if (!obj[field]) throw ApiError.badRequest(`Missing required field: ${field}`);
+    if (obj[field] == null || obj[field] === "") throw ApiError.badRequest(`Missing required field: ${field}`);
   }
 }

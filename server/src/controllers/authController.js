@@ -11,7 +11,7 @@ const REFRESH_TOKEN_OPTIONS = {
 export async function signUp(req, res, next) {
   try {
     const data = await userService.createUser(req.body);
-    res.status(200).json({ data, success: true });
+    res.status(201).json({ data, success: true });
   } catch (e) {
     next(e);
   }
@@ -32,7 +32,7 @@ export async function signOut(req, res, next) {
   try {
     const token = req.cookies?.refreshToken;
     if (token) res.clearCookie("refreshToken");
-    res.status(204).json({ success: true });
+    res.status(204).end();
   } catch (e) {
     next(e);
   }
