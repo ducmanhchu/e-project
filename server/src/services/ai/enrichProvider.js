@@ -58,7 +58,7 @@ async function enrichWithClaude(word) {
 
 async function enrichWithGemini(word) {
   const response = await genai.models.generateContent({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     contents: ENRICH_PROMPT(word),
     config: {
       responseMimeType: "application/json",

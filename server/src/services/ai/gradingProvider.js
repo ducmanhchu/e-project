@@ -159,7 +159,7 @@ async function gradeWithClaude(userAnswer, referenceAnswer, vietnameseText, leve
 
 async function gradeWithGemini(userAnswer, referenceAnswer, vietnameseText, level, contentType) {
   const response = await genai.models.generateContent({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     contents: GRADING_PROMPT(userAnswer, referenceAnswer, vietnameseText, level, contentType),
     config: {
       responseMimeType: "application/json",

@@ -168,7 +168,7 @@ async function previewWithClaude(paragraph, context) {
 
 async function previewWithGemini(paragraph, context) {
   const response = await genai.models.generateContent({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     contents: PREVIEW_PROMPT(paragraph, context),
     config: {
       responseMimeType: "application/json",
