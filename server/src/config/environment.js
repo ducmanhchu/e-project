@@ -1,0 +1,14 @@
+import "dotenv/config";
+
+export const env = {
+  MONGODB_URI: process.env.MONGODB_URI,
+  DATABASE_NAME: process.env.DATABASE_NAME,
+  LOCAL_PORT: process.env.LOCAL_PORT,
+  LOCAL_HOST: process.env.LOCAL_HOST,
+  ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
+  REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
+  VERTEX_PROJECT_ID: process.env.VERTEX_PROJECT_ID,
+  VERTEX_LOCATION: process.env.VERTEX_LOCATION,
+  CLAUDE_API_KEY: process.env.CLAUDE_API_KEY,
+  AI_PRIMARY_PROVIDER: process.env.AI_PRIMARY_PROVIDER || "claude",
+};
