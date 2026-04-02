@@ -4,8 +4,8 @@ import {
 	SidebarInset,
 	SidebarProvider,
 	SidebarTrigger,
-} from "@/components/ui/sidebar";
-import AppSidebar from "@/components/AppSidebar";
+} from "@/shared/components/ui/sidebar";
+import AppSidebar from "@admin/components/AppSidebar";
 
 export default function AdminLayout() {
 	return (

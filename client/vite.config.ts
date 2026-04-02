@@ -9,6 +9,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@admin": path.resolve(__dirname, "./src/domains/admin"),
+      "@user": path.resolve(__dirname, "./src/domains/user"),
+      "@shared": path.resolve(__dirname, "./src/shared"),
     },
   },
 })

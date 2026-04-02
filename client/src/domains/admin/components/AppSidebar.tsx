@@ -1,12 +1,12 @@
 import { Link } from "react-router";
-import { ChevronDown, LogIn, Moon, Pen, Speech, Sun, User } from "lucide-react";
+import { ChevronDown, LogIn, Moon, Pen, Speech, Sun } from "lucide-react";
 
-import { useTheme } from "@/hooks/useTheme";
+import { useTheme } from "@/shared/hooks/useTheme";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "./ui/collapsible";
+} from "@/shared/components/ui/collapsible";
 import {
 	Sidebar,
 	SidebarContent,
@@ -19,7 +19,7 @@ import {
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarMenuSubItem,
-} from "./ui/sidebar";
+} from "@/shared/components/ui/sidebar";
 
 const features = [
 	{
