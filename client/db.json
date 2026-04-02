@@ -1,0 +1,484 @@
+{
+	"back-translation": [
+		{
+			"id": "1",
+			"status": "not started",
+			"level": "beginner",
+			"title": "Morning Routine",
+			"category": "Daily Life",
+			"content": [
+				{
+					"sentence_idx": 1,
+					"text_vn": "Tôi thức dậy lúc 6 giờ sáng mỗi ngày.",
+					"text_en": "I wake up at 6 AM every day.",
+					"hint": "I w___ up at 6 AM e____ day."
+				},
+				{
+					"sentence_idx": 2,
+					"text_vn": "Sau đó, tôi đánh răng và rửa mặt.",
+					"text_en": "After that, I brush my teeth and wash my face.",
+					"hint": "A____ that, I b____ my teeth and w___ my face."
+				},
+				{
+					"sentence_idx": 3,
+					"text_vn": "Cuối cùng, tôi ăn sáng trước khi đi làm.",
+					"text_en": "Finally, I have breakfast before going to work.",
+					"hint": "F______, I have b________ before going to work."
+				}
+			],
+			"current_sentence": 1,
+			"vocab": [
+				{
+					"word": "wake up",
+					"meaning": "thức dậy",
+					"type": "phrasal verb",
+					"audio_url": ""
+				},
+				{
+					"word": "brush",
+					"meaning": "đánh, chải",
+					"type": "verb",
+					"audio_url": ""
+				},
+				{
+					"word": "breakfast",
+					"meaning": "bữa sáng",
+					"type": "noun",
+					"audio_url": ""
+				}
+			]
+		},
+		{
+			"id": "2",
+			"status": "not started",
+			"level": "intermediate",
+			"title": "Commuting to Work",
+			"category": "Daily Life",
+			"content": [
+				{
+					"sentence_idx": 1,
+					"text_vn": "Giao thông ở thành phố thường rất tắc nghẽn vào giờ cao điểm.",
+					"text_en": "Traffic in the city is usually very congested during rush hour.",
+					"hint": "T______ in the city is usually very c________ during r___ h___."
+				},
+				{
+					"sentence_idx": 2,
+					"text_vn": "Tôi thường mất khoảng 45 phút để đến văn phòng bằng xe buýt.",
+					"text_en": "It usually takes me about 45 minutes to get to the office by bus.",
+					"hint": "It usually t____ me about 45 minutes to get to the o_____ by bus."
+				},
+				{
+					"sentence_idx": 3,
+					"text_vn": "Đôi khi, tôi đi chung xe với đồng nghiệp để tiết kiệm chi phí.",
+					"text_en": "Sometimes, I carpool with my colleagues to save costs.",
+					"hint": "Sometimes, I c______ with my c_________ to save costs."
+				}
+			],
+			"current_sentence": 1,
+			"vocab": [
+				{
+					"word": "congested",
+					"meaning": "tắc nghẽn",
+					"type": "adjective",
+					"audio_url": ""
+				},
+				{
+					"word": "rush hour",
+					"meaning": "giờ cao điểm",
+					"type": "noun",
+					"audio_url": ""
+				},
+				{
+					"word": "carpool",
+					"meaning": "đi chung xe",
+					"type": "verb",
+					"audio_url": ""
+				}
+			]
+		},
+		{
+			"id": "3",
+			"status": "not started",
+			"level": "beginner",
+			"title": "Cooking Dinner",
+			"category": "Daily Life",
+			"content": [
+				{
+					"sentence_idx": 1,
+					"text_vn": "Hôm nay tôi sẽ nấu một bữa tối đơn giản cho gia đình.",
+					"text_en": "Today I will cook a simple dinner for my family.",
+					"hint": "Today I will c___ a s_____ dinner for my family."
+				},
+				{
+					"sentence_idx": 2,
+					"text_vn": "Tôi đã mua một ít thịt gà và rau tươi ở chợ.",
+					"text_en": "I bought some chicken and fresh vegetables at the market.",
+					"hint": "I b_____ some chicken and f____ vegetables at the market."
+				},
+				{
+					"sentence_idx": 3,
+					"text_vn": "Món ăn yêu thích của tôi là gà xào sả ớt.",
+					"text_en": "My favorite dish is stir-fried chicken with lemongrass and chili.",
+					"hint": "My f_______ dish is s___-f____ chicken with lemongrass and chili."
+				}
+			],
+			"current_sentence": 1,
+			"vocab": [
+				{
+					"word": "simple",
+					"meaning": "đơn giản",
+					"type": "adjective",
+					"audio_url": ""
+				},
+				{
+					"word": "fresh",
+					"meaning": "tươi, mới",
+					"type": "adjective",
+					"audio_url": ""
+				},
+				{
+					"word": "stir-fried",
+					"meaning": "xào",
+					"type": "adjective",
+					"audio_url": ""
+				}
+			]
+		},
+		{
+			"id": "4",
+			"status": "not started",
+			"level": "intermediate",
+			"title": "House Cleaning",
+			"category": "Daily Life",
+			"content": [
+				{
+					"sentence_idx": 1,
+					"text_vn": "Cuối tuần là thời gian lý tưởng để dọn dẹp nhà cửa.",
+					"text_en": "The weekend is the ideal time to clean the house.",
+					"hint": "The weekend is the i____ time to c____ the house."
+				},
+				{
+					"sentence_idx": 2,
+					"text_vn": "Tôi bắt đầu bằng việc hút bụi phòng khách và phòng ngủ.",
+					"text_en": "I start by vacuuming the living room and bedroom.",
+					"hint": "I start by v________ the living room and bedroom."
+				},
+				{
+					"sentence_idx": 3,
+					"text_vn": "Sau khi lau sàn, tôi mang quần áo đi giặt.",
+					"text_en": "After mopping the floor, I take the clothes to do the laundry.",
+					"hint": "After m______ the floor, I take the clothes to do the l______."
+				}
+			],
+			"current_sentence": 1,
+			"vocab": [
+				{
+					"word": "ideal",
+					"meaning": "lý tưởng",
+					"type": "adjective",
+					"audio_url": ""
+				},
+				{
+					"word": "vacuum",
+					"meaning": "hút bụi",
+					"type": "verb",
+					"audio_url": ""
+				},
+				{
+					"word": "mop",
+					"meaning": "lau chùi",
+					"type": "verb",
+					"audio_url": ""
+				}
+			]
+		},
+		{
+			"id": "5",
+			"status": "not started",
+			"level": "advanced",
+			"title": "Work From Home",
+			"category": "Daily Life",
+			"content": [
+				{
+					"sentence_idx": 1,
+					"text_vn": "Làm việc từ xa đòi hỏi kỷ luật bản thân và kỹ năng quản lý thời gian tốt.",
+					"text_en": "Working remotely requires self-discipline and good time management skills.",
+					"hint": "Working r_______ requires s___-d_________ and good time management skills."
+				},
+				{
+					"sentence_idx": 2,
+					"text_vn": "Tôi thiết lập một góc làm việc yên tĩnh để tránh bị phân tâm.",
+					"text_en": "I set up a quiet workspace to avoid being distracted.",
+					"hint": "I set up a q____ workspace to a____ being d_________."
+				},
+				{
+					"sentence_idx": 3,
+					"text_vn": "Các cuộc họp trực tuyến được tiến hành qua phần mềm chuyên dụng.",
+					"text_en": "Online meetings are conducted via specialized software.",
+					"hint": "Online meetings are c________ via s__________ software."
+				}
+			],
+			"current_sentence": 1,
+			"vocab": [
+				{
+					"word": "remotely",
+					"meaning": "từ xa",
+					"type": "adverb",
+					"audio_url": ""
+				},
+				{
+					"word": "self-discipline",
+					"meaning": "kỷ luật bản thân",
+					"type": "noun",
+					"audio_url": ""
+				},
+				{
+					"word": "distracted",
+					"meaning": "bị phân tâm",
+					"type": "adjective",
+					"audio_url": ""
+				}
+			]
+		},
+		{
+			"id": "6",
+			"status": "not started",
+			"level": "beginner",
+			"title": "Evening Relaxation",
+			"category": "Daily Life",
+			"content": [
+				{
+					"sentence_idx": 1,
+					"text_vn": "Sau một ngày dài, tôi thích thư giãn trên ghế sofa.",
+					"text_en": "After a long day, I like to relax on the sofa.",
+					"hint": "After a l___ day, I like to r____ on the sofa."
+				},
+				{
+					"sentence_idx": 2,
+					"text_vn": "Tôi thường xem một bộ phim hài hoặc đọc vài trang sách.",
+					"text_en": "I usually watch a comedy movie or read a few pages of a book.",
+					"hint": "I usually watch a c_____ movie or read a few p____ of a book."
+				},
+				{
+					"sentence_idx": 3,
+					"text_vn": "Thói quen này giúp tôi giảm căng thẳng và ngủ ngon hơn.",
+					"text_en": "This habit helps me reduce stress and sleep better.",
+					"hint": "This h____ helps me r_____ stress and sleep better."
+				}
+			],
+			"current_sentence": 1,
+			"vocab": [
+				{
+					"word": "relax",
+					"meaning": "thư giãn",
+					"type": "verb",
+					"audio_url": ""
+				},
+				{
+					"word": "comedy",
+					"meaning": "hài kịch",
+					"type": "noun",
+					"audio_url": ""
+				},
+				{
+					"word": "stress",
+					"meaning": "căng thẳng",
+					"type": "noun",
+					"audio_url": ""
+				}
+			]
+		},
+		{
+			"id": "7",
+			"status": "not started",
+			"level": "intermediate",
+			"title": "Coffee with Friends",
+			"category": "Daily Life",
+			"content": [
+				{
+					"sentence_idx": 1,
+					"text_vn": "Chúng tôi hẹn gặp nhau tại một quán cà phê quen thuộc vào chiều thứ Bảy.",
+					"text_en": "We arranged to meet at a familiar coffee shop on Saturday afternoon.",
+					"hint": "We a_______ to meet at a f_______ coffee shop on Saturday afternoon."
+				},
+				{
+					"sentence_idx": 2,
+					"text_vn": "Tôi gọi một ly cà phê đen đá, còn bạn tôi chọn sinh tố bơ.",
+					"text_en": "I ordered an iced black coffee, while my friend chose an avocado smoothie.",
+					"hint": "I o______ an iced black coffee, while my friend c____ an avocado smoothie."
+				},
+				{
+					"sentence_idx": 3,
+					"text_vn": "Chúng tôi đã trò chuyện rất nhiều về công việc và cuộc sống.",
+					"text_en": "We chatted a lot about work and life.",
+					"hint": "We c______ a lot about work and life."
+				}
+			],
+			"current_sentence": 1,
+			"vocab": [
+				{
+					"word": "familiar",
+					"meaning": "quen thuộc",
+					"type": "adjective",
+					"audio_url": ""
+				},
+				{
+					"word": "order",
+					"meaning": "gọi món, đặt hàng",
+					"type": "verb",
+					"audio_url": ""
+				},
+				{
+					"word": "chat",
+					"meaning": "trò chuyện",
+					"type": "verb",
+					"audio_url": ""
+				}
+			]
+		},
+		{
+			"id": "8",
+			"status": "not started",
+			"level": "advanced",
+			"title": "Gym Workout",
+			"category": "Daily Life",
+			"content": [
+				{
+					"sentence_idx": 1,
+					"text_vn": "Duy trì thói quen tập thể dục đều đặn là rất quan trọng cho sức khỏe.",
+					"text_en": "Maintaining a regular exercise routine is very important for health.",
+					"hint": "M__________ a r______ exercise r______ is very important for health."
+				},
+				{
+					"sentence_idx": 2,
+					"text_vn": "Hôm nay là ngày tập lưng và tay trước của tôi tại phòng gym.",
+					"text_en": "Today is my back and bicep workout day at the gym.",
+					"hint": "Today is my b___ and b____ workout day at the gym."
+				},
+				{
+					"sentence_idx": 3,
+					"text_vn": "Tôi luôn khởi động kỹ để tránh gặp chấn thương trong quá trình nâng tạ.",
+					"text_en": "I always warm up thoroughly to avoid getting injured while lifting weights.",
+					"hint": "I always warm up t_________ to avoid getting i______ while lifting weights."
+				}
+			],
+			"current_sentence": 1,
+			"vocab": [
+				{
+					"word": "routine",
+					"meaning": "thói quen, trình tự",
+					"type": "noun",
+					"audio_url": ""
+				},
+				{
+					"word": "thoroughly",
+					"meaning": "kỹ lưỡng, triệt để",
+					"type": "adverb",
+					"audio_url": ""
+				},
+				{
+					"word": "injured",
+					"meaning": "bị thương",
+					"type": "adjective",
+					"audio_url": ""
+				}
+			]
+		},
+		{
+			"id": "9",
+			"status": "not started",
+			"level": "beginner",
+			"title": "Supermarket Shopping",
+			"category": "Daily Life",
+			"content": [
+				{
+					"sentence_idx": 1,
+					"text_vn": "Tôi cần đi siêu thị để mua đồ dùng thiết yếu cho tuần tới.",
+					"text_en": "I need to go to the supermarket to buy essential supplies for next week.",
+					"hint": "I need to go to the supermarket to buy e________ supplies for next week."
+				},
+				{
+					"sentence_idx": 2,
+					"text_vn": "Tôi luôn đẩy xe đẩy dọc theo các kệ hàng hóa để tìm những thứ trong danh sách.",
+					"text_en": "I always push the cart along the aisles to find the things on the list.",
+					"hint": "I always push the c___ along the a_____ to find the things on the list."
+				},
+				{
+					"sentence_idx": 3,
+					"text_vn": "Sau khi lấy đủ đồ, tôi xếp hàng tại quầy thu ngân để thanh toán.",
+					"text_en": "After getting enough items, I line up at the checkout counter to pay.",
+					"hint": "After getting enough items, I line up at the c_______ c______ to pay."
+				}
+			],
+			"current_sentence": 1,
+			"vocab": [
+				{
+					"word": "essential",
+					"meaning": "thiết yếu",
+					"type": "adjective",
+					"audio_url": ""
+				},
+				{
+					"word": "aisle",
+					"meaning": "lối đi (giữa các kệ hàng)",
+					"type": "noun",
+					"audio_url": ""
+				},
+				{
+					"word": "checkout counter",
+					"meaning": "quầy thu ngân",
+					"type": "noun",
+					"audio_url": ""
+				}
+			]
+		},
+		{
+			"id": "10",
+			"status": "not started",
+			"level": "intermediate",
+			"title": "Technology Usage",
+			"category": "Daily Life",
+			"content": [
+				{
+					"sentence_idx": 1,
+					"text_vn": "Hầu hết chúng ta đều dành quá nhiều thời gian để lướt mạng xã hội mỗi ngày.",
+					"text_en": "Most of us spend too much time scrolling through social media every day.",
+					"hint": "Most of us spend too much time s________ through social media every day."
+				},
+				{
+					"sentence_idx": 2,
+					"text_vn": "Điện thoại thông minh đã thay đổi cách chúng ta giao tiếp và tiếp cận thông tin.",
+					"text_en": "Smartphones have changed the way we communicate and access information.",
+					"hint": "Smartphones have changed the way we c__________ and a_____ information."
+				},
+				{
+					"sentence_idx": 3,
+					"text_vn": "Tôi đang cố gắng giảm thời gian sử dụng màn hình trước khi đi ngủ.",
+					"text_en": "I am trying to reduce my screen time before going to sleep.",
+					"hint": "I am trying to r_____ my s_____ t___ before going to sleep."
+				}
+			],
+			"current_sentence": 1,
+			"vocab": [
+				{
+					"word": "scroll",
+					"meaning": "cuộn, lướt (màn hình)",
+					"type": "verb",
+					"audio_url": ""
+				},
+				{
+					"word": "communicate",
+					"meaning": "giao tiếp",
+					"type": "verb",
+					"audio_url": ""
+				},
+				{
+					"word": "screen time",
+					"meaning": "thời gian sử dụng màn hình",
+					"type": "noun",
+					"audio_url": ""
+				}
+			]
+		}
+	]
+}

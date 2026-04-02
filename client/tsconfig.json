@@ -11,9 +11,10 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"],
+      "@admin/*": ["./src/domains/admin/*"],
+      "@user/*": ["./src/domains/user/*"],
+      "@shared/*": ["./src/shared/*"]
     }
   }
 }
