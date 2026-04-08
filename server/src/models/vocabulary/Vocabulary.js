@@ -40,7 +40,7 @@ const vocabularySchema = new mongoose.Schema(
   },
 );
 
-vocabularySchema.index({ word: 1, partOfSpeech: 1 }, { unique: true });
+vocabularySchema.index({ word: 1 }, { unique: true });
 
 export const Vocabulary = mongoose.model(
   "Vocabulary",

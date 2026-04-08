@@ -16,5 +16,5 @@ const seeWriteSchema = new mongoose.Schema(
 export const SeeWrite = mongoose.model(
   "SeeWrite",
   seeWriteSchema,
-  "SeeWrites",
+  "seeWrites",
 );

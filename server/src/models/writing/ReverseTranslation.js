@@ -51,5 +51,5 @@ const reverseTranslationSchema = new mongoose.Schema(
 export const ReverseTranslation = mongoose.model(
   "ReverseTranslation",
   reverseTranslationSchema,
-  "ReverseTranslations",
+  "reverseTranslations",
 );

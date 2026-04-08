@@ -1,7 +1,14 @@
 import { Type, claude, genai, withFallback } from "./client";
 
 const PART_OF_SPEECH_VALUES = [
-  "word",
+  "noun",
+  "verb",
+  "adjective",
+  "adverb",
+  "preposition",
+  "conjunction",
+  "determiner",
+  "pronoun",
   "noun_phrase",
   "verb_phrase",
   "adj_phrase",

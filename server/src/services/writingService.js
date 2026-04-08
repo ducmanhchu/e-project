@@ -85,29 +85,23 @@ export async function saveDictionary(lessonId, entries) {
 
   const Model = getModelByType(found.type);
 
-  // Upsert each word into Vocabulary collection
+  // Upsert each word into Vocabulary collection (atomic, no race condition)
   const vocabRefs = await Promise.all(
     entries.map(async (e) => {
       const normalized = normalizeWord(e.word, e.partOfSpeech, e.example);
-      const existed = await Vocabulary.findOne({
-        word: normalized,
-        partOfSpeech: e.partOfSpeech || null,
-      });
+      const vocab = await Vocabulary.findOneAndUpdate(
+        { word: normalized },
+        { $setOnInsert: { word: normalized, partOfSpeech: e.partOfSpeech, definitions: [] } },
+        { upsert: true, new: true },
+      );
 
-      let vocab;
-      if (existed) {
-        vocab = existed;
-      } else {
-        vocab = await Vocabulary.create({
-          word: normalized,
-          partOfSpeech: e.partOfSpeech,
-          definitions: [],
-        });
-        // Fire-and-forget AI enrich for new words
+      // Enrich in background if new (no definitions yet)
+      if (!vocab.definitions || vocab.definitions.length === 0) {
         ensureEnriched(vocab).catch((err) =>
           console.error(`[enrich] Failed for "${vocab.word}":`, err.message),
         );
       }
+
       return {
         vocabularyId: vocab._id,
         sentenceIndex: e.sentenceIndex ?? null,

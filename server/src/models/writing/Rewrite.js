@@ -12,5 +12,5 @@ const rewriteSchema = new mongoose.Schema(
 export const Rewrite = mongoose.model(
   "Rewrite",
   rewriteSchema,
-  "Rewrites",
+  "rewrites",
 );

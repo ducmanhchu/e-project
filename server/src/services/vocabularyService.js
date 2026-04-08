@@ -11,18 +11,107 @@ function getPrimaryMeaning(vocab) {
 }
 
 /**
- * Enrich a Vocabulary document with AI data if not already enriched.
- * Returns enriched doc when awaited, or fire-and-forget for background use.
+ * Fetch word data from Vocaxis API (free, rich dictionary data)
+ * Returns mapped data matching Vocabulary schema, or null on failure.
+ */
+async function fetchFromVocaxis(word) {
+  try {
+    const res = await fetch(
+      `https://workers.vocaxis.com/lookup/${encodeURIComponent(word)}`,
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const entry = data[0];
+    if (!entry?.definitions?.length) return null;
+
+    return {
+      ipa: entry.ipa?.us || entry.ipa?.uk || null,
+      definitions: entry.definitions.map((def) => ({
+        definitionCefrLevel: def.definition_cefr_level || "",
+        engDef: def.english || "",
+        viDef: def.equivalents?.vi || "",
+        example: def.examples?.[0]
+          ? {
+              engEx: def.examples[0].english || "",
+              viEx: def.examples[0].translations?.vi || "",
+            }
+          : undefined,
+        synonyms: def.synonyms || [],
+        antonyms: def.antonyms || [],
+      })),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch audio URL from free Dictionary API
+ */
+async function fetchAudioUrl(word) {
+  try {
+    const res = await fetch(
+      `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`,
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const phonetics = data[0]?.phonetics || [];
+    const withAudio = phonetics.find((p) => p.audio && p.audio.length > 0);
+    return withAudio?.audio || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Enrich a Vocabulary document if not already enriched.
+ * Priority: Vocaxis API → AI fallback. Audio from Dictionary API.
  */
 export async function ensureEnriched(vocab) {
-  if (vocab.definitions && vocab.definitions.length > 0) return vocab;
+  const hasDefinitions = vocab.definitions && vocab.definitions.length > 0;
+  const hasAudio = !!vocab.audio;
 
-  const { result } = await aiEnrichWord(vocab.word);
+  // Already fully enriched
+  if (hasDefinitions && hasAudio) return vocab;
+
+  // Has definitions but missing audio — just fetch audio
+  if (hasDefinitions && !hasAudio) {
+    const audioUrl = await fetchAudioUrl(vocab.word);
+    if (audioUrl) {
+      return Vocabulary.findByIdAndUpdate(
+        vocab._id,
+        { audio: audioUrl },
+        { new: true },
+      );
+    }
+    return vocab;
+  }
+
+  // Try Vocaxis + audio in parallel
+  const [vocaxis, audioUrl] = await Promise.all([
+    fetchFromVocaxis(vocab.word),
+    fetchAudioUrl(vocab.word),
+  ]);
+
+  let enrichData;
+
+  if (vocaxis) {
+    enrichData = vocaxis;
+  } else {
+    // Fallback: AI enrich
+    const { result } = await aiEnrichWord(vocab.word);
+    enrichData = {
+      ipa: result.ipa,
+      definitions: result.definitions || [],
+    };
+  }
+
   return Vocabulary.findByIdAndUpdate(
     vocab._id,
     {
-      ipa: result.ipa,
-      definitions: result.definitions || [],
+      ipa: enrichData.ipa,
+      definitions: enrichData.definitions,
+      ...(audioUrl && { audio: audioUrl }),
     },
     { new: true },
   );
@@ -76,17 +165,13 @@ export async function addWord(userId, payload) {
     if (!word?.trim()) throw ApiError.badRequest("word is required");
     const normalized = word.toLowerCase().trim();
 
-    vocab = await Vocabulary.findOne({
-      word: normalized,
-      ...(partOfSpeech && { partOfSpeech }),
-    });
+    vocab = await Vocabulary.findOneAndUpdate(
+      { word: normalized },
+      { $setOnInsert: { word: normalized, partOfSpeech, definitions: [] } },
+      { upsert: true, new: true },
+    );
 
-    if (!vocab) {
-      vocab = await Vocabulary.create({
-        word: normalized,
-        partOfSpeech,
-        definitions: [],
-      });
+    if (!vocab.definitions || vocab.definitions.length === 0) {
       enrichInBackground(vocab);
     }
   }
