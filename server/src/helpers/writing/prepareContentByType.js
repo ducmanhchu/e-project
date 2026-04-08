@@ -3,19 +3,18 @@ import { validateFields } from "@server/helpers/validateFields";
 import { WRITING_TYPE, EXAM_TYPE } from "@server/const/writting";
 
 /**
- * Validate type-specific fields and return { content, totalSentences }
- * content gets stored in WritingLesson.content (Mixed)
+ * Validate type-specific fields and return flat fields + totalSentences
  */
 export function prepareContentByType(type, body) {
   switch (type) {
     case WRITING_TYPE.REVERSE_TRANSLATION:
       return prepareReverseTranslation(body);
     case WRITING_TYPE.SEE_AND_WRITE:
-      return prepareSeeAndWrite(body);
+      return prepareDescribe(body);
     case WRITING_TYPE.PARAPHRASING:
-      return prepareParaphrasing(body);
+      return prepareRewrite(body);
     case WRITING_TYPE.EXAM_SIMULATION:
-      return prepareExamSimulation(body);
+      return prepareExam(body);
     default:
       throw ApiError.badRequest(`Invalid writing type: ${type}`);
   }
@@ -34,12 +33,11 @@ function prepareReverseTranslation(body) {
       order: i + 1,
       vietnameseText: s.vietnameseText.trim(),
       referenceAnswer: s.referenceAnswer.trim(),
-      ...(s.explanation && { explanation: s.explanation.trim() }),
     };
   });
 
   return {
-    content: {
+    fields: {
       vietnameseParagraph: vietnameseParagraph?.trim() || null,
       sentences: cleaned,
     },
@@ -47,7 +45,7 @@ function prepareReverseTranslation(body) {
   };
 }
 
-function prepareSeeAndWrite(body) {
+function prepareDescribe(body) {
   validateFields(body, ["mediaUrl", "mediaType"]);
 
   if (!["image", "video"].includes(body.mediaType)) {
@@ -55,7 +53,7 @@ function prepareSeeAndWrite(body) {
   }
 
   return {
-    content: {
+    fields: {
       mediaUrl: body.mediaUrl,
       mediaType: body.mediaType,
       ...(body.requiredKeywords && { requiredKeywords: body.requiredKeywords }),
@@ -66,18 +64,18 @@ function prepareSeeAndWrite(body) {
   };
 }
 
-function prepareParaphrasing(body) {
+function prepareRewrite(body) {
   validateFields(body, ["targetSentence"]);
 
   return {
-    content: {
+    fields: {
       targetSentence: body.targetSentence.trim(),
     },
     totalSentences: 1,
   };
 }
 
-function prepareExamSimulation(body) {
+function prepareExam(body) {
   validateFields(body, ["examType", "examPrompt", "examDuration"]);
 
   if (!Object.values(EXAM_TYPE).includes(body.examType)) {
@@ -87,7 +85,7 @@ function prepareExamSimulation(body) {
   }
 
   return {
-    content: {
+    fields: {
       examType: body.examType,
       examPrompt: body.examPrompt.trim(),
       examDuration: body.examDuration,

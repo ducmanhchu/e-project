@@ -1,30 +1,32 @@
 import mongoose from "mongoose";
 
+const exampleSchema = new mongoose.Schema(
+  {
+    engEx: String,
+    viEx: String,
+  },
+  { _id: false },
+);
+
 const definitionSchema = new mongoose.Schema(
   {
-    partOfSpeech: String,
-    definition: String,
-    example: String,
+    definitionCefrLevel: String,
+    engDef: String,
+    viDef: String,
+    example: exampleSchema,
+    synonyms: [String],
+    antonyms: [String],
   },
   { _id: false },
 );
 
 const vocabularySchema = new mongoose.Schema(
   {
-    // Core word data
     word: { type: String, required: true, lowercase: true, trim: true },
     partOfSpeech: String,
-    meaning: { type: String, required: true }, // Vietnamese
-    example: String,
-
-    // Rich data (AI-generated, cached)
-    phonetic: String,
+    ipa: String,
     definitions: [definitionSchema],
-    synonyms: [String],
-    antonyms: [String],
-    relatedWords: [String],
-    enrichedBy: { type: String, enum: ["claude", "gemini"] },
-    enrichedAt: Date,
+    audio: String,
   },
   {
     timestamps: true,
@@ -38,7 +40,7 @@ const vocabularySchema = new mongoose.Schema(
   },
 );
 
-vocabularySchema.index({ word: 1, meaning: 1 }, { unique: true });
+vocabularySchema.index({ word: 1, partOfSpeech: 1 }, { unique: true });
 
 export const Vocabulary = mongoose.model(
   "Vocabulary",

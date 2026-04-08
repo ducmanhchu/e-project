@@ -37,14 +37,13 @@ ${level ? `   - Use vocabulary appropriate for ${level} learners in the Vietname
 2. Split into individual sentences and for each sentence:
    - Provide the Vietnamese translation (must match the corresponding part in vietnameseParagraph)
    - Extract 3-5 key vocabulary words/phrases with Vietnamese meanings and English example sentences
-   - Add a brief grammar/vocabulary note in Vietnamese if relevant${level ? ` (suitable for ${level} level)` : ""}
 
 Rules:
 - Split at natural sentence boundaries (., !, ?, but NOT abbreviations like Mr., Dr., U.S.)
 - Keep each sentence as a complete, standalone unit
 - The vietnameseParagraph MUST have the same line breaks and paragraph structure as the original English
 - Each sentence's vietnameseText must be consistent with the vietnameseParagraph (same wording)
-${level === "beginner" ? "- For vocabulary: focus on common, high-frequency words that beginners need to learn\n- For explanations: keep grammar notes simple and clear" : ""}${level === "intermediate" ? "- For vocabulary: include both common words and useful collocations/phrases\n- For explanations: include grammar patterns and usage notes" : ""}${level === "advanced" ? "- For vocabulary: focus on nuanced expressions, idioms, and sophisticated vocabulary\n- For explanations: include advanced grammar points, register differences, and stylistic notes" : ""}
+${level === "beginner" ? "- For vocabulary: focus on common, high-frequency words that beginners need to learn" : ""}${level === "intermediate" ? "- For vocabulary: include both common words and useful collocations/phrases" : ""}${level === "advanced" ? "- For vocabulary: focus on nuanced expressions, idioms, and sophisticated vocabulary" : ""}
 - Vocabulary extraction rules (CRITICAL — follow strictly):
 
   FORMAT RULES:
@@ -114,11 +113,6 @@ async function previewWithClaude(paragraph, context) {
                     description:
                       "Vietnamese translation of the sentence (must be consistent with vietnameseParagraph)",
                   },
-                  explanation: {
-                    type: "string",
-                    description:
-                      "Brief grammar/vocabulary note in Vietnamese (empty string if none)",
-                  },
                   vocabulary: {
                     type: "array",
                     description: "3-5 key vocabulary items from this sentence",
@@ -146,7 +140,6 @@ async function previewWithClaude(paragraph, context) {
                 required: [
                   "referenceAnswer",
                   "vietnameseText",
-                  "explanation",
                   "vocabulary",
                 ],
               },
@@ -187,7 +180,6 @@ async function previewWithGemini(paragraph, context) {
               properties: {
                 referenceAnswer: { type: Type.STRING },
                 vietnameseText: { type: Type.STRING },
-                explanation: { type: Type.STRING },
                 vocabulary: {
                   type: Type.ARRAY,
                   items: {
@@ -202,7 +194,7 @@ async function previewWithGemini(paragraph, context) {
                   },
                 },
               },
-              propertyOrdering: ["referenceAnswer", "vietnameseText", "explanation", "vocabulary"],
+              propertyOrdering: ["referenceAnswer", "vietnameseText", "vocabulary"],
             },
           },
         },

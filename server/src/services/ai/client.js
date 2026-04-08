@@ -9,10 +9,10 @@ import { env } from "@server/config/environment";
  * Order determined by AI_PRIMARY_PROVIDER env: "claude" (default) | "vertex"
  */
 export async function withFallback(label, claudeFn, geminiFn) {
-  const isClaudePrimary = env.AI_PRIMARY_PROVIDER !== "vertex";
+  const isClaudePrimary = !["vertex", "gemini"].includes(env.AI_PRIMARY_PROVIDER);
   const [primaryFn, primaryName, fallbackFn, fallbackName] = isClaudePrimary
-    ? [claudeFn, "claude", geminiFn, "vertex"]
-    : [geminiFn, "vertex", claudeFn, "claude"];
+    ? [claudeFn, "claude", geminiFn, "gemini"]
+    : [geminiFn, "gemini", claudeFn, "claude"];
 
   try {
     const result = await primaryFn();

@@ -43,3 +43,10 @@ serviceAccount.json
 .cursor/
 .agents/
 .cursorignore
+
+# Celo ignore
+front/
+.claude/
+CLAUDE.md
+.playwright-cli
+.playwright-mcp

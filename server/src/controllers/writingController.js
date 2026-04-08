@@ -1,7 +1,7 @@
 import * as writingService from "@server/services/writingService";
 
 /**
- * POST /admin/writings/preview
+ * POST /admin/writing/reverse-translation/preview
  * Bước 1: split + Gemini dịch + vocab, chưa lưu DB
  */
 export async function previewWriting(req, res, next) {
@@ -14,7 +14,7 @@ export async function previewWriting(req, res, next) {
 }
 
 /**
- * POST /admin/writings
+ * POST /admin/writing/reverse-translation
  * Bước 2: lưu lesson draft
  */
 export async function createWriting(req, res, next) {
@@ -27,7 +27,7 @@ export async function createWriting(req, res, next) {
 }
 
 /**
- * POST /admin/writings/:id/dictionary
+ * POST /admin/writing/reverse-translation/:id/dictionary
  * Bước 3: lưu hint pool
  */
 export async function saveDictionary(req, res, next) {
@@ -42,15 +42,3 @@ export async function saveDictionary(req, res, next) {
   }
 }
 
-/**
- * PATCH /admin/writings/:id/publish
- * Bước 4: isPublished = true
- */
-export async function publishWriting(req, res, next) {
-  try {
-    const data = await writingService.publishWriting(req.params.id);
-    res.json({ success: true, data });
-  } catch (e) {
-    next(e);
-  }
-}

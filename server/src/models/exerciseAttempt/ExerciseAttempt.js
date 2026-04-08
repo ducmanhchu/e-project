@@ -33,9 +33,19 @@ const exerciseAttemptSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    lessonType: {
+      type: String,
+      required: true,
+      enum: [
+        "ReverseTranslation",
+        "SeeWrite",
+        "Rewrite",
+        "Exam",
+      ],
+    },
     lessonId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "WritingLesson",
+      refPath: "lessonType",
       required: true,
     },
     status: {

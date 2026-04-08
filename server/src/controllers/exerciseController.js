@@ -2,16 +2,31 @@ import * as exerciseService from "@server/services/exerciseService";
 import { ApiError } from "@server/helpers/ApiError";
 
 /**
- * GET /api/writings
+ * GET /api/writing/reverse-translation
  */
 export async function listLessons(req, res, next) {
   try {
-    const { level, contentType, topic, status, page = 1, limit = 12 } = req.query;
+    const { level, contentType, topic, page = 1, limit = 12 } = req.query;
+    const p = Math.max(1, +page);
+    const l = Math.min(Math.max(1, +limit), 50);
     const data = await exerciseService.listLessons(
-      req.user._id,
-      { level, contentType, topic, status },
-      { page: Math.max(1, +page), limit: Math.min(Math.max(1, +limit), 50) },
+      { level, contentType, topic },
+      { page: p, limit: l },
     );
+    res.json({ success: true, data, pagination: { page: p, limit: l } });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * GET /api/attempts?lessonIds=id1,id2
+ */
+export async function listAttempts(req, res, next) {
+  try {
+    const { lessonIds } = req.query;
+    const ids = lessonIds ? lessonIds.split(",").filter(Boolean) : null;
+    const data = await exerciseService.listAttempts(req.user._id, ids);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -19,11 +34,23 @@ export async function listLessons(req, res, next) {
 }
 
 /**
- * GET /api/writings/:lessonId/exercise
+ * GET /api/writing/reverse-translation/:lessonId
  */
-export async function getExercise(req, res, next) {
+export async function getLesson(req, res, next) {
   try {
-    const data = await exerciseService.getExercise(
+    const data = await exerciseService.getLesson(req.params.lessonId);
+    res.json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * GET /api/attempts/:lessonId
+ */
+export async function getAttempt(req, res, next) {
+  try {
+    const data = await exerciseService.getAttempt(
       req.user._id,
       req.params.lessonId,
     );
@@ -34,7 +61,7 @@ export async function getExercise(req, res, next) {
 }
 
 /**
- * POST /api/writings/:lessonId/exercise/submit
+ * POST /api/attempts/:lessonId/submit
  */
 export async function submitAnswer(req, res, next) {
   try {
@@ -57,7 +84,7 @@ export async function submitAnswer(req, res, next) {
 }
 
 /**
- * GET /api/writings/:lessonId/exercise/progress
+ * GET /api/attempts/:lessonId/progress
  */
 export async function getProgress(req, res, next) {
   try {
@@ -72,7 +99,7 @@ export async function getProgress(req, res, next) {
 }
 
 /**
- * GET /api/writings/:lessonId/exercise/history
+ * GET /api/attempts/:lessonId/history
  */
 export async function getHistory(req, res, next) {
   try {
@@ -85,3 +112,4 @@ export async function getHistory(req, res, next) {
     next(e);
   }
 }
+

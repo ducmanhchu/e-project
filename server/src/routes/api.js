@@ -17,19 +17,22 @@ router.post("/auth/signin", authController.signIn);
 
 router.post("/auth/signout", authController.signOut);
 router.post("/auth/refresh", authController.refreshToken);
-// router.post("/auth/verify", authController.verifyAccount);
 
 router.use(protectedRoute);
 router.get("/me", userController.authMe);
 
-// user exercise routes
-router.get("/writings", exerciseController.listLessons);
-router.get("/writings/:lessonId/exercise", exerciseController.getExercise);
-router.post("/writings/:lessonId/exercise/submit", exerciseController.submitAnswer);
-router.get("/writings/:lessonId/exercise/progress", exerciseController.getProgress);
-router.get("/writings/:lessonId/exercise/history", exerciseController.getHistory);
+// writing — lesson data (read-only for users)
+router.get("/writing/reverse-translation", exerciseController.listLessons);
+router.get("/writing/reverse-translation/:lessonId", exerciseController.getLesson);
 
-// vocabulary routes
+// attempts — user exercise progress
+router.get("/attempts", exerciseController.listAttempts);
+router.get("/attempts/:lessonId", exerciseController.getAttempt);
+router.post("/attempts/:lessonId/submit", exerciseController.submitAnswer);
+router.get("/attempts/:lessonId/progress", exerciseController.getProgress);
+router.get("/attempts/:lessonId/history", exerciseController.getHistory);
+
+// vocabulary
 router.post("/vocabulary", vocabularyController.addWord);
 router.get("/vocabulary", vocabularyController.listWords);
 router.get("/vocabulary/stats", vocabularyController.getStats);
@@ -41,9 +44,9 @@ router.delete("/vocabulary/:wordId", vocabularyController.deleteWord);
 
 // admin routes
 router.use("/admin", authorizeRoles(USER_ROLE.ADMIN));
-router.post("/admin/writings/preview", writingController.previewWriting);
-router.post("/admin/writings", writingController.createWriting);
-router.post("/admin/writings/:id/dictionary", writingController.saveDictionary);
-router.patch("/admin/writings/:id/publish", writingController.publishWriting);
+router.post("/admin/writing/reverse-translation/preview", writingController.previewWriting);
+router.post("/admin/writing/reverse-translation", writingController.createWriting);
+router.post("/admin/writing/reverse-translation/:id/dictionary", writingController.saveDictionary);
+
 
 export default router;

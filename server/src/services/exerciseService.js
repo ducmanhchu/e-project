@@ -1,145 +1,110 @@
-import { WritingLesson } from "@server/models/writing/WritingLesson";
-import { Vocabulary } from "@server/models/vocabulary/Vocabulary";
+import { ReverseTranslation } from "@server/models/writing/ReverseTranslation";
 import { ExerciseAttempt } from "@server/models/exerciseAttempt/ExerciseAttempt";
 import { ApiError } from "@server/helpers/ApiError";
 import { aiGradeAnswer } from "@server/services/ai/gradingProvider";
-import { WRITING_TYPE } from "@server/const/writting";
 
 const COMPLETION_THRESHOLD = 70;
 
-async function buildVocabulary(vocabRefs) {
-  if (!vocabRefs || vocabRefs.length === 0) return [];
-
-  const ids = vocabRefs.map((r) => r.vocabularyId);
-  const vocabs = await Vocabulary.find({ _id: { $in: ids } })
-    .select("word partOfSpeech meaning example")
-    .lean();
-
-  const vocabMap = new Map(vocabs.map((v) => [v._id.toString(), v]));
-
-  return vocabRefs
-    .map((ref) => {
-      const v = vocabMap.get(ref.vocabularyId.toString());
-      if (!v) return null;
-      return {
-        vocabularyId: v._id,
-        word: v.word,
-        partOfSpeech: v.partOfSpeech,
-        meaning: v.meaning,
-        example: v.example,
-        sentenceIndex: ref.sentenceIndex ?? null,
-      };
-    })
-    .filter(Boolean);
-}
-
 /**
- * List published reverse_translation lessons with user progress
+ * GET /writing/reverse-translation — List published lessons
  */
-export async function listLessons(userId, filters, pagination) {
-  const { level, contentType, topic, status } = filters;
+export async function listLessons(filters, pagination) {
+  const { level, contentType, topic } = filters;
   const { page, limit } = pagination;
 
   const query = {
-    isPublished: true,
-    type: WRITING_TYPE.REVERSE_TRANSLATION,
     ...(level && { level }),
     ...(contentType && { contentType }),
     ...(topic && { topic }),
   };
 
   const [lessons, total] = await Promise.all([
-    WritingLesson.find(query)
+    ReverseTranslation.find(query)
       .select(
-        "title level topic contentType totalSentences isPremium createdAt",
+        "title level topic contentType totalSentences createdAt",
       )
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .lean(),
-    WritingLesson.countDocuments(query),
+    ReverseTranslation.countDocuments(query),
   ]);
 
-  // Batch fetch user attempts for these lessons
-  const lessonIds = lessons.map((l) => l._id);
-  const attempts = await ExerciseAttempt.find({
-    userId,
-    lessonId: { $in: lessonIds },
-  })
-    .select("lessonId status completedSentences totalScore")
-    .lean();
-
-  const attemptMap = new Map(attempts.map((a) => [a.lessonId.toString(), a]));
-
-  let results = lessons.map((lesson) => {
-    const attempt = attemptMap.get(lesson._id.toString());
-    return {
-      id: lesson._id,
-      title: lesson.title,
-      level: lesson.level,
-      topic: lesson.topic,
-      contentType: lesson.contentType,
-      totalSentences: lesson.totalSentences,
-      isPremium: lesson.isPremium,
-      createdAt: lesson.createdAt,
-      userProgress: attempt
-        ? {
-            status: attempt.status,
-            completedSentences: attempt.completedSentences,
-            totalScore: attempt.totalScore,
-          }
-        : null,
-    };
-  });
-
-  // Post-query filter by status
-  if (status && status !== "all") {
-    results = results.filter((r) => {
-      if (status === "not_started") return !r.userProgress;
-      if (status === "in_progress")
-        return r.userProgress?.status === "in_progress";
-      if (status === "completed") return r.userProgress?.status === "completed";
-      return true;
-    });
-  }
-
-  return {
-    lessons: results,
-    pagination: {
-      page,
-      limit,
-      total: status && status !== "all" ? results.length : total,
-      totalPages:
-        status && status !== "all"
-          ? Math.ceil(results.length / limit)
-          : Math.ceil(total / limit),
-    },
-  };
+  return lessons.map((lesson) => ({
+    id: lesson._id,
+    title: lesson.title,
+    level: lesson.level,
+    topic: lesson.topic,
+    contentType: lesson.contentType,
+    totalSentences: lesson.totalSentences,
+    createdAt: lesson.createdAt,
+  }));
 }
 
 /**
- * Get exercise detail + upsert attempt
+ * GET /attempts — List all user attempts (optionally filter by lessonIds)
  */
-export async function getExercise(userId, lessonId) {
-  const lesson = await WritingLesson.findOne({
+export async function listAttempts(userId, lessonIds) {
+  const query = { userId };
+  if (lessonIds && lessonIds.length > 0) {
+    query.lessonId = { $in: lessonIds };
+  }
+
+  const attempts = await ExerciseAttempt.find(query)
+    .select("lessonId status completedSentences totalScore")
+    .lean();
+
+  return attempts.map((a) => ({
+    lessonId: a.lessonId,
+    status: a.status,
+    completedSentences: a.completedSentences,
+    totalScore: a.totalScore,
+  }));
+}
+
+/**
+ * GET /writing/reverse-translation/:id — Lesson data only
+ */
+export async function getLesson(lessonId) {
+  const lesson = await ReverseTranslation.findOne({
     _id: lessonId,
-    isPublished: true,
-    type: WRITING_TYPE.REVERSE_TRANSLATION,
   }).lean();
 
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  // Upsert attempt
+  return {
+    id: lesson._id,
+    title: lesson.title,
+    level: lesson.level,
+    topic: lesson.topic,
+    contentType: lesson.contentType,
+    totalSentences: lesson.totalSentences,
+    vietnameseParagraph: lesson.vietnameseParagraph || null,
+    sentences: (lesson.sentences || []).map((s) => ({
+      order: s.order,
+      vietnameseText: s.vietnameseText,
+    })),
+    vocabularyRefs: (lesson.vocabularyRefs || []).map((ref) => ({
+      vocabularyId: ref.vocabularyId,
+      sentenceIndex: ref.sentenceIndex ?? null,
+    })),
+  };
+}
+
+/**
+ * GET /attempts/:lessonId — Upsert + return attempt progress
+ */
+export async function getAttempt(userId, lessonId) {
   let attempt = await ExerciseAttempt.findOne({ userId, lessonId });
   if (!attempt) {
     attempt = await ExerciseAttempt.create({
       userId,
       lessonId,
+      lessonType: "ReverseTranslation",
       sentenceAttempts: [],
     });
   }
 
-  // Build response — strip full submissions, only return last per sentence
   const sentenceAttempts = attempt.sentenceAttempts.map((sa) => ({
     sentenceOrder: sa.sentenceOrder,
     attemptCount: sa.attemptCount,
@@ -152,30 +117,14 @@ export async function getExercise(userId, lessonId) {
   }));
 
   return {
-    lesson: {
-      id: lesson._id,
-      title: lesson.title,
-      level: lesson.level,
-      topic: lesson.topic,
-      contentType: lesson.contentType,
-      totalSentences: lesson.totalSentences,
-      vietnameseParagraph: lesson.content?.vietnameseParagraph || null,
-      sentences: (lesson.content?.sentences || []).map((s) => ({
-        order: s.order,
-        vietnameseText: s.vietnameseText,
-        // explanation hidden until user submits for this sentence
-      })),
-    },
-    vocabulary: await buildVocabulary(lesson.content?.vocabularyRefs),
-    attempt: {
-      id: attempt._id,
-      status: attempt.status,
-      completedSentences: attempt.completedSentences,
-      totalScore: attempt.totalScore,
-      sentenceAttempts,
-    },
+    id: attempt._id,
+    status: attempt.status,
+    completedSentences: attempt.completedSentences,
+    totalScore: attempt.totalScore,
+    sentenceAttempts,
   };
 }
+
 
 /**
  * Submit answer for a sentence — AI grades it
@@ -187,15 +136,13 @@ export async function submitAnswer(
   userAnswer,
 ) {
   // Use .lean() to get raw data including referenceAnswer (toJSON strips it)
-  const lesson = await WritingLesson.findOne({
+  const lesson = await ReverseTranslation.findOne({
     _id: lessonId,
-    isPublished: true,
-    type: WRITING_TYPE.REVERSE_TRANSLATION,
   }).lean();
 
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  const sentences = lesson.content?.sentences || [];
+  const sentences = lesson.sentences || [];
   const sentence = sentences.find((s) => s.order === sentenceOrder);
   if (!sentence)
     throw ApiError.badRequest(`Sentence order ${sentenceOrder} not found`);
@@ -230,6 +177,7 @@ export async function submitAnswer(
     attempt = await ExerciseAttempt.create({
       userId,
       lessonId,
+      lessonType: "ReverseTranslation",
       sentenceAttempts: [],
     });
   }
@@ -288,8 +236,6 @@ export async function submitAnswer(
       feedback: submission.feedback,
       gradedBy: provider,
     },
-    // Return explanation after submit
-    explanation: sentence.explanation || null,
     sentenceProgress: {
       sentenceOrder,
       attemptCount: sa.attemptCount,
@@ -306,22 +252,16 @@ export async function submitAnswer(
 }
 
 /**
- * Get exercise progress
+ * Get exercise progress (attempt only, no lesson query)
  */
 export async function getProgress(userId, lessonId) {
   const attempt = await ExerciseAttempt.findOne({ userId, lessonId });
   if (!attempt) throw ApiError.notFound("No attempt found for this lesson");
 
-  const lesson = await WritingLesson.findById(lessonId)
-    .select("totalSentences title")
-    .lean();
-
   return {
     lessonId,
-    lessonTitle: lesson?.title,
     status: attempt.status,
     completedSentences: attempt.completedSentences,
-    totalSentences: lesson?.totalSentences || 0,
     totalScore: attempt.totalScore,
     completedAt: attempt.completedAt,
     sentenceAttempts: attempt.sentenceAttempts.map((sa) => ({

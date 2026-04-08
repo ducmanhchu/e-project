@@ -10,9 +10,20 @@ export async function addWord(req, res, next) {
   }
 }
 
+/**
+ * GET /api/vocabulary?ids=id1,id2  → batch by IDs
+ * GET /api/vocabulary?status=&search=&page=&limit=  → user list
+ */
 export async function listWords(req, res, next) {
   try {
-    const { status, search, page = 1, limit = 20 } = req.query;
+    const { ids, status, search, page = 1, limit = 20 } = req.query;
+
+    if (ids) {
+      const idList = ids.split(",").filter(Boolean);
+      const data = await vocabularyService.getWordsByIds(idList);
+      return res.json({ success: true, data });
+    }
+
     const data = await vocabularyService.listWords(
       req.user._id,
       { status, search },
