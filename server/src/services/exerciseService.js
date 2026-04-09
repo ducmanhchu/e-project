@@ -231,23 +231,11 @@ export async function submitAnswer(
   await attempt.save();
 
   return {
-    grading: {
-      score,
-      feedback: submission.feedback,
-      gradedBy: provider,
-    },
-    sentenceProgress: {
-      sentenceOrder,
-      attemptCount: sa.attemptCount,
-      bestScore: sa.bestScore,
-      isCompleted: sa.isCompleted,
-    },
-    attemptSummary: {
-      status: attempt.status,
-      completedSentences: attempt.completedSentences,
-      totalSentences: lesson.totalSentences,
-      totalScore: attempt.totalScore,
-    },
+    score,
+    feedback: submission.feedback,
+    gradedBy: provider,
+    bestScore: sa.bestScore,
+    isCompleted: sa.isCompleted,
   };
 }
 

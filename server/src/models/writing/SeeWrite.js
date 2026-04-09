@@ -5,8 +5,8 @@ const seeWriteSchema = new mongoose.Schema(
   {
     ...getBaseWritingFields(),
     mediaUrl: { type: String, required: true },
-    mediaType: { type: String, required: true, enum: ["image", "video"] },
-    requiredKeywords: [String],
+    requiredWords: [String],
+    wordPool: [String],
     minWordCount: Number,
     maxWordCount: Number,
   },

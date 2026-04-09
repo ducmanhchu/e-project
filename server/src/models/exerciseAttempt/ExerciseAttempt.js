@@ -52,6 +52,13 @@ const exerciseAttemptSchema = new mongoose.Schema(
     sentenceAttempts: [sentenceAttemptSchema],
     totalScore: { type: Number, default: 0 },
     completedSentences: { type: Number, default: 0 },
+    keywordQuiz: {
+      selectedKeywords: [String],
+      correct: [String],
+      missed: [String],
+      wrong: [String],
+      score: { type: Number, default: 0 },
+    },
   },
   {
     timestamps: true,

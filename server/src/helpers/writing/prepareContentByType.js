@@ -46,17 +46,17 @@ function prepareReverseTranslation(body) {
 }
 
 function prepareDescribe(body) {
-  validateFields(body, ["mediaUrl", "mediaType"]);
+  validateFields(body, ["mediaUrl"]);
 
-  if (!["image", "video"].includes(body.mediaType)) {
-    throw ApiError.badRequest("mediaType must be 'image' or 'video'");
-  }
+  const requiredWords = body.requiredWords || [];
+  const distractorWords = body.distractorWords || [];
+  const wordPool = [...requiredWords, ...distractorWords];
 
   return {
     fields: {
       mediaUrl: body.mediaUrl,
-      mediaType: body.mediaType,
-      ...(body.requiredKeywords && { requiredKeywords: body.requiredKeywords }),
+      ...(requiredWords.length > 0 && { requiredWords }),
+      ...(wordPool.length > 0 && { wordPool }),
       ...(body.minWordCount != null && { minWordCount: body.minWordCount }),
       ...(body.maxWordCount != null && { maxWordCount: body.maxWordCount }),
     },
