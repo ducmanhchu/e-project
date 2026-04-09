@@ -1,4 +1,5 @@
 import { Type, claude, genai, withFallback } from "./client";
+import { createPartFromUri } from "@google/genai";
 
 const LEVEL_CRITERIA = {
   beginner: `Level: BEGINNER — Be encouraging and lenient.
@@ -193,5 +194,177 @@ export async function aiGradeAnswer(
     "grading",
     () => gradeWithClaude(userAnswer, referenceAnswer, vietnameseText, level, contentType),
     () => gradeWithGemini(userAnswer, referenceAnswer, vietnameseText, level, contentType),
+  );
+}
+
+// --- See & Write grading ---
+
+const SW_LEVEL_CRITERIA = {
+  beginner: `Level: BEGINNER — Be encouraging and lenient.
+- Accept simple sentences (S+V+O), basic adjectives (big, nice, beautiful)
+- Do NOT penalize missing articles, minor preposition errors, or simple tense mistakes
+- Accept short paragraphs (3-5 sentences) as adequate
+- Focus on: Can the reader understand what is being described? Are required words present?
+- A simple but clear description should score 70+`,
+
+  intermediate: `Level: INTERMEDIATE — Balance accuracy with encouragement.
+- Expect varied sentence structures (not just S+V+O repeated)
+- Expect descriptive adjectives/adverbs beyond basic ones
+- Penalize repetitive sentence starters ("There is... There is... There is...")
+- Expect a logical flow between sentences (spatial, temporal, or thematic order)
+- Minor word choice issues acceptable if meaning is clear`,
+
+  advanced: `Level: ADVANCED — Expect polished descriptive writing.
+- Expect rich vocabulary: vivid adjectives, precise verbs, figurative language
+- Expect complex sentences with varied connectors and transitions
+- Expect a cohesive paragraph with clear structure (opening → body → closing impression)
+- Penalize generic descriptions that could apply to any image
+- Expect idiomatic expressions and natural collocations`,
+};
+
+const SEE_WRITE_PROMPT = (userAnswer, lesson, wordCount, level, quizScore) => {
+  const requiredWords = lesson.requiredWords?.length
+    ? lesson.requiredWords.join(", ")
+    : "none";
+  const minWc = lesson.minWordCount ? lesson.minWordCount : null;
+  const maxWc = lesson.maxWordCount ? lesson.maxWordCount : null;
+  const wcRequirement = minWc && maxWc ? `${minWc}–${maxWc} words`
+    : minWc ? `at least ${minWc} words`
+    : maxWc ? `at most ${maxWc} words`
+    : "no specific requirement";
+
+  return `You are a strict but fair English writing evaluator for Vietnamese learners.
+
+Task: "See & Write" — the student views the image below and writes a descriptive paragraph in English.
+Lesson title: "${lesson.title}"
+
+${SW_LEVEL_CRITERIA[level] || SW_LEVEL_CRITERIA.intermediate}
+
+Required words: ${requiredWords}
+Word count requirement: ${wcRequirement}
+Actual word count: ${wordCount}${quizScore != null ? `\nKeyword quiz score: ${quizScore}% (bonus/penalty up to ±5 on final score)` : ""}
+
+Student's answer: "${userAnswer}"
+
+Evaluate based on these 5 criteria:
+
+1. **Content accuracy** (0-25 points): Does the writing accurately describe what is shown in the image?
+   - Compare the student's description against what you see in the image
+   - 25: Accurate, detailed description matching the image
+   - 15-24: Mostly accurate, minor details wrong or missing
+   - 5-14: Partially accurate, significant elements wrong or invented
+   - 0-4: Does not match the image at all
+
+2. **Task completion** (0-20 points): Did the student complete the writing task?
+   - Required words usage: Are they used naturally in context (not just listed)?
+${lesson.requiredWords?.length ? `     Count how many of [${requiredWords}] appear. Deduct proportionally for missing ones.` : "     No required words — evaluate whether the writing is a genuine descriptive paragraph."}
+   - Word count: ${minWc || maxWc ? `Is it within ${wcRequirement}?` : "Is the length reasonable for the topic?"}
+   - 20: All words used naturally, appropriate length
+   - 12-19: Most words used, minor length issue
+   - 5-11: Several words missing or forced, too short/long
+   - 0-4: Most words missing, way off length
+
+3. **Vocabulary & expression** (0-25 points): Is the language rich and descriptive?
+   - Variety: diverse adjectives, verbs, expressions (not repetitive)?
+   - Descriptiveness: vivid details (colors, sizes, positions, feelings, atmosphere)?
+   - Level-appropriateness: vocabulary should match the student's level
+   - 25: Rich, varied, vivid descriptive language
+   - 15-24: Good variety with some repetition or generic words
+   - 5-14: Limited vocabulary, repetitive, mostly basic words
+   - 0-4: Very poor or no descriptive language
+
+4. **Grammar & structure** (0-20 points): Is the English correct and well-structured?
+   - Grammar accuracy (apply level-appropriate standards)
+   - Sentence variety: mix of simple/compound/complex sentences
+   - Paragraph coherence: logical ordering (general → specific, foreground → background)
+   - 20: Excellent grammar, varied structures, coherent flow
+   - 12-19: Minor errors, some variety, generally coherent
+   - 5-11: Multiple errors, repetitive structures, weak organization
+   - 0-4: Severe errors making text hard to understand
+
+5. **Naturalness & creativity** (0-10 points): Does it read well?
+   - Natural English (not word-by-word translation from Vietnamese)?
+   - Any creative element (opening hook, personal impression, figurative language)?
+   - 10: Natural, engaging, shows personal voice
+   - 5-9: Readable but somewhat mechanical or generic
+   - 1-4: Stiff, clearly translated, no personal touch
+   - 0: Incomprehensible
+
+Total = sum of 5 criteria (0-100)${quizScore != null ? " + quiz bonus/penalty (±5)" : ""}.
+
+Rules:
+- If answer is gibberish, copied text, or completely unrelated to the image: score 0-10
+- DO penalize if required words are present but used unnaturally (e.g., just listed at the end)
+- DO penalize if the description contains details that clearly contradict the image
+
+Respond with:
+1. Total score (0-100)
+2. Brief evaluation summary in Vietnamese (1-2 sentences)
+3. 1-3 specific strengths in Vietnamese
+4. 1-3 specific improvements in Vietnamese if score < 100, empty array if perfect`;
+};
+
+async function gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level, quizScore) {
+  const content = [
+    { type: "image", source: { type: "url", url: lesson.mediaUrl } },
+    { type: "text", text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level, quizScore) },
+  ];
+
+  const response = await claude.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 1024,
+    messages: [{ role: "user", content }],
+    tools: [
+      {
+        name: "return_grading",
+        description: "Return the grading result",
+        input_schema: {
+          type: "object",
+          properties: GRADING_SCHEMA,
+          required: ["score", "summary", "strengths", "improvements"],
+        },
+      },
+    ],
+    tool_choice: { type: "tool", name: "return_grading" },
+  });
+
+  const toolBlock = response.content.find((b) => b.type === "tool_use");
+  return toolBlock.input;
+}
+
+async function gradeSeeWriteWithGemini(userAnswer, lesson, wordCount, level, quizScore) {
+  const response = await genai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [
+      { text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level, quizScore) },
+      createPartFromUri(lesson.mediaUrl, "image/jpeg"),
+    ],
+    config: {
+      responseMimeType: "application/json",
+      responseJsonSchema: {
+        type: Type.OBJECT,
+        properties: {
+          score: { type: Type.NUMBER },
+          summary: { type: Type.STRING },
+          strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+          improvements: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+        propertyOrdering: ["score", "summary", "strengths", "improvements"],
+      },
+    },
+  });
+
+  return JSON.parse(response.text);
+}
+
+/**
+ * Grade See & Write answer: Claude (primary) → Gemini (fallback)
+ */
+export async function aiGradeSeeWrite(userAnswer, lesson, level = "intermediate", quizScore = null) {
+  const wordCount = userAnswer.trim().split(/\s+/).filter(Boolean).length;
+  return withFallback(
+    "grading-see-write",
+    () => gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level, quizScore),
+    () => gradeSeeWriteWithGemini(userAnswer, lesson, wordCount, level, quizScore),
   );
 }
