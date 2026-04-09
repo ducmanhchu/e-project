@@ -1,12 +1,12 @@
 import { Link } from "react-router";
 import { ChevronDown, LogIn, Moon, Pen, Speech, Sun } from "lucide-react";
 
-import { useTheme } from "@/shared/hooks/useTheme";
+import { useTheme } from "@/shared/hooks/use-theme";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "@/shared/components/ui/collapsible";
+} from "@shared/components/ui/collapsible";
 import {
 	Sidebar,
 	SidebarContent,
@@ -19,7 +19,7 @@ import {
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarMenuSubItem,
-} from "@/shared/components/ui/sidebar";
+} from "@shared/components/ui/sidebar";
 
 const features = [
 	{
@@ -41,7 +41,7 @@ const features = [
 	},
 ];
 
-export default function AppSidebar() {
+export function AppSidebar() {
 	const { theme, toggleTheme } = useTheme();
 
 	return (

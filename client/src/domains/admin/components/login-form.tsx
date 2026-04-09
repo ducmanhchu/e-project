@@ -1,14 +1,14 @@
-import { cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/components/ui/button";
+import { cn } from "@shared/lib/utils";
+import { Button } from "@shared/components/ui/button";
 import {
 	Card,
 	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
-} from "@/shared/components/ui/card";
-import { Field, FieldGroup, FieldLabel } from "@/shared/components/ui/field";
-import { Input } from "@/shared/components/ui/input";
+} from "@shared/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@shared/components/ui/field";
+import { Input } from "@shared/components/ui/input";
 
 export function LoginForm({
 	className,

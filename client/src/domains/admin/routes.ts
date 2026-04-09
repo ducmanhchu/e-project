@@ -1,11 +1,12 @@
 import type { RouteObject } from "react-router";
 import { redirect } from "react-router";
-import AdminLayout from "./layouts/AdminLayout";
-import Login from "./pages/Login";
-import BackTranslate from "./pages/BackTranslate";
-import SeeAndWrite from "./pages/SeeAndWrite";
-import Paraphrase from "./pages/Paraphrase";
-import Conversation from "./pages/Conversation";
+
+import { AdminLayout } from "./layouts/admin-layout";
+import { Login } from "./pages/login";
+import { BackTranslate } from "./pages/back-translate";
+import { SeeAndWrite } from "./pages/see-and-write";
+import { Paraphrase } from "./pages/paraphrase";
+import { Conversation } from "./pages/conversation";
 
 export const adminRoutes: RouteObject[] = [
 	{

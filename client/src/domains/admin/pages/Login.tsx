@@ -1,10 +1,10 @@
 import { Sun, Moon } from "lucide-react";
 
-import { LoginForm } from "@/domains/admin/components/login-form";
-import { useTheme } from "@/shared/hooks/useTheme";
-import { Button } from "@/shared/components/ui/button";
+import { LoginForm } from "@admin/components/login-form";
+import { useTheme } from "@/shared/hooks/use-theme";
+import { Button } from "@shared/components/ui/button";
 
-export default function Login() {
+export function Login() {
 	const { theme, setTheme } = useTheme();
 
 	return (

@@ -8,25 +8,24 @@
 			"category": "Daily Life",
 			"content": [
 				{
-					"sentence_idx": 1,
-					"text_vn": "Tôi thức dậy lúc 6 giờ sáng mỗi ngày.",
-					"text_en": "I wake up at 6 AM every day.",
+					"sentenceIdx": 1,
+					"textVn": "Tôi thức dậy lúc 6 giờ sáng mỗi ngày.",
+					"textEn": "I wake up at 6 AM every day.",
 					"hint": "I w___ up at 6 AM e____ day."
 				},
 				{
-					"sentence_idx": 2,
-					"text_vn": "Sau đó, tôi đánh răng và rửa mặt.",
-					"text_en": "After that, I brush my teeth and wash my face.",
+					"sentenceIdx": 2,
+					"textVn": "Sau đó, tôi đánh răng và rửa mặt.",
+					"textEn": "After that, I brush my teeth and wash my face.",
 					"hint": "A____ that, I b____ my teeth and w___ my face."
 				},
 				{
-					"sentence_idx": 3,
-					"text_vn": "Cuối cùng, tôi ăn sáng trước khi đi làm.",
-					"text_en": "Finally, I have breakfast before going to work.",
+					"sentenceIdx": 3,
+					"textVn": "Cuối cùng, tôi ăn sáng trước khi đi làm.",
+					"textEn": "Finally, I have breakfast before going to work.",
 					"hint": "F______, I have b________ before going to work."
 				}
 			],
-			"current_sentence": 1,
 			"vocab": [
 				{
 					"word": "wake up",
@@ -56,25 +55,24 @@
 			"category": "Daily Life",
 			"content": [
 				{
-					"sentence_idx": 1,
-					"text_vn": "Giao thông ở thành phố thường rất tắc nghẽn vào giờ cao điểm.",
-					"text_en": "Traffic in the city is usually very congested during rush hour.",
+					"sentenceIdx": 1,
+					"textVn": "Giao thông ở thành phố thường rất tắc nghẽn vào giờ cao điểm.",
+					"textEn": "Traffic in the city is usually very congested during rush hour.",
 					"hint": "T______ in the city is usually very c________ during r___ h___."
 				},
 				{
-					"sentence_idx": 2,
-					"text_vn": "Tôi thường mất khoảng 45 phút để đến văn phòng bằng xe buýt.",
-					"text_en": "It usually takes me about 45 minutes to get to the office by bus.",
+					"sentenceIdx": 2,
+					"textVn": "Tôi thường mất khoảng 45 phút để đến văn phòng bằng xe buýt.",
+					"textEn": "It usually takes me about 45 minutes to get to the office by bus.",
 					"hint": "It usually t____ me about 45 minutes to get to the o_____ by bus."
 				},
 				{
-					"sentence_idx": 3,
-					"text_vn": "Đôi khi, tôi đi chung xe với đồng nghiệp để tiết kiệm chi phí.",
-					"text_en": "Sometimes, I carpool with my colleagues to save costs.",
+					"sentenceIdx": 3,
+					"textVn": "Đôi khi, tôi đi chung xe với đồng nghiệp để tiết kiệm chi phí.",
+					"textEn": "Sometimes, I carpool with my colleagues to save costs.",
 					"hint": "Sometimes, I c______ with my c_________ to save costs."
 				}
 			],
-			"current_sentence": 1,
 			"vocab": [
 				{
 					"word": "congested",
@@ -104,25 +102,24 @@
 			"category": "Daily Life",
 			"content": [
 				{
-					"sentence_idx": 1,
-					"text_vn": "Hôm nay tôi sẽ nấu một bữa tối đơn giản cho gia đình.",
-					"text_en": "Today I will cook a simple dinner for my family.",
+					"sentenceIdx": 1,
+					"textVn": "Hôm nay tôi sẽ nấu một bữa tối đơn giản cho gia đình.",
+					"textEn": "Today I will cook a simple dinner for my family.",
 					"hint": "Today I will c___ a s_____ dinner for my family."
 				},
 				{
-					"sentence_idx": 2,
-					"text_vn": "Tôi đã mua một ít thịt gà và rau tươi ở chợ.",
-					"text_en": "I bought some chicken and fresh vegetables at the market.",
+					"sentenceIdx": 2,
+					"textVn": "Tôi đã mua một ít thịt gà và rau tươi ở chợ.",
+					"textEn": "I bought some chicken and fresh vegetables at the market.",
 					"hint": "I b_____ some chicken and f____ vegetables at the market."
 				},
 				{
-					"sentence_idx": 3,
-					"text_vn": "Món ăn yêu thích của tôi là gà xào sả ớt.",
-					"text_en": "My favorite dish is stir-fried chicken with lemongrass and chili.",
+					"sentenceIdx": 3,
+					"textVn": "Món ăn yêu thích của tôi là gà xào sả ớt.",
+					"textEn": "My favorite dish is stir-fried chicken with lemongrass and chili.",
 					"hint": "My f_______ dish is s___-f____ chicken with lemongrass and chili."
 				}
 			],
-			"current_sentence": 1,
 			"vocab": [
 				{
 					"word": "simple",
@@ -152,25 +149,24 @@
 			"category": "Daily Life",
 			"content": [
 				{
-					"sentence_idx": 1,
-					"text_vn": "Cuối tuần là thời gian lý tưởng để dọn dẹp nhà cửa.",
-					"text_en": "The weekend is the ideal time to clean the house.",
+					"sentenceIdx": 1,
+					"textVn": "Cuối tuần là thời gian lý tưởng để dọn dẹp nhà cửa.",
+					"textEn": "The weekend is the ideal time to clean the house.",
 					"hint": "The weekend is the i____ time to c____ the house."
 				},
 				{
-					"sentence_idx": 2,
-					"text_vn": "Tôi bắt đầu bằng việc hút bụi phòng khách và phòng ngủ.",
-					"text_en": "I start by vacuuming the living room and bedroom.",
+					"sentenceIdx": 2,
+					"textVn": "Tôi bắt đầu bằng việc hút bụi phòng khách và phòng ngủ.",
+					"textEn": "I start by vacuuming the living room and bedroom.",
 					"hint": "I start by v________ the living room and bedroom."
 				},
 				{
-					"sentence_idx": 3,
-					"text_vn": "Sau khi lau sàn, tôi mang quần áo đi giặt.",
-					"text_en": "After mopping the floor, I take the clothes to do the laundry.",
+					"sentenceIdx": 3,
+					"textVn": "Sau khi lau sàn, tôi mang quần áo đi giặt.",
+					"textEn": "After mopping the floor, I take the clothes to do the laundry.",
 					"hint": "After m______ the floor, I take the clothes to do the l______."
 				}
 			],
-			"current_sentence": 1,
 			"vocab": [
 				{
 					"word": "ideal",
@@ -200,25 +196,24 @@
 			"category": "Daily Life",
 			"content": [
 				{
-					"sentence_idx": 1,
-					"text_vn": "Làm việc từ xa đòi hỏi kỷ luật bản thân và kỹ năng quản lý thời gian tốt.",
-					"text_en": "Working remotely requires self-discipline and good time management skills.",
+					"sentenceIdx": 1,
+					"textVn": "Làm việc từ xa đòi hỏi kỷ luật bản thân và kỹ năng quản lý thời gian tốt.",
+					"textEn": "Working remotely requires self-discipline and good time management skills.",
 					"hint": "Working r_______ requires s___-d_________ and good time management skills."
 				},
 				{
-					"sentence_idx": 2,
-					"text_vn": "Tôi thiết lập một góc làm việc yên tĩnh để tránh bị phân tâm.",
-					"text_en": "I set up a quiet workspace to avoid being distracted.",
+					"sentenceIdx": 2,
+					"textVn": "Tôi thiết lập một góc làm việc yên tĩnh để tránh bị phân tâm.",
+					"textEn": "I set up a quiet workspace to avoid being distracted.",
 					"hint": "I set up a q____ workspace to a____ being d_________."
 				},
 				{
-					"sentence_idx": 3,
-					"text_vn": "Các cuộc họp trực tuyến được tiến hành qua phần mềm chuyên dụng.",
-					"text_en": "Online meetings are conducted via specialized software.",
+					"sentenceIdx": 3,
+					"textVn": "Các cuộc họp trực tuyến được tiến hành qua phần mềm chuyên dụng.",
+					"textEn": "Online meetings are conducted via specialized software.",
 					"hint": "Online meetings are c________ via s__________ software."
 				}
 			],
-			"current_sentence": 1,
 			"vocab": [
 				{
 					"word": "remotely",
@@ -248,25 +243,24 @@
 			"category": "Daily Life",
 			"content": [
 				{
-					"sentence_idx": 1,
-					"text_vn": "Sau một ngày dài, tôi thích thư giãn trên ghế sofa.",
-					"text_en": "After a long day, I like to relax on the sofa.",
+					"sentenceIdx": 1,
+					"textVn": "Sau một ngày dài, tôi thích thư giãn trên ghế sofa.",
+					"textEn": "After a long day, I like to relax on the sofa.",
 					"hint": "After a l___ day, I like to r____ on the sofa."
 				},
 				{
-					"sentence_idx": 2,
-					"text_vn": "Tôi thường xem một bộ phim hài hoặc đọc vài trang sách.",
-					"text_en": "I usually watch a comedy movie or read a few pages of a book.",
+					"sentenceIdx": 2,
+					"textVn": "Tôi thường xem một bộ phim hài hoặc đọc vài trang sách.",
+					"textEn": "I usually watch a comedy movie or read a few pages of a book.",
 					"hint": "I usually watch a c_____ movie or read a few p____ of a book."
 				},
 				{
-					"sentence_idx": 3,
-					"text_vn": "Thói quen này giúp tôi giảm căng thẳng và ngủ ngon hơn.",
-					"text_en": "This habit helps me reduce stress and sleep better.",
+					"sentenceIdx": 3,
+					"textVn": "Thói quen này giúp tôi giảm căng thẳng và ngủ ngon hơn.",
+					"textEn": "This habit helps me reduce stress and sleep better.",
 					"hint": "This h____ helps me r_____ stress and sleep better."
 				}
 			],
-			"current_sentence": 1,
 			"vocab": [
 				{
 					"word": "relax",
@@ -296,25 +290,24 @@
 			"category": "Daily Life",
 			"content": [
 				{
-					"sentence_idx": 1,
-					"text_vn": "Chúng tôi hẹn gặp nhau tại một quán cà phê quen thuộc vào chiều thứ Bảy.",
-					"text_en": "We arranged to meet at a familiar coffee shop on Saturday afternoon.",
+					"sentenceIdx": 1,
+					"textVn": "Chúng tôi hẹn gặp nhau tại một quán cà phê quen thuộc vào chiều thứ Bảy.",
+					"textEn": "We arranged to meet at a familiar coffee shop on Saturday afternoon.",
 					"hint": "We a_______ to meet at a f_______ coffee shop on Saturday afternoon."
 				},
 				{
-					"sentence_idx": 2,
-					"text_vn": "Tôi gọi một ly cà phê đen đá, còn bạn tôi chọn sinh tố bơ.",
-					"text_en": "I ordered an iced black coffee, while my friend chose an avocado smoothie.",
+					"sentenceIdx": 2,
+					"textVn": "Tôi gọi một ly cà phê đen đá, còn bạn tôi chọn sinh tố bơ.",
+					"textEn": "I ordered an iced black coffee, while my friend chose an avocado smoothie.",
 					"hint": "I o______ an iced black coffee, while my friend c____ an avocado smoothie."
 				},
 				{
-					"sentence_idx": 3,
-					"text_vn": "Chúng tôi đã trò chuyện rất nhiều về công việc và cuộc sống.",
-					"text_en": "We chatted a lot about work and life.",
+					"sentenceIdx": 3,
+					"textVn": "Chúng tôi đã trò chuyện rất nhiều về công việc và cuộc sống.",
+					"textEn": "We chatted a lot about work and life.",
 					"hint": "We c______ a lot about work and life."
 				}
 			],
-			"current_sentence": 1,
 			"vocab": [
 				{
 					"word": "familiar",
@@ -344,25 +337,24 @@
 			"category": "Daily Life",
 			"content": [
 				{
-					"sentence_idx": 1,
-					"text_vn": "Duy trì thói quen tập thể dục đều đặn là rất quan trọng cho sức khỏe.",
-					"text_en": "Maintaining a regular exercise routine is very important for health.",
+					"sentenceIdx": 1,
+					"textVn": "Duy trì thói quen tập thể dục đều đặn là rất quan trọng cho sức khỏe.",
+					"textEn": "Maintaining a regular exercise routine is very important for health.",
 					"hint": "M__________ a r______ exercise r______ is very important for health."
 				},
 				{
-					"sentence_idx": 2,
-					"text_vn": "Hôm nay là ngày tập lưng và tay trước của tôi tại phòng gym.",
-					"text_en": "Today is my back and bicep workout day at the gym.",
+					"sentenceIdx": 2,
+					"textVn": "Hôm nay là ngày tập lưng và tay trước của tôi tại phòng gym.",
+					"textEn": "Today is my back and bicep workout day at the gym.",
 					"hint": "Today is my b___ and b____ workout day at the gym."
 				},
 				{
-					"sentence_idx": 3,
-					"text_vn": "Tôi luôn khởi động kỹ để tránh gặp chấn thương trong quá trình nâng tạ.",
-					"text_en": "I always warm up thoroughly to avoid getting injured while lifting weights.",
+					"sentenceIdx": 3,
+					"textVn": "Tôi luôn khởi động kỹ để tránh gặp chấn thương trong quá trình nâng tạ.",
+					"textEn": "I always warm up thoroughly to avoid getting injured while lifting weights.",
 					"hint": "I always warm up t_________ to avoid getting i______ while lifting weights."
 				}
 			],
-			"current_sentence": 1,
 			"vocab": [
 				{
 					"word": "routine",
@@ -392,25 +384,24 @@
 			"category": "Daily Life",
 			"content": [
 				{
-					"sentence_idx": 1,
-					"text_vn": "Tôi cần đi siêu thị để mua đồ dùng thiết yếu cho tuần tới.",
-					"text_en": "I need to go to the supermarket to buy essential supplies for next week.",
+					"sentenceIdx": 1,
+					"textVn": "Tôi cần đi siêu thị để mua đồ dùng thiết yếu cho tuần tới.",
+					"textEn": "I need to go to the supermarket to buy essential supplies for next week.",
 					"hint": "I need to go to the supermarket to buy e________ supplies for next week."
 				},
 				{
-					"sentence_idx": 2,
-					"text_vn": "Tôi luôn đẩy xe đẩy dọc theo các kệ hàng hóa để tìm những thứ trong danh sách.",
-					"text_en": "I always push the cart along the aisles to find the things on the list.",
+					"sentenceIdx": 2,
+					"textVn": "Tôi luôn đẩy xe đẩy dọc theo các kệ hàng hóa để tìm những thứ trong danh sách.",
+					"textEn": "I always push the cart along the aisles to find the things on the list.",
 					"hint": "I always push the c___ along the a_____ to find the things on the list."
 				},
 				{
-					"sentence_idx": 3,
-					"text_vn": "Sau khi lấy đủ đồ, tôi xếp hàng tại quầy thu ngân để thanh toán.",
-					"text_en": "After getting enough items, I line up at the checkout counter to pay.",
+					"sentenceIdx": 3,
+					"textVn": "Sau khi lấy đủ đồ, tôi xếp hàng tại quầy thu ngân để thanh toán.",
+					"textEn": "After getting enough items, I line up at the checkout counter to pay.",
 					"hint": "After getting enough items, I line up at the c_______ c______ to pay."
 				}
 			],
-			"current_sentence": 1,
 			"vocab": [
 				{
 					"word": "essential",
@@ -440,25 +431,24 @@
 			"category": "Daily Life",
 			"content": [
 				{
-					"sentence_idx": 1,
-					"text_vn": "Hầu hết chúng ta đều dành quá nhiều thời gian để lướt mạng xã hội mỗi ngày.",
-					"text_en": "Most of us spend too much time scrolling through social media every day.",
+					"sentenceIdx": 1,
+					"textVn": "Hầu hết chúng ta đều dành quá nhiều thời gian để lướt mạng xã hội mỗi ngày.",
+					"textEn": "Most of us spend too much time scrolling through social media every day.",
 					"hint": "Most of us spend too much time s________ through social media every day."
 				},
 				{
-					"sentence_idx": 2,
-					"text_vn": "Điện thoại thông minh đã thay đổi cách chúng ta giao tiếp và tiếp cận thông tin.",
-					"text_en": "Smartphones have changed the way we communicate and access information.",
+					"sentenceIdx": 2,
+					"textVn": "Điện thoại thông minh đã thay đổi cách chúng ta giao tiếp và tiếp cận thông tin.",
+					"textEn": "Smartphones have changed the way we communicate and access information.",
 					"hint": "Smartphones have changed the way we c__________ and a_____ information."
 				},
 				{
-					"sentence_idx": 3,
-					"text_vn": "Tôi đang cố gắng giảm thời gian sử dụng màn hình trước khi đi ngủ.",
-					"text_en": "I am trying to reduce my screen time before going to sleep.",
+					"sentenceIdx": 3,
+					"textVn": "Tôi đang cố gắng giảm thời gian sử dụng màn hình trước khi đi ngủ.",
+					"textEn": "I am trying to reduce my screen time before going to sleep.",
 					"hint": "I am trying to r_____ my s_____ t___ before going to sleep."
 				}
 			],
-			"current_sentence": 1,
 			"vocab": [
 				{
 					"word": "scroll",
