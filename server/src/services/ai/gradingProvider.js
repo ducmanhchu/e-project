@@ -235,73 +235,114 @@ const SEE_WRITE_PROMPT = (userAnswer, lesson, wordCount, level, quizScore) => {
 
   return `You are a strict but fair English writing evaluator for Vietnamese learners.
 
-Task: "See & Write" — the student views the image below and writes a descriptive paragraph in English.
+Task: "See & Write" — the student views an image and writes a descriptive paragraph in English.
+This is PARAGRAPH-LEVEL evaluation. Evaluate the writing as a whole piece.
 Lesson title: "${lesson.title}"
 
 ${SW_LEVEL_CRITERIA[level] || SW_LEVEL_CRITERIA.intermediate}
 
-Required words: ${requiredWords}
+Required keywords: ${requiredWords}
 Word count requirement: ${wcRequirement}
 Actual word count: ${wordCount}${quizScore != null ? `\nKeyword quiz score: ${quizScore}% (bonus/penalty up to ±5 on final score)` : ""}
 
-Student's answer: "${userAnswer}"
+Student's writing:
+"""
+${userAnswer}
+"""
 
-Evaluate based on these 5 criteria:
+═══ PART 1: SCORING (4 criteria, IELTS-aligned) ═══
 
-1. **Content accuracy** (0-25 points): Does the writing accurately describe what is shown in the image?
-   - Compare the student's description against what you see in the image
-   - 25: Accurate, detailed description matching the image
-   - 15-24: Mostly accurate, minor details wrong or missing
-   - 5-14: Partially accurate, significant elements wrong or invented
-   - 0-4: Does not match the image at all
+1. **Task Achievement** (0-25 points):
+   - Does the writing accurately describe what is shown in the image?
+   - Are required keywords [${requiredWords}] used naturally in context (not just listed)?
+   - Is the word count within ${wcRequirement}?
+   - 22-25: Accurate description, all keywords natural, appropriate length
+   - 16-21: Mostly accurate, 1-2 keywords missing/forced, minor length issue
+   - 9-15: Partially accurate, several keywords missing, length off
+   - 0-8: Does not match image, most keywords missing
 
-2. **Task completion** (0-20 points): Did the student complete the writing task?
-   - Required words usage: Are they used naturally in context (not just listed)?
-${lesson.requiredWords?.length ? `     Count how many of [${requiredWords}] appear. Deduct proportionally for missing ones.` : "     No required words — evaluate whether the writing is a genuine descriptive paragraph."}
-   - Word count: ${minWc || maxWc ? `Is it within ${wcRequirement}?` : "Is the length reasonable for the topic?"}
-   - 20: All words used naturally, appropriate length
-   - 12-19: Most words used, minor length issue
-   - 5-11: Several words missing or forced, too short/long
-   - 0-4: Most words missing, way off length
+2. **Coherence & Cohesion** (0-25 points):
+   - Logical paragraph structure (opening → details → impression)?
+   - Smooth transitions between sentences (spatial, thematic)?
+   - Connectors used (In the foreground, Furthermore, Meanwhile...)?
+   - No repetition of ideas or sentences?
+   - 22-25: Clear structure, smooth flow, effective transitions
+   - 16-21: Generally coherent, transitions could improve
+   - 9-15: Weak organization, few transitions, some repetition
+   - 0-8: No structure, hard to follow
 
-3. **Vocabulary & expression** (0-25 points): Is the language rich and descriptive?
-   - Variety: diverse adjectives, verbs, expressions (not repetitive)?
-   - Descriptiveness: vivid details (colors, sizes, positions, feelings, atmosphere)?
-   - Level-appropriateness: vocabulary should match the student's level
-   - 25: Rich, varied, vivid descriptive language
-   - 15-24: Good variety with some repetition or generic words
-   - 5-14: Limited vocabulary, repetitive, mostly basic words
-   - 0-4: Very poor or no descriptive language
+3. **Lexical Resource** (0-25 points):
+   - Vocabulary variety: diverse adjectives, verbs, descriptive expressions?
+   - Precision: specific words (towering, crimson) vs generic (big, nice)?
+   - Collocations: natural word combinations?
+   - Level-appropriate vocabulary?
+   - 22-25: Rich, varied, precise descriptive language
+   - 16-21: Good variety, some generic or repetitive words
+   - 9-15: Limited vocabulary, mostly basic words
+   - 0-8: Very poor, repetitive, or inappropriate vocabulary
 
-4. **Grammar & structure** (0-20 points): Is the English correct and well-structured?
-   - Grammar accuracy (apply level-appropriate standards)
-   - Sentence variety: mix of simple/compound/complex sentences
-   - Paragraph coherence: logical ordering (general → specific, foreground → background)
-   - 20: Excellent grammar, varied structures, coherent flow
-   - 12-19: Minor errors, some variety, generally coherent
-   - 5-11: Multiple errors, repetitive structures, weak organization
-   - 0-4: Severe errors making text hard to understand
+4. **Grammatical Range & Accuracy** (0-25 points):
+   - Grammar correctness (apply level-appropriate standards)
+   - Sentence variety: mix of simple, compound, complex sentences?
+   - Proper use of tenses, articles, prepositions?
+   - 22-25: Excellent grammar, varied structures, rare errors
+   - 16-21: Minor errors, some variety in structures
+   - 9-15: Frequent errors, repetitive structures
+   - 0-8: Severe errors making text hard to understand
 
-5. **Naturalness & creativity** (0-10 points): Does it read well?
-   - Natural English (not word-by-word translation from Vietnamese)?
-   - Any creative element (opening hook, personal impression, figurative language)?
-   - 10: Natural, engaging, shows personal voice
-   - 5-9: Readable but somewhat mechanical or generic
-   - 1-4: Stiff, clearly translated, no personal touch
-   - 0: Incomprehensible
+Total = sum of 4 criteria (0-100)${quizScore != null ? " + quiz bonus/penalty (±5)" : ""}.
 
-Total = sum of 5 criteria (0-100)${quizScore != null ? " + quiz bonus/penalty (±5)" : ""}.
+═══ PART 2: ENHANCED VERSION ═══
 
-Rules:
-- If answer is gibberish, copied text, or completely unrelated to the image: score 0-10
-- DO penalize if required words are present but used unnaturally (e.g., just listed at the end)
-- DO penalize if the description contains details that clearly contradict the image
+Rewrite the student's paragraph as an improved, polished version that:
+- Fixes ALL grammar, spelling, and punctuation errors
+- Improves vocabulary (upgrade generic words to more descriptive ones)
+- Improves coherence (add transitions, reorder if needed)
+- Keeps the student's original ideas and structure as much as possible
+- Stays within the word count requirement (${wcRequirement})
+- Uses ALL required keywords naturally: [${requiredWords}]
 
-Respond with:
-1. Total score (0-100)
-2. Brief evaluation summary in Vietnamese (1-2 sentences)
-3. 1-3 specific strengths in Vietnamese
-4. 1-3 specific improvements in Vietnamese if score < 100, empty array if perfect`;
+═══ PART 3: CORRECTIONS ═══
+
+List 1-3 specific corrections: quote the problematic phrase from student's writing, provide the better alternative, and explain in Vietnamese why. Empty array if perfect.
+
+═══ OUTPUT ═══
+
+For each criterion: name, score, maxScore (25), comment in Vietnamese.
+Also: total score, summary in Vietnamese (2-3 sentences), enhanced version, corrections.`;
+};
+
+const SW_GRADING_SCHEMA = {
+  score: { type: "number", description: "Total score 0-100" },
+  summary: { type: "string", description: "Overall evaluation summary in Vietnamese (2-3 sentences)" },
+  enhancedVersion: { type: "string", description: "AI-polished version of the student's writing" },
+  criteria: {
+    type: "array",
+    description: "4 IELTS-aligned criteria",
+    items: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Criterion name: task_achievement | coherence_cohesion | lexical_resource | grammatical_range_accuracy" },
+        score: { type: "number", description: "Score for this criterion (0-25)" },
+        maxScore: { type: "number", description: "Always 25" },
+        comment: { type: "string", description: "Specific comment in Vietnamese explaining this score" },
+      },
+      required: ["name", "score", "maxScore", "comment"],
+    },
+  },
+  corrections: {
+    type: "array",
+    description: "1-3 concrete corrections. Empty if perfect.",
+    items: {
+      type: "object",
+      properties: {
+        original: { type: "string", description: "Problematic phrase quoted from student's writing" },
+        suggestion: { type: "string", description: "Better alternative in English" },
+        explanation: { type: "string", description: "Brief explanation in Vietnamese" },
+      },
+      required: ["original", "suggestion", "explanation"],
+    },
+  },
 };
 
 async function gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level, quizScore) {
@@ -312,7 +353,7 @@ async function gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level, qui
 
   const response = await claude.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1024,
+    max_tokens: 2048,
     messages: [{ role: "user", content }],
     tools: [
       {
@@ -320,8 +361,8 @@ async function gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level, qui
         description: "Return the grading result",
         input_schema: {
           type: "object",
-          properties: GRADING_SCHEMA,
-          required: ["score", "summary", "strengths", "improvements"],
+          properties: SW_GRADING_SCHEMA,
+          required: ["score", "summary", "enhancedVersion", "criteria", "corrections"],
         },
       },
     ],
@@ -346,10 +387,34 @@ async function gradeSeeWriteWithGemini(userAnswer, lesson, wordCount, level, qui
         properties: {
           score: { type: Type.NUMBER },
           summary: { type: Type.STRING },
-          strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
-          improvements: { type: Type.ARRAY, items: { type: Type.STRING } },
+          enhancedVersion: { type: Type.STRING },
+          criteria: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING },
+                score: { type: Type.NUMBER },
+                maxScore: { type: Type.NUMBER },
+                comment: { type: Type.STRING },
+              },
+              propertyOrdering: ["name", "score", "maxScore", "comment"],
+            },
+          },
+          corrections: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                original: { type: Type.STRING },
+                suggestion: { type: Type.STRING },
+                explanation: { type: Type.STRING },
+              },
+              propertyOrdering: ["original", "suggestion", "explanation"],
+            },
+          },
         },
-        propertyOrdering: ["score", "summary", "strengths", "improvements"],
+        propertyOrdering: ["score", "summary", "enhancedVersion", "criteria", "corrections"],
       },
     },
   });

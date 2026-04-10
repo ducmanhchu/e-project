@@ -6,6 +6,7 @@ import * as exerciseController from "@server/controllers/exerciseController";
 import * as seeWriteController from "@server/controllers/seeWriteController";
 import * as vocabularyController from "@server/controllers/vocabularyController";
 import * as uploadController from "@server/controllers/uploadController";
+import * as seeWriteAdminController from "@server/controllers/seeWriteAdminController";
 import multer from "multer";
 import {
   protectedRoute,
@@ -62,5 +63,10 @@ router.post("/admin/writing/reverse-translation/preview", writingController.prev
 router.post("/admin/writing/reverse-translation", writingController.createWriting);
 router.post("/admin/writing/reverse-translation/:id/dictionary", writingController.saveDictionary);
 
+// admin see & write
+router.get("/admin/writing/see-and-write", seeWriteAdminController.listLessons);
+router.post("/admin/writing/see-and-write", seeWriteAdminController.createLesson);
+router.get("/admin/writing/see-and-write/:id", seeWriteAdminController.getLesson);
+router.put("/admin/writing/see-and-write/:id", seeWriteAdminController.updateLesson);
 
 export default router;

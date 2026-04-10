@@ -215,8 +215,9 @@ export async function submitAnswer(userId, lessonId, userAnswer) {
     score,
     feedback: {
       summary: grading.summary,
-      strengths: grading.strengths || [],
-      improvements: grading.improvements || [],
+      enhancedVersion: grading.enhancedVersion || null,
+      criteria: grading.criteria || [],
+      corrections: grading.corrections || [],
     },
     gradedBy: provider,
     submittedAt: new Date(),

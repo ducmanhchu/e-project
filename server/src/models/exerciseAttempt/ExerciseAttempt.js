@@ -4,11 +4,7 @@ const submissionSchema = new mongoose.Schema(
   {
     userAnswer: { type: String, required: true },
     score: { type: Number, min: 0, max: 100, required: true },
-    feedback: {
-      summary: String,
-      strengths: [String],
-      improvements: [String],
-    },
+    feedback: { type: mongoose.Schema.Types.Mixed },
     gradedBy: { type: String, enum: ["claude", "gemini"] },
     submittedAt: { type: Date, default: Date.now },
   },
