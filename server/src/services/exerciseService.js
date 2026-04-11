@@ -34,15 +34,18 @@ export async function listLessons(filters, pagination) {
     ReverseTranslation.countDocuments(query),
   ]);
 
-  return lessons.map((lesson) => ({
-    id: lesson._id,
-    title: lesson.title,
-    level: lesson.level,
-    topic: lesson.topic,
-    contentType: lesson.contentType,
-    totalSentences: lesson.totalSentences,
-    createdAt: lesson.createdAt,
-  }));
+  return {
+    items: lessons.map((lesson) => ({
+      id: lesson._id,
+      title: lesson.title,
+      level: lesson.level,
+      topic: lesson.topic,
+      contentType: lesson.contentType,
+      totalSentences: lesson.totalSentences,
+      createdAt: lesson.createdAt,
+    })),
+    total,
+  };
 }
 
 /**

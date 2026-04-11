@@ -102,6 +102,12 @@ export async function submitAnswer(userId, examId, userAnswer) {
   const exam = await Exam.findById(examId).lean();
   if (!exam) throw ApiError.notFound("Exam not found");
 
+  const wordCount = userAnswer.trim().split(/\s+/).filter(Boolean).length;
+  const minWords = EXAM_MIN_WORDS[exam.examType];
+  if (minWords && wordCount < minWords) {
+    throw ApiError.badRequest(`Word count ${wordCount} is below IELTS minimum ${minWords}`);
+  }
+
   const { result: grading, provider } = await aiGradeExam(userAnswer, exam);
 
   const band = roundBand(Math.max(1, Math.min(9, grading.overallBand)));

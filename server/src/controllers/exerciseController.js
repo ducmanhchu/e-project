@@ -9,11 +9,15 @@ export async function listLessons(req, res, next) {
     const { level, contentType, topic, page = 1, limit = 12 } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
-    const data = await exerciseService.listLessons(
+    const { items, total } = await exerciseService.listLessons(
       { level, contentType, topic },
       { page: p, limit: l },
     );
-    res.json({ success: true, data, pagination: { page: p, limit: l } });
+    res.json({
+      success: true,
+      data: items,
+      pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
+    });
   } catch (e) {
     next(e);
   }

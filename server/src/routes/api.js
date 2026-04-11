@@ -65,12 +65,8 @@ router.post("/writing/exam/:examId/submit", examController.submitAnswer);
 router.get("/writing/exam/:examId/progress", examController.getProgress);
 router.get("/writing/exam/:examId/history", examController.getHistory);
 
-// attempts — user exercise progress
+// attempts — batch query (shared across all modules)
 router.get("/attempts", attemptController.listAttempts);
-router.get("/attempts/:lessonId", exerciseController.getAttempt);
-router.post("/attempts/:lessonId/submit", exerciseController.submitAnswer);
-router.get("/attempts/:lessonId/progress", exerciseController.getProgress);
-router.get("/attempts/:lessonId/history", exerciseController.getHistory);
 
 // vocabulary
 router.post("/vocabulary", vocabularyController.addWord);

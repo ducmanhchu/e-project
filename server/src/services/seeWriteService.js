@@ -168,6 +168,7 @@ export async function checkKeywords(userId, lessonId, selectedKeywords) {
     score: quizScore,
     translations,
   };
+  attempt.markModified("keywordQuiz");
   await attempt.save();
 
   return {
