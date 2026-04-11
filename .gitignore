@@ -48,5 +48,7 @@ serviceAccount.json
 front/
 .claude/
 CLAUDE.md
+plans/
 .playwright-cli
 .playwright-mcp
+words_data.json

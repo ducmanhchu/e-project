@@ -7,6 +7,10 @@ import * as seeWriteController from "@server/controllers/seeWriteController";
 import * as vocabularyController from "@server/controllers/vocabularyController";
 import * as uploadController from "@server/controllers/uploadController";
 import * as seeWriteAdminController from "@server/controllers/seeWriteAdminController";
+import * as rewriteController from "@server/controllers/rewriteController";
+import * as rewriteAdminController from "@server/controllers/rewriteAdminController";
+import * as examController from "@server/controllers/examController";
+import * as examAdminController from "@server/controllers/examAdminController";
 import multer from "multer";
 import {
   protectedRoute,
@@ -39,6 +43,22 @@ router.post("/writing/see-and-write/:lessonId/submit", seeWriteController.submit
 router.get("/writing/see-and-write/:lessonId/progress", seeWriteController.getProgress);
 router.get("/writing/see-and-write/:lessonId/history", seeWriteController.getHistory);
 
+// rewrite — lesson data + exercise
+router.get("/writing/rewrite", rewriteController.listLessons);
+router.get("/writing/rewrite/:lessonId", rewriteController.getLesson);
+router.get("/writing/rewrite/:lessonId/attempt", rewriteController.getAttempt);
+router.post("/writing/rewrite/:lessonId/submit", rewriteController.submitAnswer);
+router.get("/writing/rewrite/:lessonId/progress", rewriteController.getProgress);
+router.get("/writing/rewrite/:lessonId/history", rewriteController.getHistory);
+
+// exam — IELTS exercise
+router.get("/writing/exam", examController.listExams);
+router.get("/writing/exam/:examId", examController.getExam);
+router.get("/writing/exam/:examId/attempt", examController.getAttempt);
+router.post("/writing/exam/:examId/submit", examController.submitAnswer);
+router.get("/writing/exam/:examId/progress", examController.getProgress);
+router.get("/writing/exam/:examId/history", examController.getHistory);
+
 // attempts — user exercise progress
 router.get("/attempts", exerciseController.listAttempts);
 router.get("/attempts/:lessonId", exerciseController.getAttempt);
@@ -68,5 +88,14 @@ router.get("/admin/writing/see-and-write", seeWriteAdminController.listLessons);
 router.post("/admin/writing/see-and-write", seeWriteAdminController.createLesson);
 router.get("/admin/writing/see-and-write/:id", seeWriteAdminController.getLesson);
 router.put("/admin/writing/see-and-write/:id", seeWriteAdminController.updateLesson);
+
+// admin rewrite
+router.get("/admin/writing/rewrite", rewriteAdminController.listLessons);
+router.post("/admin/writing/rewrite", rewriteAdminController.createLesson);
+router.get("/admin/writing/rewrite/:id", rewriteAdminController.getLesson);
+router.put("/admin/writing/rewrite/:id", rewriteAdminController.updateLesson);
+
+// admin exam
+router.post("/admin/writing/exam", examAdminController.createExam);
 
 export default router;

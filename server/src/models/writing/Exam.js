@@ -1,29 +1,18 @@
 import mongoose from "mongoose";
-import { EXAM_TYPE } from "@server/const/writting";
 import { getBaseWritingFields, BASE_SCHEMA_OPTIONS } from "./baseWritingFields";
 
 const examSchema = new mongoose.Schema(
   {
     ...getBaseWritingFields(),
-    examType: { type: String, required: true, enum: Object.values(EXAM_TYPE) },
-    examPrompt: { type: String, required: true },
-    examDuration: { type: Number, required: true },
-    sampleAnswer: String,
-  },
-  {
-    ...BASE_SCHEMA_OPTIONS,
-    toJSON: {
-      ...BASE_SCHEMA_OPTIONS.toJSON,
-      transform(_, ret) {
-        delete ret._id;
-        delete ret.sampleAnswer;
-      },
+    examType: {
+      type: String,
+      required: true,
+      enum: ["ielts_task1", "ielts_task2"],
     },
+    examPrompt: { type: String, required: true },
+    imageUrl: { type: String },
   },
+  BASE_SCHEMA_OPTIONS,
 );
 
-export const Exam = mongoose.model(
-  "Exam",
-  examSchema,
-  "exams",
-);
+export const Exam = mongoose.model("Exam", examSchema, "exams");

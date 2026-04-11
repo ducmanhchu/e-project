@@ -1,6 +1,6 @@
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
-import { WRITING_TYPE, EXAM_TYPE } from "@server/const/writting";
+import { WRITING_TYPE } from "@server/const/writting";
 
 /**
  * Validate type-specific fields and return flat fields + totalSentences
@@ -65,31 +65,43 @@ function prepareDescribe(body) {
 }
 
 function prepareRewrite(body) {
-  validateFields(body, ["targetSentence"]);
+  const { sentences } = body;
+
+  if (!Array.isArray(sentences) || sentences.length === 0) {
+    throw ApiError.badRequest("sentences must be a non-empty array");
+  }
+
+  const cleaned = sentences.map((s, i) => {
+    validateFields(s, ["targetSentence"]);
+    return {
+      order: i + 1,
+      targetSentence: s.targetSentence.trim(),
+    };
+  });
 
   return {
-    fields: {
-      targetSentence: body.targetSentence.trim(),
-    },
-    totalSentences: 1,
+    fields: { sentences: cleaned },
+    totalSentences: cleaned.length,
   };
 }
 
 function prepareExam(body) {
-  validateFields(body, ["examType", "examPrompt", "examDuration"]);
+  validateFields(body, ["examType", "examPrompt"]);
 
-  if (!Object.values(EXAM_TYPE).includes(body.examType)) {
-    throw ApiError.badRequest(
-      `examType must be one of: ${Object.values(EXAM_TYPE).join(", ")}`,
-    );
+  const ALLOWED_TYPES = ["ielts_task1", "ielts_task2"];
+  if (!ALLOWED_TYPES.includes(body.examType)) {
+    throw ApiError.badRequest(`examType must be one of: ${ALLOWED_TYPES.join(", ")}`);
+  }
+
+  if (body.examType === "ielts_task1" && !body.imageUrl?.trim()) {
+    throw ApiError.badRequest("imageUrl is required for IELTS Task 1");
   }
 
   return {
     fields: {
       examType: body.examType,
       examPrompt: body.examPrompt.trim(),
-      examDuration: body.examDuration,
-      ...(body.sampleAnswer && { sampleAnswer: body.sampleAnswer.trim() }),
+      ...(body.imageUrl && { imageUrl: body.imageUrl.trim() }),
     },
     totalSentences: 1,
   };
