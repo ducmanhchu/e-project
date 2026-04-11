@@ -13,7 +13,7 @@ const sentenceSchema = new mongoose.Schema(
 
 const vocabRefSchema = new mongoose.Schema(
   {
-    vocabularyId: {
+    id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Vocabulary",
       required: true,

@@ -39,7 +39,7 @@ export async function getWordDetail(req, res, next) {
   try {
     const data = await vocabularyService.getWordDetail(
       req.user._id,
-      req.params.wordId,
+      req.params.id,
     );
     res.json({ success: true, data });
   } catch (e) {
@@ -53,7 +53,7 @@ export async function updateStatus(req, res, next) {
     if (!status) throw ApiError.badRequest("status is required");
     const data = await vocabularyService.updateStatus(
       req.user._id,
-      req.params.wordId,
+      req.params.id,
       status,
     );
     res.json({ success: true, data });
@@ -66,7 +66,7 @@ export async function deleteWord(req, res, next) {
   try {
     const data = await vocabularyService.deleteWord(
       req.user._id,
-      req.params.wordId,
+      req.params.id,
     );
     res.json({ success: true, data });
   } catch (e) {

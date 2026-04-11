@@ -28,7 +28,7 @@ export async function listExams(req, res, next) {
  */
 export async function getExam(req, res, next) {
   try {
-    const data = await examService.getExam(req.params.examId);
+    const data = await examService.getExam(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -40,7 +40,7 @@ export async function getExam(req, res, next) {
  */
 export async function getAttempt(req, res, next) {
   try {
-    const data = await examService.getAttempt(req.user._id, req.params.examId);
+    const data = await examService.getAttempt(req.user._id, req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -59,7 +59,7 @@ export async function submitAnswer(req, res, next) {
 
     const data = await examService.submitAnswer(
       req.user._id,
-      req.params.examId,
+      req.params.id,
       userAnswer.trim(),
     );
     res.json({ success: true, data });
@@ -73,7 +73,7 @@ export async function submitAnswer(req, res, next) {
  */
 export async function getProgress(req, res, next) {
   try {
-    const data = await examService.getProgress(req.user._id, req.params.examId);
+    const data = await examService.getProgress(req.user._id, req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -88,7 +88,7 @@ export async function getHistory(req, res, next) {
     const { page = 1, limit = 20 } = req.query;
     const data = await examService.getHistory(
       req.user._id,
-      req.params.examId,
+      req.params.id,
       { page: Math.max(1, +page), limit: Math.min(Math.max(1, +limit), 50) },
     );
     res.json({ success: true, data });

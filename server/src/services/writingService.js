@@ -103,7 +103,7 @@ export async function saveDictionary(lessonId, entries) {
       }
 
       return {
-        vocabularyId: vocab._id,
+        id: vocab._id,
         sentenceIndex: e.sentenceIndex ?? null,
       };
     }),

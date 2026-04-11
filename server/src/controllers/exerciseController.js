@@ -28,7 +28,7 @@ export async function listLessons(req, res, next) {
  */
 export async function getLesson(req, res, next) {
   try {
-    const data = await exerciseService.getLesson(req.params.lessonId);
+    const data = await exerciseService.getLesson(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -42,7 +42,7 @@ export async function getAttempt(req, res, next) {
   try {
     const data = await exerciseService.getAttempt(
       req.user._id,
-      req.params.lessonId,
+      req.params.id,
     );
     res.json({ success: true, data });
   } catch (e) {
@@ -63,7 +63,7 @@ export async function submitAnswer(req, res, next) {
 
     const data = await exerciseService.submitAnswer(
       req.user._id,
-      req.params.lessonId,
+      req.params.id,
       +sentenceOrder,
       userAnswer.trim(),
     );
@@ -80,7 +80,7 @@ export async function getProgress(req, res, next) {
   try {
     const data = await exerciseService.getProgress(
       req.user._id,
-      req.params.lessonId,
+      req.params.id,
     );
     res.json({ success: true, data });
   } catch (e) {
@@ -96,7 +96,7 @@ export async function getHistory(req, res, next) {
     const { page = 1, limit = 20 } = req.query;
     const data = await exerciseService.getHistory(
       req.user._id,
-      req.params.lessonId,
+      req.params.id,
       { page: Math.max(1, +page), limit: Math.min(Math.max(1, +limit), 50) },
     );
     res.json({ success: true, data });

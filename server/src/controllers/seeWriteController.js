@@ -28,7 +28,7 @@ export async function listLessons(req, res, next) {
  */
 export async function getLesson(req, res, next) {
   try {
-    const data = await seeWriteService.getLesson(req.params.lessonId);
+    const data = await seeWriteService.getLesson(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -42,7 +42,7 @@ export async function getAttempt(req, res, next) {
   try {
     const data = await seeWriteService.getAttempt(
       req.user._id,
-      req.params.lessonId,
+      req.params.id,
     );
     res.json({ success: true, data });
   } catch (e) {
@@ -61,7 +61,7 @@ export async function checkKeywords(req, res, next) {
     }
     const data = await seeWriteService.checkKeywords(
       req.user._id,
-      req.params.lessonId,
+      req.params.id,
       selectedKeywords,
     );
     res.json({ success: true, data });
@@ -82,7 +82,7 @@ export async function submitAnswer(req, res, next) {
 
     const data = await seeWriteService.submitAnswer(
       req.user._id,
-      req.params.lessonId,
+      req.params.id,
       userAnswer.trim(),
     );
     res.json({ success: true, data });
@@ -98,7 +98,7 @@ export async function getProgress(req, res, next) {
   try {
     const data = await seeWriteService.getProgress(
       req.user._id,
-      req.params.lessonId,
+      req.params.id,
     );
     res.json({ success: true, data });
   } catch (e) {
@@ -114,7 +114,7 @@ export async function getHistory(req, res, next) {
     const { page = 1, limit = 20 } = req.query;
     const data = await seeWriteService.getHistory(
       req.user._id,
-      req.params.lessonId,
+      req.params.id,
       { page: Math.max(1, +page), limit: Math.min(Math.max(1, +limit), 50) },
     );
     res.json({ success: true, data });

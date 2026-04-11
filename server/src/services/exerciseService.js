@@ -68,7 +68,7 @@ export async function getLesson(lessonId) {
       vietnameseText: s.vietnameseText,
     })),
     vocabularyRefs: (lesson.vocabularyRefs || []).map((ref) => ({
-      vocabularyId: ref.vocabularyId,
+      id: ref.id,
       sentenceIndex: ref.sentenceIndex ?? null,
     })),
   };

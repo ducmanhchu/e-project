@@ -34,36 +34,36 @@ router.get("/me", userController.authMe);
 
 // reverse translation — user
 router.get("/writing/reverse-translation", exerciseController.listLessons);
-router.get("/writing/reverse-translation/:lessonId", exerciseController.getLesson);
-router.get("/writing/reverse-translation/:lessonId/attempt", exerciseController.getAttempt);
-router.post("/writing/reverse-translation/:lessonId/submit", exerciseController.submitAnswer);
-router.get("/writing/reverse-translation/:lessonId/progress", exerciseController.getProgress);
-router.get("/writing/reverse-translation/:lessonId/history", exerciseController.getHistory);
+router.get("/writing/reverse-translation/:id", exerciseController.getLesson);
+router.get("/writing/reverse-translation/:id/attempt", exerciseController.getAttempt);
+router.post("/writing/reverse-translation/:id/submit", exerciseController.submitAnswer);
+router.get("/writing/reverse-translation/:id/progress", exerciseController.getProgress);
+router.get("/writing/reverse-translation/:id/history", exerciseController.getHistory);
 
 // see & write — lesson data
 router.get("/writing/see-and-write", seeWriteController.listLessons);
-router.get("/writing/see-and-write/:lessonId", seeWriteController.getLesson);
-router.get("/writing/see-and-write/:lessonId/attempt", seeWriteController.getAttempt);
-router.post("/writing/see-and-write/:lessonId/check-keywords", seeWriteController.checkKeywords);
-router.post("/writing/see-and-write/:lessonId/submit", seeWriteController.submitAnswer);
-router.get("/writing/see-and-write/:lessonId/progress", seeWriteController.getProgress);
-router.get("/writing/see-and-write/:lessonId/history", seeWriteController.getHistory);
+router.get("/writing/see-and-write/:id", seeWriteController.getLesson);
+router.get("/writing/see-and-write/:id/attempt", seeWriteController.getAttempt);
+router.post("/writing/see-and-write/:id/check-keywords", seeWriteController.checkKeywords);
+router.post("/writing/see-and-write/:id/submit", seeWriteController.submitAnswer);
+router.get("/writing/see-and-write/:id/progress", seeWriteController.getProgress);
+router.get("/writing/see-and-write/:id/history", seeWriteController.getHistory);
 
 // rewrite — lesson data + exercise
 router.get("/writing/rewrite", rewriteController.listLessons);
-router.get("/writing/rewrite/:lessonId", rewriteController.getLesson);
-router.get("/writing/rewrite/:lessonId/attempt", rewriteController.getAttempt);
-router.post("/writing/rewrite/:lessonId/submit", rewriteController.submitAnswer);
-router.get("/writing/rewrite/:lessonId/progress", rewriteController.getProgress);
-router.get("/writing/rewrite/:lessonId/history", rewriteController.getHistory);
+router.get("/writing/rewrite/:id", rewriteController.getLesson);
+router.get("/writing/rewrite/:id/attempt", rewriteController.getAttempt);
+router.post("/writing/rewrite/:id/submit", rewriteController.submitAnswer);
+router.get("/writing/rewrite/:id/progress", rewriteController.getProgress);
+router.get("/writing/rewrite/:id/history", rewriteController.getHistory);
 
 // exam — IELTS exercise
 router.get("/writing/exam", examController.listExams);
-router.get("/writing/exam/:examId", examController.getExam);
-router.get("/writing/exam/:examId/attempt", examController.getAttempt);
-router.post("/writing/exam/:examId/submit", examController.submitAnswer);
-router.get("/writing/exam/:examId/progress", examController.getProgress);
-router.get("/writing/exam/:examId/history", examController.getHistory);
+router.get("/writing/exam/:id", examController.getExam);
+router.get("/writing/exam/:id/attempt", examController.getAttempt);
+router.post("/writing/exam/:id/submit", examController.submitAnswer);
+router.get("/writing/exam/:id/progress", examController.getProgress);
+router.get("/writing/exam/:id/history", examController.getHistory);
 
 // attempts — batch query (shared across all modules)
 router.get("/attempts", attemptController.listAttempts);
@@ -74,9 +74,9 @@ router.get("/vocabulary", vocabularyController.listWords);
 router.get("/vocabulary/stats", vocabularyController.getStats);
 router.get("/vocabulary/review/questions", vocabularyController.getReviewQuestions);
 router.post("/vocabulary/review/complete", vocabularyController.recordReview);
-router.get("/vocabulary/:wordId", vocabularyController.getWordDetail);
-router.patch("/vocabulary/:wordId/status", vocabularyController.updateStatus);
-router.delete("/vocabulary/:wordId", vocabularyController.deleteWord);
+router.get("/vocabulary/:id", vocabularyController.getWordDetail);
+router.patch("/vocabulary/:id/status", vocabularyController.updateStatus);
+router.delete("/vocabulary/:id", vocabularyController.deleteWord);
 
 // admin routes
 router.use("/admin", authorizeRoles(USER_ROLE.ADMIN));
