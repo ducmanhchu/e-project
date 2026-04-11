@@ -1,10 +1,15 @@
 import { SeeWrite } from "@server/models/writing/SeeWrite";
-import { ExerciseAttempt } from "@server/models/exerciseAttempt/ExerciseAttempt";
+import { Attempt } from "@server/models/attempt/Attempt";
 import { ApiError } from "@server/helpers/ApiError";
 import { aiGradeSeeWrite } from "@server/services/ai/gradingProvider";
 import { aiTranslateKeywords } from "@server/services/ai/keywordProvider";
-
-const COMPLETION_THRESHOLD = 70;
+import {
+  findOrCreateAttempt,
+  submitAndUpdateProgress,
+  getLastSubmission,
+  getSubmissions,
+} from "@server/helpers/attemptHelper";
+import { COMPLETION_THRESHOLD } from "@server/const/exercise";
 
 function shuffleArray(arr) {
   const a = [...arr];
@@ -19,18 +24,17 @@ function shuffleArray(arr) {
  * GET /writing/see-and-write — List lessons
  */
 export async function listLessons(filters, pagination) {
-  const { level, contentType, topic } = filters;
+  const { level, topic } = filters;
   const { page, limit } = pagination;
 
   const query = {
     ...(level && { level }),
-    ...(contentType && { contentType }),
     ...(topic && { topic }),
   };
 
   const [lessons, total] = await Promise.all([
     SeeWrite.find(query)
-      .select("title level topic contentType totalSentences createdAt")
+      .select("title level topic totalSentences createdAt")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -44,7 +48,7 @@ export async function listLessons(filters, pagination) {
       title: lesson.title,
       level: lesson.level,
       topic: lesson.topic,
-      contentType: lesson.contentType,
+
       totalSentences: lesson.totalSentences,
       createdAt: lesson.createdAt,
     })),
@@ -54,13 +58,10 @@ export async function listLessons(filters, pagination) {
 
 /**
  * GET /writing/see-and-write/:lessonId — Lesson detail
- * Returns shuffled wordPool (no answers exposed)
  */
 export async function getLesson(lessonId) {
   const lesson = await SeeWrite.findById(lessonId).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
-
-  const wordPool = shuffleArray(lesson.wordPool || []);
 
   return {
     id: lesson._id,
@@ -68,7 +69,7 @@ export async function getLesson(lessonId) {
     level: lesson.level,
     topic: lesson.topic,
     mediaUrl: lesson.mediaUrl,
-    wordPool,
+    wordPool: shuffleArray(lesson.wordPool || []),
     keywordCount: (lesson.requiredWords || []).length,
     minWordCount: lesson.minWordCount || null,
     maxWordCount: lesson.maxWordCount || null,
@@ -80,40 +81,33 @@ export async function getLesson(lessonId) {
  * GET /writing/see-and-write/:lessonId/attempt — Upsert + return attempt
  */
 export async function getAttempt(userId, lessonId) {
-  let attempt = await ExerciseAttempt.findOne({ userId, lessonId });
-  if (!attempt) {
-    attempt = await ExerciseAttempt.create({
-      userId,
-      lessonId,
-      lessonType: "SeeWrite",
-      sentenceAttempts: [],
-    });
-  }
+  const attempt = await findOrCreateAttempt(userId, lessonId, "SeeWrite");
 
-  const sentenceAttempts = attempt.sentenceAttempts.map((sa) => ({
-    sentenceOrder: sa.sentenceOrder,
-    attemptCount: sa.attemptCount,
-    bestScore: sa.bestScore,
-    isCompleted: sa.isCompleted,
-    lastSubmission:
-      sa.submissions.length > 0
-        ? sa.submissions[sa.submissions.length - 1]
-        : null,
-  }));
+  const progress = attempt.sentenceProgress.find((p) => p.sentenceOrder === 1);
+  const lastSub = progress
+    ? await getLastSubmission(attempt._id, 1)
+    : null;
 
   return {
     id: attempt._id,
     status: attempt.status,
     completedSentences: attempt.completedSentences,
-    totalScore: attempt.totalScore,
+    bestScore: attempt.bestScore,
     keywordQuiz: attempt.keywordQuiz || null,
-    sentenceAttempts,
+    sentenceAttempts: progress
+      ? [{
+          sentenceOrder: 1,
+          attemptCount: progress.attemptCount,
+          bestScore: progress.bestScore,
+          isCompleted: progress.isCompleted,
+          lastSubmission: lastSub,
+        }]
+      : [],
   };
 }
 
 /**
  * POST /writing/see-and-write/:lessonId/check-keywords
- * Validate keyword selections + AI translate + save to attempt
  */
 export async function checkKeywords(userId, lessonId, selectedKeywords) {
   if (!Array.isArray(selectedKeywords) || selectedKeywords.length === 0) {
@@ -150,33 +144,29 @@ export async function checkKeywords(userId, lessonId, selectedKeywords) {
     (results.correct.length / (lesson.requiredWords?.length || 1)) * 100,
   );
 
-  // AI batch translate all pool keywords
-  const allWords = lesson.wordPool || [];
+  // Check cached translations first
+  const attempt = await findOrCreateAttempt(userId, lessonId, "SeeWrite");
+  let translations = attempt.keywordQuiz?.translations || null;
+  let translatedBy = "cached";
 
-  const { result: aiResult, provider } = await aiTranslateKeywords(allWords);
-
-  const translations = {};
-  for (const item of aiResult.translations) {
-    translations[item.word.toLowerCase()] = item.viMeaning;
+  if (!translations) {
+    const allWords = lesson.wordPool || [];
+    const { result: aiResult, provider } = await aiTranslateKeywords(allWords);
+    translations = {};
+    for (const item of aiResult.translations) {
+      translations[item.word.toLowerCase()] = item.viMeaning;
+    }
+    translatedBy = provider;
   }
 
-  // Save quiz result to attempt
-  let attempt = await ExerciseAttempt.findOne({ userId, lessonId });
-  if (!attempt) {
-    attempt = await ExerciseAttempt.create({
-      userId,
-      lessonId,
-      lessonType: "SeeWrite",
-      sentenceAttempts: [],
-    });
-  }
-
+  // Save quiz result + translations cache
   attempt.keywordQuiz = {
     selectedKeywords,
     correct: results.correct,
     missed: results.missed,
     wrong: results.wrong,
     score: quizScore,
+    translations,
   };
   await attempt.save();
 
@@ -184,83 +174,61 @@ export async function checkKeywords(userId, lessonId, selectedKeywords) {
     results,
     score: quizScore,
     translations,
-    translatedBy: provider,
+    translatedBy,
   };
 }
 
 /**
  * POST /writing/see-and-write/:lessonId/submit — Grade answer
- * Passes keyword quiz score to AI grading prompt
  */
 export async function submitAnswer(userId, lessonId, userAnswer) {
   const lesson = await SeeWrite.findById(lessonId).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  // Get quiz score from attempt (if exists)
-  const attempt = await ExerciseAttempt.findOne({ userId, lessonId });
-  const quizScore = attempt?.keywordQuiz?.score ?? null;
+  // Enforce quiz if lesson has requiredWords
+  const hasKeywords = (lesson.requiredWords || []).length > 0;
+  const attempt = await findOrCreateAttempt(userId, lessonId, "SeeWrite");
+
+  if (hasKeywords && !attempt.keywordQuiz) {
+    throw ApiError.badRequest("Keyword quiz is required before submitting");
+  }
+
+  // Validate word count
+  const wordCount = userAnswer.trim().split(/\s+/).filter(Boolean).length;
+  const minWc = lesson.minWordCount || 0;
+  if (minWc > 0 && wordCount < minWc) {
+    throw ApiError.badRequest(`Word count ${wordCount} is below minimum ${minWc}`);
+  }
 
   const { result: grading, provider } = await aiGradeSeeWrite(
     userAnswer,
     lesson,
     lesson.level,
-    quizScore,
   );
 
   const score = Math.min(100, Math.max(0, Math.round(grading.score)));
-  const isNowCompleted = score >= COMPLETION_THRESHOLD;
 
-  const submission = {
+  const { submission, progress } = await submitAndUpdateProgress(attempt, {
+    sentenceOrder: 1,
     userAnswer,
     score,
+    gradedBy: provider,
     feedback: {
       summary: grading.summary,
       enhancedVersion: grading.enhancedVersion || null,
       criteria: grading.criteria || [],
       corrections: grading.corrections || [],
     },
-    gradedBy: provider,
-    submittedAt: new Date(),
-  };
-
-  if (!attempt) {
-    throw ApiError.badRequest("Attempt not found — complete keyword quiz first");
-  }
-
-  // SeeWrite always uses sentenceOrder = 1
-  let sa = attempt.sentenceAttempts.find((s) => s.sentenceOrder === 1);
-  if (!sa) {
-    attempt.sentenceAttempts.push({
-      sentenceOrder: 1,
-      submissions: [],
-      bestScore: 0,
-      attemptCount: 0,
-      isCompleted: false,
-    });
-    sa = attempt.sentenceAttempts[attempt.sentenceAttempts.length - 1];
-  }
-
-  sa.submissions.push(submission);
-  sa.attemptCount += 1;
-  if (score > sa.bestScore) sa.bestScore = score;
-  if (isNowCompleted) sa.isCompleted = true;
-
-  attempt.completedSentences = sa.isCompleted ? 1 : 0;
-  attempt.totalScore = sa.bestScore;
-
-  if (sa.isCompleted && attempt.status !== "completed") {
-    attempt.status = "completed";
-    attempt.completedAt = new Date();
-  }
-
-  await attempt.save();
+    isCompleted: score >= COMPLETION_THRESHOLD,
+    totalSentences: 1,
+  });
 
   return {
     score,
     feedback: submission.feedback,
     gradedBy: provider,
-    bestScore: sa.bestScore,
-    isCompleted: sa.isCompleted,
+    bestScore: progress.bestScore,
+    isCompleted: progress.isCompleted,
   };
 }
 
@@ -268,14 +236,14 @@ export async function submitAnswer(userId, lessonId, userAnswer) {
  * GET /writing/see-and-write/:lessonId/progress
  */
 export async function getProgress(userId, lessonId) {
-  const attempt = await ExerciseAttempt.findOne({ userId, lessonId });
+  const attempt = await Attempt.findOne({ userId, lessonId });
   if (!attempt) throw ApiError.notFound("No attempt found for this lesson");
 
   return {
     lessonId,
     status: attempt.status,
     completedSentences: attempt.completedSentences,
-    totalScore: attempt.totalScore,
+    bestScore: attempt.bestScore,
     completedAt: attempt.completedAt,
   };
 }
@@ -283,14 +251,17 @@ export async function getProgress(userId, lessonId) {
 /**
  * GET /writing/see-and-write/:lessonId/history
  */
-export async function getHistory(userId, lessonId) {
-  const attempt = await ExerciseAttempt.findOne({ userId, lessonId });
+export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}) {
+  const attempt = await Attempt.findOne({ userId, lessonId });
   if (!attempt) throw ApiError.notFound("No attempt found for this lesson");
+
+  const { docs, total } = await getSubmissions(attempt._id, { sentenceOrder: 1, page, limit });
 
   return {
     lessonId,
     status: attempt.status,
-    totalScore: attempt.totalScore,
-    submissions: attempt.sentenceAttempts[0]?.submissions || [],
+    bestScore: attempt.bestScore,
+    submissions: docs.reverse(),
+    pagination: { page, limit, total },
   };
 }

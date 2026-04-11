@@ -85,7 +85,12 @@ export async function getProgress(req, res, next) {
  */
 export async function getHistory(req, res, next) {
   try {
-    const data = await examService.getHistory(req.user._id, req.params.examId);
+    const { page = 1, limit = 20 } = req.query;
+    const data = await examService.getHistory(
+      req.user._id,
+      req.params.examId,
+      { page: Math.max(1, +page), limit: Math.min(Math.max(1, +limit), 50) },
+    );
     res.json({ success: true, data });
   } catch (e) {
     next(e);

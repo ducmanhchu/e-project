@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { CONTENT_TYPE } from "@server/const/writting";
 import { getBaseWritingFields, BASE_SCHEMA_OPTIONS } from "./baseWritingFields";
 
 const sentenceSchema = new mongoose.Schema(
@@ -25,6 +26,11 @@ const vocabRefSchema = new mongoose.Schema(
 const reverseTranslationSchema = new mongoose.Schema(
   {
     ...getBaseWritingFields(),
+    contentType: {
+      type: String,
+      enum: Object.values(CONTENT_TYPE),
+      default: CONTENT_TYPE.GENERAL,
+    },
     vietnameseParagraph: { type: String, required: true },
     sentences: {
       type: [sentenceSchema],

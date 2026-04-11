@@ -1,11 +1,12 @@
 import * as userService from "@server/services/userService";
 import * as authService from "@server/services/authService";
+import { TOKEN_LIFE } from "@server/const/auth";
 
 const REFRESH_TOKEN_OPTIONS = {
 	httpOnly: true,
 	secure: false,
 	sameSite: "lax",
-	maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
+	maxAge: TOKEN_LIFE.REFRESH_MAX_AGE_MS,
 };
 
 export async function signUp(req, res, next) {

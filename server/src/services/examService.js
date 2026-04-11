@@ -1,13 +1,14 @@
 import { Exam } from "@server/models/writing/Exam";
-import { ExerciseAttempt } from "@server/models/exerciseAttempt/ExerciseAttempt";
+import { Attempt } from "@server/models/attempt/Attempt";
 import { ApiError } from "@server/helpers/ApiError";
 import { aiGradeExam } from "@server/services/ai/gradingProvider";
-
-const COMPLETION_BAND = 6.0;
-const MIN_WORD_COUNT = { ielts_task1: 150, ielts_task2: 250 };
-
-const bandToScore = (band) => Math.round(band * 10);
-const roundBand = (band) => Math.round(band * 2) / 2;
+import {
+  findOrCreateAttempt,
+  submitAndUpdateProgress,
+  getLastSubmission,
+  getSubmissions,
+} from "@server/helpers/attemptHelper";
+import { COMPLETION_BAND, EXAM_MIN_WORDS, bandToScore, roundBand } from "@server/const/exercise";
 
 /**
  * GET /writing/exam — List exams
@@ -61,7 +62,7 @@ export async function getExam(examId) {
     examType: exam.examType,
     examPrompt: exam.examPrompt,
     imageUrl: exam.imageUrl || null,
-    minWordCount: MIN_WORD_COUNT[exam.examType],
+    minWordCount: EXAM_MIN_WORDS[exam.examType],
     totalSentences: exam.totalSentences,
   };
 }
@@ -70,32 +71,25 @@ export async function getExam(examId) {
  * GET /writing/exam/:examId/attempt — Upsert + return attempt
  */
 export async function getAttempt(userId, examId) {
-  let attempt = await ExerciseAttempt.findOne({ userId, lessonId: examId });
-  if (!attempt) {
-    attempt = await ExerciseAttempt.create({
-      userId,
-      lessonId: examId,
-      lessonType: "Exam",
-      sentenceAttempts: [],
-    });
-  }
+  const attempt = await findOrCreateAttempt(userId, examId, "Exam");
 
-  const sa = attempt.sentenceAttempts.find((s) => s.sentenceOrder === 1);
+  const progress = attempt.sentenceProgress.find((p) => p.sentenceOrder === 1);
+  const lastSub = progress
+    ? await getLastSubmission(attempt._id, 1)
+    : null;
 
   return {
     id: attempt._id,
     status: attempt.status,
     completedSentences: attempt.completedSentences,
-    totalScore: attempt.totalScore,
-    sentenceAttempts: sa
+    bestScore: attempt.bestScore,
+    sentenceAttempts: progress
       ? [{
           sentenceOrder: 1,
-          attemptCount: sa.attemptCount,
-          bestScore: sa.bestScore,
-          isCompleted: sa.isCompleted,
-          lastSubmission: sa.submissions.length > 0
-            ? sa.submissions[sa.submissions.length - 1]
-            : null,
+          attemptCount: progress.attemptCount,
+          bestScore: progress.bestScore,
+          isCompleted: progress.isCompleted,
+          lastSubmission: lastSub,
         }]
       : [],
   };
@@ -112,11 +106,13 @@ export async function submitAnswer(userId, examId, userAnswer) {
 
   const band = roundBand(Math.max(1, Math.min(9, grading.overallBand)));
   const score = bandToScore(band);
-  const isNowCompleted = band >= COMPLETION_BAND;
 
-  const submission = {
+  const attempt = await findOrCreateAttempt(userId, examId, "Exam");
+  const { submission, progress } = await submitAndUpdateProgress(attempt, {
+    sentenceOrder: 1,
     userAnswer,
     score,
+    gradedBy: provider,
     feedback: {
       bandScore: band,
       summary: grading.summary,
@@ -124,55 +120,18 @@ export async function submitAnswer(userId, examId, userAnswer) {
       criteria: grading.criteria || [],
       corrections: grading.corrections || [],
     },
-    gradedBy: provider,
-    submittedAt: new Date(),
-  };
-
-  let attempt = await ExerciseAttempt.findOne({ userId, lessonId: examId });
-  if (!attempt) {
-    attempt = await ExerciseAttempt.create({
-      userId,
-      lessonId: examId,
-      lessonType: "Exam",
-      sentenceAttempts: [],
-    });
-  }
-
-  let sa = attempt.sentenceAttempts.find((s) => s.sentenceOrder === 1);
-  if (!sa) {
-    attempt.sentenceAttempts.push({
-      sentenceOrder: 1,
-      submissions: [],
-      bestScore: 0,
-      attemptCount: 0,
-      isCompleted: false,
-    });
-    sa = attempt.sentenceAttempts[attempt.sentenceAttempts.length - 1];
-  }
-
-  sa.submissions.push(submission);
-  sa.attemptCount += 1;
-  if (score > sa.bestScore) sa.bestScore = score;
-  if (isNowCompleted) sa.isCompleted = true;
-
-  attempt.completedSentences = sa.isCompleted ? 1 : 0;
-  attempt.totalScore = sa.bestScore;
-
-  if (sa.isCompleted && attempt.status !== "completed") {
-    attempt.status = "completed";
-    attempt.completedAt = new Date();
-  }
-
-  await attempt.save();
+    isCompleted: band >= COMPLETION_BAND,
+    totalSentences: 1,
+  });
 
   return {
     score,
     bandScore: band,
     feedback: submission.feedback,
     gradedBy: provider,
-    bestScore: sa.bestScore,
-    bestBand: roundBand(sa.bestScore / 10),
-    isCompleted: sa.isCompleted,
+    bestScore: progress.bestScore,
+    bestBand: roundBand(progress.bestScore / 10),
+    isCompleted: progress.isCompleted,
   };
 }
 
@@ -180,14 +139,14 @@ export async function submitAnswer(userId, examId, userAnswer) {
  * GET /writing/exam/:examId/progress
  */
 export async function getProgress(userId, examId) {
-  const attempt = await ExerciseAttempt.findOne({ userId, lessonId: examId });
+  const attempt = await Attempt.findOne({ userId, lessonId: examId });
   if (!attempt) throw ApiError.notFound("No attempt found for this exam");
 
   return {
     lessonId: examId,
     status: attempt.status,
     completedSentences: attempt.completedSentences,
-    totalScore: attempt.totalScore,
+    bestScore: attempt.bestScore,
     completedAt: attempt.completedAt,
   };
 }
@@ -195,14 +154,17 @@ export async function getProgress(userId, examId) {
 /**
  * GET /writing/exam/:examId/history
  */
-export async function getHistory(userId, examId) {
-  const attempt = await ExerciseAttempt.findOne({ userId, lessonId: examId });
+export async function getHistory(userId, examId, { page = 1, limit = 20 } = {}) {
+  const attempt = await Attempt.findOne({ userId, lessonId: examId });
   if (!attempt) throw ApiError.notFound("No attempt found for this exam");
+
+  const { docs, total } = await getSubmissions(attempt._id, { sentenceOrder: 1, page, limit });
 
   return {
     lessonId: examId,
     status: attempt.status,
-    totalScore: attempt.totalScore,
-    submissions: attempt.sentenceAttempts[0]?.submissions || [],
+    bestScore: attempt.bestScore,
+    submissions: docs.reverse(),
+    pagination: { page, limit, total },
   };
 }

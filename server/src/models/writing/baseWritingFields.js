@@ -1,16 +1,10 @@
 import {
   WRITING_LEVEL,
   WRITING_TOPIC,
-  CONTENT_TYPE,
 } from "@server/const/writting";
 
 export function getBaseWritingFields() {
   return {
-    contentType: {
-      type: String,
-      enum: Object.values(CONTENT_TYPE),
-      default: CONTENT_TYPE.GENERAL,
-    },
     topic: {
       type: String,
       enum: Object.values(WRITING_TOPIC),

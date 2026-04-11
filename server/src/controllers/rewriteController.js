@@ -6,11 +6,11 @@ import { ApiError } from "@server/helpers/ApiError";
  */
 export async function listLessons(req, res, next) {
   try {
-    const { level, contentType, topic, page = 1, limit = 12 } = req.query;
+    const { level, topic, page = 1, limit = 12 } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
     const { items, total } = await rewriteService.listLessons(
-      { level, contentType, topic },
+      { level, topic },
       { page: p, limit: l },
     );
     res.json({
@@ -95,9 +95,11 @@ export async function getProgress(req, res, next) {
  */
 export async function getHistory(req, res, next) {
   try {
+    const { page = 1, limit = 20 } = req.query;
     const data = await rewriteService.getHistory(
       req.user._id,
       req.params.lessonId,
+      { page: Math.max(1, +page), limit: Math.min(Math.max(1, +limit), 50) },
     );
     res.json({ success: true, data });
   } catch (e) {

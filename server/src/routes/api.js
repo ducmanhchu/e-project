@@ -11,6 +11,8 @@ import * as rewriteController from "@server/controllers/rewriteController";
 import * as rewriteAdminController from "@server/controllers/rewriteAdminController";
 import * as examController from "@server/controllers/examController";
 import * as examAdminController from "@server/controllers/examAdminController";
+import * as attemptController from "@server/controllers/attemptController";
+import { MAX_FILE_SIZE } from "@server/const/upload";
 import multer from "multer";
 import {
   protectedRoute,
@@ -18,7 +20,7 @@ import {
 } from "@server/middlewares/authMiddleware";
 import { USER_ROLE } from "@server/const/user";
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_FILE_SIZE } });
 
 // auth routes
 router.post("/auth/signup", authController.signUp);
@@ -30,9 +32,13 @@ router.post("/auth/refresh", authController.refreshToken);
 router.use(protectedRoute);
 router.get("/me", userController.authMe);
 
-// writing — lesson data (read-only for users)
+// reverse translation — user
 router.get("/writing/reverse-translation", exerciseController.listLessons);
 router.get("/writing/reverse-translation/:lessonId", exerciseController.getLesson);
+router.get("/writing/reverse-translation/:lessonId/attempt", exerciseController.getAttempt);
+router.post("/writing/reverse-translation/:lessonId/submit", exerciseController.submitAnswer);
+router.get("/writing/reverse-translation/:lessonId/progress", exerciseController.getProgress);
+router.get("/writing/reverse-translation/:lessonId/history", exerciseController.getHistory);
 
 // see & write — lesson data
 router.get("/writing/see-and-write", seeWriteController.listLessons);
@@ -60,7 +66,7 @@ router.get("/writing/exam/:examId/progress", examController.getProgress);
 router.get("/writing/exam/:examId/history", examController.getHistory);
 
 // attempts — user exercise progress
-router.get("/attempts", exerciseController.listAttempts);
+router.get("/attempts", attemptController.listAttempts);
 router.get("/attempts/:lessonId", exerciseController.getAttempt);
 router.post("/attempts/:lessonId/submit", exerciseController.submitAnswer);
 router.get("/attempts/:lessonId/progress", exerciseController.getProgress);
@@ -96,6 +102,8 @@ router.get("/admin/writing/rewrite/:id", rewriteAdminController.getLesson);
 router.put("/admin/writing/rewrite/:id", rewriteAdminController.updateLesson);
 
 // admin exam
+router.get("/admin/writing/exam", examAdminController.listExams);
 router.post("/admin/writing/exam", examAdminController.createExam);
+router.get("/admin/writing/exam/:id", examAdminController.getExam);
 
 export default router;

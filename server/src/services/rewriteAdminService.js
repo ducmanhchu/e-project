@@ -23,7 +23,7 @@ export async function listLessons({ page = 1, limit = 20 } = {}) {
       title: l.title,
       level: l.level,
       topic: l.topic,
-      contentType: l.contentType,
+
       totalSentences: l.totalSentences,
       sentences: l.sentences || [],
       createdAt: l.createdAt,
@@ -46,7 +46,7 @@ export async function getLessonAdmin(lessonId) {
     title: lesson.title,
     level: lesson.level,
     topic: lesson.topic,
-    contentType: lesson.contentType,
+
     description: lesson.description,
     sentences: lesson.sentences || [],
     totalSentences: lesson.totalSentences,
@@ -71,7 +71,7 @@ export async function updateLesson(lessonId, body) {
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
   const allowedFields = [
-    "title", "level", "topic", "description", "contentType", "sortOrder",
+    "title", "level", "topic", "description", "sortOrder",
   ];
 
   const updates = {};
@@ -111,7 +111,6 @@ export async function updateLesson(lessonId, body) {
     title: updated.title,
     level: updated.level,
     topic: updated.topic,
-    contentType: updated.contentType,
     description: updated.description,
     sentences: updated.sentences || [],
     totalSentences: updated.totalSentences,

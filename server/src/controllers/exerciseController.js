@@ -20,20 +20,6 @@ export async function listLessons(req, res, next) {
 }
 
 /**
- * GET /api/attempts?lessonIds=id1,id2
- */
-export async function listAttempts(req, res, next) {
-  try {
-    const { lessonIds } = req.query;
-    const ids = lessonIds ? lessonIds.split(",").filter(Boolean) : null;
-    const data = await exerciseService.listAttempts(req.user._id, ids);
-    res.json({ success: true, data });
-  } catch (e) {
-    next(e);
-  }
-}
-
-/**
  * GET /api/writing/reverse-translation/:lessonId
  */
 export async function getLesson(req, res, next) {
@@ -103,9 +89,11 @@ export async function getProgress(req, res, next) {
  */
 export async function getHistory(req, res, next) {
   try {
+    const { page = 1, limit = 20 } = req.query;
     const data = await exerciseService.getHistory(
       req.user._id,
       req.params.lessonId,
+      { page: Math.max(1, +page), limit: Math.min(Math.max(1, +limit), 50) },
     );
     res.json({ success: true, data });
   } catch (e) {

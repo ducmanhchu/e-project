@@ -1,5 +1,6 @@
 import { Type, claude, genai, withFallback } from "./client";
 import { createPartFromUri } from "@google/genai";
+import { EXAM_MIN_WORDS } from "@server/const/exercise";
 
 const LEVEL_CRITERIA = {
   beginner: `Level: BEGINNER — Be encouraging and lenient.
@@ -200,32 +201,31 @@ export async function aiGradeAnswer(
 // --- See & Write grading ---
 
 const SW_LEVEL_CRITERIA = {
-  beginner: `Level: BEGINNER — Be encouraging and lenient.
-- Accept simple sentences (S+V+O), basic adjectives (big, nice, beautiful)
-- Do NOT penalize missing articles, minor preposition errors, or simple tense mistakes
-- Accept short paragraphs (3-5 sentences) as adequate
-- Focus on: Can the reader understand what is being described? Are required words present?
-- A simple but clear description should score 70+`,
+  beginner: `Level: BEGINNER — Encouraging but still check accuracy.
+- Accept simple sentences (S+V+O), basic adjectives
+- Do NOT penalize minor article/preposition errors
+- Still MUST check: does description match the image? Are keywords used?
+- A simple but accurate description with keywords should score 70+
+- Inaccurate description (doesn't match image) should score below 15 on Task Achievement regardless of grammar`,
 
-  intermediate: `Level: INTERMEDIATE — Balance accuracy with encouragement.
-- Expect varied sentence structures (not just S+V+O repeated)
-- Expect descriptive adjectives/adverbs beyond basic ones
-- Penalize repetitive sentence starters ("There is... There is... There is...")
-- Expect a logical flow between sentences (spatial, temporal, or thematic order)
-- Minor word choice issues acceptable if meaning is clear`,
+  intermediate: `Level: INTERMEDIATE — Balance accuracy with quality.
+- Expect varied sentence structures, not just "There is... There is..."
+- Keywords must be woven into sentences naturally, not listed
+- Description must cover main elements visible in the image
+- Penalize generic descriptions that could apply to any image`,
 
-  advanced: `Level: ADVANCED — Expect polished descriptive writing.
-- Expect rich vocabulary: vivid adjectives, precise verbs, figurative language
-- Expect complex sentences with varied connectors and transitions
-- Expect a cohesive paragraph with clear structure (opening → body → closing impression)
-- Penalize generic descriptions that could apply to any image
-- Expect idiomatic expressions and natural collocations`,
+  advanced: `Level: ADVANCED — Expect polished, accurate descriptive writing.
+- Rich vocabulary, precise verbs, figurative language
+- Complex sentences with varied connectors
+- Description must capture details, atmosphere, and spatial relationships in the image
+- Penalize any inaccuracy about the image content`,
 };
 
-const SEE_WRITE_PROMPT = (userAnswer, lesson, wordCount, level, quizScore) => {
+const SEE_WRITE_PROMPT = (userAnswer, lesson, wordCount, level) => {
   const requiredWords = lesson.requiredWords?.length
     ? lesson.requiredWords.join(", ")
     : "none";
+  const requiredCount = lesson.requiredWords?.length || 0;
   const minWc = lesson.minWordCount ? lesson.minWordCount : null;
   const maxWc = lesson.maxWordCount ? lesson.maxWordCount : null;
   const wcRequirement = minWc && maxWc ? `${minWc}–${maxWc} words`
@@ -233,122 +233,119 @@ const SEE_WRITE_PROMPT = (userAnswer, lesson, wordCount, level, quizScore) => {
     : maxWc ? `at most ${maxWc} words`
     : "no specific requirement";
 
-  return `You are a strict but fair English writing evaluator for Vietnamese learners.
-
-Task: "See & Write" — the student views an image and writes a descriptive paragraph in English.
-This is PARAGRAPH-LEVEL evaluation. Evaluate the writing as a whole piece.
-Lesson title: "${lesson.title}"
+  return `You are an English teacher grading a Vietnamese student's image description.
+Look at the image carefully FIRST, then evaluate whether the student's writing accurately describes what you see.
 
 ${SW_LEVEL_CRITERIA[level] || SW_LEVEL_CRITERIA.intermediate}
 
-Required keywords: ${requiredWords}
-Word count requirement: ${wcRequirement}
-Actual word count: ${wordCount}${quizScore != null ? `\nKeyword quiz score: ${quizScore}% (bonus/penalty up to ±5 on final score)` : ""}
+═══ CONTEXT ═══
+Required keywords (${requiredCount}): [${requiredWords}]
+Word count: ${wordCount} (requirement: ${wcRequirement})
 
 Student's writing:
 """
 ${userAnswer}
 """
 
-═══ PART 1: SCORING (4 criteria, IELTS-aligned) ═══
+═══ WRITING STYLE FOR ALL COMMENTS ═══
+- Vietnamese, CONCISE — max 1-2 short sentences per criterion
+- Quote specific English phrases from student's writing using single quotes
+- NO filler: skip "Học sinh đã", "Bài viết của bạn"
+- Go straight to the point
 
-1. **Task Achievement** (0-25 points):
-   - Does the writing accurately describe what is shown in the image?
-   - Are required keywords [${requiredWords}] used naturally in context (not just listed)?
-   - Is the word count within ${wcRequirement}?
-   - 22-25: Accurate description, all keywords natural, appropriate length
-   - 16-21: Mostly accurate, 1-2 keywords missing/forced, minor length issue
-   - 9-15: Partially accurate, several keywords missing, length off
-   - 0-8: Does not match image, most keywords missing
+═══ STEP 1: IMAGE VERIFICATION ═══
+Before scoring, compare the student's writing against the image:
+- What does the image ACTUALLY show? (objects, people, setting, actions, colors, spatial layout)
+- Does the student describe things that are NOT in the image? (= fabrication, penalize heavily)
+- Does the student MISS major elements visible in the image?
 
-2. **Coherence & Cohesion** (0-25 points):
-   - Logical paragraph structure (opening → details → impression)?
-   - Smooth transitions between sentences (spatial, thematic)?
-   - Connectors used (In the foreground, Furthermore, Meanwhile...)?
-   - No repetition of ideas or sentences?
-   - 22-25: Clear structure, smooth flow, effective transitions
-   - 16-21: Generally coherent, transitions could improve
-   - 9-15: Weak organization, few transitions, some repetition
-   - 0-8: No structure, hard to follow
+═══ STEP 2: KEYWORD CHECK ═══
+For each required keyword [${requiredWords}]:
+- Is it present in the student's writing?
+- Is it used NATURALLY in a sentence (good) or just listed/forced (penalize)?
+- Example of forced usage: "I can see ocean, sand, umbrella, sunset" (= listing, not natural)
+- Example of natural usage: "The golden sand stretches along the ocean shore" (= woven in)
 
-3. **Lexical Resource** (0-25 points):
-   - Vocabulary variety: diverse adjectives, verbs, descriptive expressions?
-   - Precision: specific words (towering, crimson) vs generic (big, nice)?
-   - Collocations: natural word combinations?
-   - Level-appropriate vocabulary?
-   - 22-25: Rich, varied, precise descriptive language
-   - 16-21: Good variety, some generic or repetitive words
-   - 9-15: Limited vocabulary, mostly basic words
-   - 0-8: Very poor, repetitive, or inappropriate vocabulary
+═══ STEP 3: SCORING — 4 criteria ═══
 
-4. **Grammatical Range & Accuracy** (0-25 points):
-   - Grammar correctness (apply level-appropriate standards)
-   - Sentence variety: mix of simple, compound, complex sentences?
-   - Proper use of tenses, articles, prepositions?
-   - 22-25: Excellent grammar, varied structures, rare errors
-   - 16-21: Minor errors, some variety in structures
-   - 9-15: Frequent errors, repetitive structures
-   - 0-8: Severe errors making text hard to understand
+1. **task_achievement** (0-25):
+   Image accuracy + keyword usage + word count.
+   - How many keywords used naturally? (${requiredCount} required: [${requiredWords}])
+   - Does description match the actual image content?
+   - Fabricated details (things NOT in image) → heavy penalty
+   - Missing major image elements → penalty
+   - Keywords just listed, not in sentences → max 15${wordCount < (minWc || 0) ? `\n   - Word count ${wordCount} < ${minWc} → penalty` : ""}
+   22-25: accurate + all keywords natural + correct length | 16-21: mostly accurate, 1-2 keywords missing | 9-15: partially matches image OR keywords forced | 0-8: doesn't match image
 
-Total = sum of 4 criteria (0-100)${quizScore != null ? " + quiz bonus/penalty (±5)" : ""}.
+2. **coherence_cohesion** (0-25):
+   Paragraph structure + transitions + flow.
+   22-25: clear structure, smooth transitions | 16-21: generally coherent | 9-15: weak, repetitive | 0-8: no structure
 
-═══ PART 2: ENHANCED VERSION ═══
+3. **lexical_resource** (0-25):
+   Vocabulary variety + precision + collocations.
+   Quote specific word choices: good ones AND poor ones.
+   22-25: rich, precise | 16-21: good, some generic | 9-15: basic/limited | 0-8: poor
 
-Rewrite the student's paragraph as an improved, polished version that:
-- Fixes ALL grammar, spelling, and punctuation errors
-- Improves vocabulary (upgrade generic words to more descriptive ones)
-- Improves coherence (add transitions, reorder if needed)
-- Keeps the student's original ideas and structure as much as possible
-- Stays within the word count requirement (${wcRequirement})
-- Uses ALL required keywords naturally: [${requiredWords}]
+4. **grammatical_range_accuracy** (0-25):
+   Grammar + sentence variety + articles/tenses/prepositions.
+   Quote every error found.
+   22-25: excellent | 16-21: minor errors | 9-15: frequent errors | 0-8: severe
 
-═══ PART 3: CORRECTIONS ═══
+Total = sum (0-100).
 
-List 1-3 specific corrections: quote the problematic phrase from student's writing, provide the better alternative, and explain in Vietnamese why. Empty array if perfect.
+═══ ENHANCED VERSION ═══
+Rewrite as improved version that:
+- Describes ONLY what is actually in the image (no fabrication)
+- Uses ALL required keywords [${requiredWords}] naturally
+- Fixes grammar/vocabulary
+- Stays within ${wcRequirement}
 
-═══ OUTPUT ═══
+═══ CORRECTIONS ═══
+1-5 corrections: quote phrase → better version → brief Vietnamese explanation (1 sentence). Include any fabricated details as corrections. Empty if perfect.
 
-For each criterion: name, score, maxScore (25), comment in Vietnamese.
-Also: total score, summary in Vietnamese (2-3 sentences), enhanced version, corrections.`;
+═══ RULES ═══
+- Summary: 1 sentence Vietnamese, mention keyword usage and image accuracy
+- If student describes things NOT in the image, explicitly call it out in task_achievement comment
+- If keywords are just listed (not in sentences), task_achievement max 15`;
 };
 
 const SW_GRADING_SCHEMA = {
   score: { type: "number", description: "Total score 0-100" },
-  summary: { type: "string", description: "Overall evaluation summary in Vietnamese (2-3 sentences)" },
-  enhancedVersion: { type: "string", description: "AI-polished version of the student's writing" },
+  summary: { type: "string", description: "1-sentence evaluation in Vietnamese" },
+  enhancedVersion: { type: "string", description: "Improved version describing only what's in the image, using all keywords" },
   criteria: {
     type: "array",
-    description: "4 IELTS-aligned criteria",
+    description: "4 criteria with concise comments",
     items: {
       type: "object",
       properties: {
-        name: { type: "string", description: "Criterion name: task_achievement | coherence_cohesion | lexical_resource | grammatical_range_accuracy" },
-        score: { type: "number", description: "Score for this criterion (0-25)" },
+        name: { type: "string", description: "task_achievement | coherence_cohesion | lexical_resource | grammatical_range_accuracy" },
+        score: { type: "number", description: "0-25" },
         maxScore: { type: "number", description: "Always 25" },
-        comment: { type: "string", description: "Specific comment in Vietnamese explaining this score" },
+        comment: { type: "string", description: "Concise Vietnamese comment (1-2 sentences), quote English phrases" },
       },
       required: ["name", "score", "maxScore", "comment"],
     },
   },
   corrections: {
     type: "array",
-    description: "1-3 concrete corrections. Empty if perfect.",
+    description: "1-5 corrections with quoted phrases. Empty if perfect.",
     items: {
       type: "object",
       properties: {
-        original: { type: "string", description: "Problematic phrase quoted from student's writing" },
-        suggestion: { type: "string", description: "Better alternative in English" },
-        explanation: { type: "string", description: "Brief explanation in Vietnamese" },
+        original: { type: "string", description: "Problematic phrase from student" },
+        suggestion: { type: "string", description: "Better alternative" },
+        explanation: { type: "string", description: "Brief Vietnamese explanation (1 sentence)" },
       },
       required: ["original", "suggestion", "explanation"],
     },
   },
 };
 
-async function gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level, quizScore) {
+async function gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level) {
   const content = [
     { type: "image", source: { type: "url", url: lesson.mediaUrl } },
-    { type: "text", text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level, quizScore) },
+    { type: "text", text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level) },
   ];
 
   const response = await claude.messages.create({
@@ -373,11 +370,11 @@ async function gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level, qui
   return toolBlock.input;
 }
 
-async function gradeSeeWriteWithGemini(userAnswer, lesson, wordCount, level, quizScore) {
+async function gradeSeeWriteWithGemini(userAnswer, lesson, wordCount, level) {
   const response = await genai.models.generateContent({
     model: "gemini-2.5-flash",
     contents: [
-      { text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level, quizScore) },
+      { text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level) },
       createPartFromUri(lesson.mediaUrl, "image/jpeg"),
     ],
     config: {
@@ -615,8 +612,6 @@ export async function aiGradeRewrite(userAnswer, targetSentence, level = "interm
 
 // --- Exam (IELTS) grading ---
 
-const EXAM_MIN_WORDS = { ielts_task1: 150, ielts_task2: 250 };
-
 const EXAM_PROMPT = (userAnswer, exam, wordCount) => {
   const isTask1 = exam.examType === "ielts_task1";
   const minWords = EXAM_MIN_WORDS[exam.examType];
@@ -809,11 +804,11 @@ export async function aiGradeExam(userAnswer, exam) {
 /**
  * Grade See & Write answer: Claude (primary) → Gemini (fallback)
  */
-export async function aiGradeSeeWrite(userAnswer, lesson, level = "intermediate", quizScore = null) {
+export async function aiGradeSeeWrite(userAnswer, lesson, level = "intermediate") {
   const wordCount = userAnswer.trim().split(/\s+/).filter(Boolean).length;
   return withFallback(
     "grading-see-write",
-    () => gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level, quizScore),
-    () => gradeSeeWriteWithGemini(userAnswer, lesson, wordCount, level, quizScore),
+    () => gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level),
+    () => gradeSeeWriteWithGemini(userAnswer, lesson, wordCount, level),
   );
 }
