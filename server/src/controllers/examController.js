@@ -1,18 +1,21 @@
 import * as examService from "@server/services/examService";
 import { ApiError } from "@server/helpers/ApiError";
+import { validateFields } from "@server/helpers/validateFields";
+import { USER_ROLE } from "@server/const/user";
 
 /**
- * GET /api/writing/exam
+ * GET /api/writing/exam — admin: all, user: filtered
  */
 export async function listExams(req, res, next) {
   try {
     const { level, topic, examType, page = 1, limit = 12 } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
-    const { items, total } = await examService.listExams(
-      { level, topic, examType },
-      { page: p, limit: l },
-    );
+
+    const { items, total } = req.user.role === USER_ROLE.ADMIN
+      ? await examService.listExamsAdmin({ page: p, limit: l })
+      : await examService.listExams({ level, topic, examType }, { page: p, limit: l });
+
     res.json({
       success: true,
       data: items,
@@ -24,11 +27,13 @@ export async function listExams(req, res, next) {
 }
 
 /**
- * GET /api/writing/exam/:examId
+ * GET /api/writing/exam/:id — admin: full, user: limited
  */
 export async function getExam(req, res, next) {
   try {
-    const data = await examService.getExam(req.params.id);
+    const data = req.user.role === USER_ROLE.ADMIN
+      ? await examService.getExamAdmin(req.params.id)
+      : await examService.getExam(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -91,6 +96,48 @@ export async function getHistory(req, res, next) {
       req.params.id,
       { page: Math.max(1, +page), limit: Math.min(Math.max(1, +limit), 50) },
     );
+    res.json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * POST /api/writing/exam — [ADMIN]
+ */
+export async function createExam(req, res, next) {
+  try {
+    validateFields(req.body, ["title", "examType", "examPrompt"]);
+
+    if (req.body.examType === "ielts_task1" && !req.body.imageUrl?.trim()) {
+      throw ApiError.badRequest("imageUrl is required for IELTS Task 1");
+    }
+
+    const data = await examService.createExam(req.body);
+    res.status(201).json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * PUT /api/writing/exam/:id — [ADMIN] Update
+ */
+export async function updateExam(req, res, next) {
+  try {
+    const data = await examService.updateExam(req.params.id, req.body);
+    res.json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * DELETE /api/writing/exam/:id — [ADMIN] Delete
+ */
+export async function deleteExam(req, res, next) {
+  try {
+    const data = await examService.deleteExam(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);

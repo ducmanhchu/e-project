@@ -1,4 +1,6 @@
 import { Attempt } from "@server/models/attempt/Attempt";
+import { resetAttempt } from "@server/helpers/attemptHelper";
+import { ApiError } from "@server/helpers/ApiError";
 
 /**
  * GET /api/attempts?lessonIds=id1,id2
@@ -26,6 +28,34 @@ export async function listAttempts(req, res, next) {
     }));
 
     res.json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * PUT /api/attempts/:id — Update attempt (retry, etc.)
+ */
+export async function updateAttempt(req, res, next) {
+  try {
+    const { action } = req.body;
+    if (!action) throw ApiError.badRequest("action is required");
+
+    const attempt = await Attempt.findOne({
+      userId: req.user._id,
+      lessonId: req.params.id,
+    });
+    if (!attempt) throw ApiError.notFound("No attempt found");
+
+    if (action === "retry") {
+      await resetAttempt(attempt);
+      return res.json({
+        success: true,
+        data: { status: "in_progress", completedSentences: 0, bestScore: 0 },
+      });
+    }
+
+    throw ApiError.badRequest(`Unknown action: ${action}`);
   } catch (e) {
     next(e);
   }

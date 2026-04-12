@@ -10,6 +10,8 @@ import {
   getSubmissions,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_THRESHOLD } from "@server/const/exercise";
+import { WRITING_TYPE } from "@server/const/writting";
+import { createWriting } from "@server/services/writingService";
 
 function shuffleArray(arr) {
   const a = [...arr];
@@ -229,7 +231,7 @@ export async function submitAnswer(userId, lessonId, userAnswer) {
     feedback: submission.feedback,
     gradedBy: provider,
     bestScore: progress.bestScore,
-    isCompleted: progress.isCompleted,
+    isCompleted: score >= COMPLETION_THRESHOLD,
   };
 }
 
@@ -265,4 +267,130 @@ export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}
     submissions: docs.reverse(),
     pagination: { page, limit, total },
   };
+}
+
+/**
+ * GET /writing/see-and-write — Admin list (all lessons)
+ */
+export async function listLessonsAdmin({ page = 1, limit = 20 } = {}) {
+  const [lessons, total] = await Promise.all([
+    SeeWrite.find()
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    SeeWrite.countDocuments(),
+  ]);
+
+  return {
+    items: lessons.map((l) => ({
+      id: l._id,
+      title: l.title,
+      level: l.level,
+      topic: l.topic,
+      mediaUrl: l.mediaUrl,
+      requiredWords: l.requiredWords || [],
+      wordPool: l.wordPool || [],
+      minWordCount: l.minWordCount,
+      maxWordCount: l.maxWordCount,
+      totalSentences: l.totalSentences,
+      createdAt: l.createdAt,
+    })),
+    total,
+  };
+}
+
+/**
+ * GET /writing/see-and-write/:id — Admin detail (no shuffle)
+ */
+export async function getLessonAdmin(lessonId) {
+  const lesson = await SeeWrite.findById(lessonId).lean();
+  if (!lesson) throw ApiError.notFound("Lesson not found");
+
+  return {
+    id: lesson._id,
+    title: lesson.title,
+    level: lesson.level,
+    topic: lesson.topic,
+    description: lesson.description,
+    mediaUrl: lesson.mediaUrl,
+    requiredWords: lesson.requiredWords || [],
+    wordPool: lesson.wordPool || [],
+    minWordCount: lesson.minWordCount,
+    maxWordCount: lesson.maxWordCount,
+    sortOrder: lesson.sortOrder,
+    createdAt: lesson.createdAt,
+    updatedAt: lesson.updatedAt,
+  };
+}
+
+/**
+ * POST /writing/see-and-write — Create lesson
+ */
+export async function createLesson(body) {
+  return createWriting({ ...body, type: WRITING_TYPE.SEE_AND_WRITE });
+}
+
+/**
+ * PUT /writing/see-and-write/:id — Update lesson
+ */
+export async function updateLesson(lessonId, body) {
+  const lesson = await SeeWrite.findById(lessonId);
+  if (!lesson) throw ApiError.notFound("Lesson not found");
+
+  const allowedFields = [
+    "title", "level", "topic", "description", "sortOrder",
+    "mediaUrl", "requiredWords", "minWordCount", "maxWordCount",
+  ];
+
+  const updates = {};
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) updates[field] = body[field];
+  }
+
+  if (body.requiredWords !== undefined || body.distractorWords !== undefined) {
+    const requiredWords = body.requiredWords ?? lesson.requiredWords ?? [];
+    const distractorWords = body.distractorWords ?? computeDistractorWords(lesson) ?? [];
+    updates.wordPool = [...requiredWords, ...distractorWords];
+    updates.requiredWords = requiredWords;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw ApiError.badRequest("No valid fields to update");
+  }
+
+  const updated = await SeeWrite.findByIdAndUpdate(
+    lessonId,
+    { $set: updates },
+    { new: true, runValidators: true },
+  ).lean();
+
+  return {
+    id: updated._id,
+    title: updated.title,
+    level: updated.level,
+    topic: updated.topic,
+    description: updated.description,
+    mediaUrl: updated.mediaUrl,
+    requiredWords: updated.requiredWords || [],
+    wordPool: updated.wordPool || [],
+    minWordCount: updated.minWordCount,
+    maxWordCount: updated.maxWordCount,
+    updatedAt: updated.updatedAt,
+  };
+}
+
+/**
+ * DELETE /writing/see-and-write/:id — Delete lesson
+ */
+export async function deleteLesson(lessonId) {
+  const lesson = await SeeWrite.findById(lessonId);
+  if (!lesson) throw ApiError.notFound("Lesson not found");
+  await SeeWrite.findByIdAndDelete(lessonId);
+  return { id: lessonId };
+}
+
+function computeDistractorWords(lesson) {
+  const requiredSet = new Set((lesson.requiredWords || []).map((w) => w.toLowerCase()));
+  return (lesson.wordPool || []).filter((w) => !requiredSet.has(w.toLowerCase()));
 }

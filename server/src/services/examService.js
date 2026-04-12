@@ -9,6 +9,8 @@ import {
   getSubmissions,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_BAND, EXAM_MIN_WORDS, bandToScore, roundBand } from "@server/const/exercise";
+import { WRITING_TYPE } from "@server/const/writting";
+import { createWriting } from "@server/services/writingService";
 
 /**
  * GET /writing/exam — List exams
@@ -137,7 +139,7 @@ export async function submitAnswer(userId, examId, userAnswer) {
     gradedBy: provider,
     bestScore: progress.bestScore,
     bestBand: roundBand(progress.bestScore / 10),
-    isCompleted: progress.isCompleted,
+    isCompleted: band >= COMPLETION_BAND,
   };
 }
 
@@ -173,4 +175,107 @@ export async function getHistory(userId, examId, { page = 1, limit = 20 } = {}) 
     submissions: docs.reverse(),
     pagination: { page, limit, total },
   };
+}
+
+/**
+ * GET /writing/exam — Admin list (all exams)
+ */
+export async function listExamsAdmin({ page = 1, limit = 20 } = {}) {
+  const [exams, total] = await Promise.all([
+    Exam.find()
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    Exam.countDocuments(),
+  ]);
+
+  return {
+    items: exams.map((e) => ({
+      id: e._id,
+      title: e.title,
+      level: e.level,
+      topic: e.topic,
+      examType: e.examType,
+      examPrompt: e.examPrompt,
+      imageUrl: e.imageUrl || null,
+      totalSentences: e.totalSentences,
+      createdAt: e.createdAt,
+    })),
+    total,
+  };
+}
+
+/**
+ * GET /writing/exam/:id — Admin detail
+ */
+export async function getExamAdmin(examId) {
+  const exam = await Exam.findById(examId).lean();
+  if (!exam) throw ApiError.notFound("Exam not found");
+
+  return {
+    id: exam._id,
+    title: exam.title,
+    level: exam.level,
+    topic: exam.topic,
+    description: exam.description,
+    examType: exam.examType,
+    examPrompt: exam.examPrompt,
+    imageUrl: exam.imageUrl || null,
+    sortOrder: exam.sortOrder,
+    createdAt: exam.createdAt,
+    updatedAt: exam.updatedAt,
+  };
+}
+
+/**
+ * POST /writing/exam — Create exam
+ */
+export async function createExam(body) {
+  return createWriting({ ...body, type: WRITING_TYPE.EXAM_SIMULATION });
+}
+
+/**
+ * PUT /writing/exam/:id — Update exam
+ */
+export async function updateExam(examId, body) {
+  const exam = await Exam.findById(examId);
+  if (!exam) throw ApiError.notFound("Exam not found");
+
+  const allowedFields = ["title", "level", "topic", "description", "sortOrder", "examPrompt", "imageUrl"];
+  const updates = {};
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) updates[field] = body[field];
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw ApiError.badRequest("No valid fields to update");
+  }
+
+  const updated = await Exam.findByIdAndUpdate(
+    examId,
+    { $set: updates },
+    { new: true, runValidators: true },
+  ).lean();
+
+  return {
+    id: updated._id,
+    title: updated.title,
+    level: updated.level,
+    topic: updated.topic,
+    examType: updated.examType,
+    examPrompt: updated.examPrompt,
+    imageUrl: updated.imageUrl || null,
+    updatedAt: updated.updatedAt,
+  };
+}
+
+/**
+ * DELETE /writing/exam/:id — Delete exam
+ */
+export async function deleteExam(examId) {
+  const exam = await Exam.findById(examId);
+  if (!exam) throw ApiError.notFound("Exam not found");
+  await Exam.findByIdAndDelete(examId);
+  return { id: examId };
 }

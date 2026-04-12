@@ -52,3 +52,4 @@ plans/
 .playwright-cli
 .playwright-mcp
 words_data.json
+.superpowers/

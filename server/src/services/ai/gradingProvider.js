@@ -3,13 +3,14 @@ import { createPartFromUri } from "@google/genai";
 import { EXAM_MIN_WORDS } from "@server/const/exercise";
 
 const LEVEL_CRITERIA = {
-  beginner: `Level: BEGINNER — Be encouraging and lenient.
+  beginner: `Level: BEGINNER — Be encouraging but still accurate.
 - Accept simple sentence structures (S+V+O) even if the reference uses more complex forms
 - Accept basic vocabulary even if the reference uses more advanced words (e.g. "happy" instead of "delighted")
 - Do NOT penalize for missing articles (a/an/the), minor preposition errors, or simple tense mistakes
 - Focus evaluation on: Does the core meaning come through? Are the key words present?
-- Acceptable paraphrases should score 70+ if meaning is preserved
-- Grammar scoring: only penalize errors that cause confusion, not stylistic imperfections`,
+- Acceptable paraphrases should score 70+ if meaning is preserved AND spelling/grammar is mostly correct
+- Grammar scoring: only penalize errors that cause confusion, not stylistic imperfections
+- Spelling errors: Each misspelled word MUST be penalized under Grammar (2-3 points per misspelled word). Multiple spelling errors should result in significant deduction. A sentence with 3+ spelling errors should NOT score above 60`,
 
   intermediate: `Level: INTERMEDIATE — Balance accuracy with encouragement.
 - Expect correct basic grammar (tenses, subject-verb agreement, articles)
@@ -17,7 +18,8 @@ const LEVEL_CRITERIA = {
 - Expect most elements of the Vietnamese sentence to be present
 - Minor word order issues are acceptable if meaning is clear
 - Penalize run-on sentences or fragments
-- Grammar scoring: penalize consistent pattern errors, not one-off slips`,
+- Grammar scoring: penalize consistent pattern errors, not one-off slips
+- Spelling errors: penalize 3-4 points per misspelled word. Multiple spelling errors should NOT pass (score < 70)`,
 
   advanced: `Level: ADVANCED — Expect near-native quality.
 - Expect grammatically correct, natural-sounding English
@@ -25,7 +27,8 @@ const LEVEL_CRITERIA = {
 - Expect idiomatic expressions where the Vietnamese implies them
 - Penalize unnatural phrasing even if technically correct
 - Expect all nuances and elements from the Vietnamese sentence
-- Grammar scoring: penalize all errors including subtle ones (collocations, article usage, preposition choice)`,
+- Grammar scoring: penalize all errors including subtle ones (collocations, article usage, preposition choice)
+- Spelling errors: penalize heavily (5+ points per misspelled word). Any spelling error is unacceptable at this level`,
 };
 
 const CONTENT_TYPE_CONTEXT = {
@@ -70,7 +73,13 @@ const CONTENT_TYPE_CONTEXT = {
 - Focus on clarity and natural expression`,
 };
 
-const GRADING_PROMPT = (userAnswer, referenceAnswer, vietnameseText, level, contentType) =>
+const GRADING_PROMPT = (
+  userAnswer,
+  referenceAnswer,
+  vietnameseText,
+  level,
+  contentType,
+) =>
   `You are a strict but fair English writing evaluator for Vietnamese learners practicing reverse translation (Vietnamese → English).
 
 ${LEVEL_CRITERIA[level] || LEVEL_CRITERIA.intermediate}
@@ -89,18 +98,19 @@ Evaluate based on these 5 criteria:
    - 10-19: Partial meaning, important parts missing or wrong
    - 0-9: Meaning significantly different
 
-2. **Grammar correctness** (0-25 points): Is the English grammatically correct?
-   - 25: Perfect grammar
-   - 15-24: Minor errors not causing confusion
-   - 5-14: Multiple errors or awkward structure
-   - 0-4: Severe errors
+2. **Grammar & Spelling correctness** (0-25 points): Is the English grammatically correct and properly spelled?
+   - 25: Perfect grammar and spelling
+   - 15-24: 1 minor error (typo or grammar slip)
+   - 5-14: 2 errors
+   - 0-4: 3+ errors (spelling OR grammar)
+   - CRITICAL: Each misspelled word (e.g. "wnat" for "want") counts as a FULL error, same weight as a grammar error. Count every misspelled word individually.
    (Apply level-appropriate grammar standards)
 
-3. **Vocabulary appropriateness** (0-20 points): Are word choices natural and fitting?
-   - 20: Natural, idiomatic choices matching context and content type
-   - 12-19: Acceptable but slightly unnatural or wrong register for the content type
-   - 5-11: Wrong or unusual word choices
-   - 0-4: Critical vocabulary errors
+3. **Vocabulary appropriateness** (0-20 points): Are word choices natural, fitting, and correctly spelled?
+   - 20: Natural, idiomatic choices matching context and content type, all words spelled correctly
+   - 12-19: Acceptable choices, max 1 misspelled word
+   - 5-11: Wrong/unusual word choices OR 2+ misspelled words
+   - 0-4: Critical vocabulary errors or most words misspelled
    (Consider content type: formal email vocab ≠ diary vocab ≠ essay vocab)
 
 4. **Completeness** (0-15 points): Are all elements from the Vietnamese sentence present?
@@ -120,26 +130,54 @@ Rules:
 - Accept valid paraphrases that preserve meaning (don't require exact word match)
 - Apply BOTH level-appropriate AND content-type-appropriate standards
 - If answer is unrelated or gibberish, score 0-10
+- If student writes in Vietnamese instead of English, score 0
+- SPELLING IS CRITICAL: A sentence with 3+ misspelled words should score MAX 55 total regardless of meaning accuracy. Spelling errors affect BOTH Grammar AND Vocabulary scores simultaneously
 
 Provide:
 1. Total score (0-100)
-2. Brief evaluation summary in Vietnamese (1-2 sentences, mention content type expectations if relevant)
-3. 1-3 specific strengths in Vietnamese
-4. 1-3 specific improvements in Vietnamese if score < 100, empty array if perfect`;
+2. "suggestion": The corrected sentence with INLINE DIFF showing what changed. Format: write the correct word in bold followed by the student's wrong word in parentheses with strikethrough. Example: if student wrote "I hoep you ar doin wel." → suggestion is "I **hope**(hoep) you **are doing well**(ar doin wel).". If score is 100, return the student's answer as-is (no diff needed). If unrelated/gibberish/Vietnamese, return empty string.
+3. "improvements": Array of specific error corrections in Vietnamese. Each item explains ONE error: what was wrong and what it should be. Example: ["Bạn đã viết sai chính tả từ **hoep**, cần sửa thành **hope**.", "Từ **doin** nên được viết đầy đủ là **doing** để đúng ngữ pháp."]. If score is 100, return empty array [].
+4. "comment": Brief overall comment in Vietnamese (1-2 sentences max). If score is 100, give SHORT praise like "Bản dịch của bạn rất chính xác và tự nhiên. Giữ vững phong độ nhé!". If score < 100, briefly summarize what needs fixing. Keep it concise.`;
 
 const GRADING_SCHEMA = {
   score: { type: "number", description: "Score from 0 to 100" },
-  summary: { type: "string", description: "Brief evaluation summary in Vietnamese" },
-  strengths: { type: "array", items: { type: "string" }, description: "Specific strengths in Vietnamese" },
-  improvements: { type: "array", items: { type: "string" }, description: "Specific improvements in Vietnamese, empty if perfect" },
+  suggestion: {
+    type: "string",
+    description:
+      "Corrected sentence with inline diff: **correct**(wrong). Empty string if unrelated/gibberish/Vietnamese",
+  },
+  improvements: {
+    type: "array",
+    items: { type: "string" },
+    description: "Array of specific error corrections in Vietnamese. Empty array if score is 100",
+  },
+  comment: {
+    type: "string",
+    description: "Brief overall comment in Vietnamese (1-2 sentences)",
+  },
 };
 
-async function gradeWithClaude(userAnswer, referenceAnswer, vietnameseText, level, contentType) {
+async function gradeWithClaude(
+  userAnswer,
+  referenceAnswer,
+  vietnameseText,
+  level,
+  contentType,
+) {
   const response = await claude.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 1024,
     messages: [
-      { role: "user", content: GRADING_PROMPT(userAnswer, referenceAnswer, vietnameseText, level, contentType) },
+      {
+        role: "user",
+        content: GRADING_PROMPT(
+          userAnswer,
+          referenceAnswer,
+          vietnameseText,
+          level,
+          contentType,
+        ),
+      },
     ],
     tools: [
       {
@@ -148,7 +186,7 @@ async function gradeWithClaude(userAnswer, referenceAnswer, vietnameseText, leve
         input_schema: {
           type: "object",
           properties: GRADING_SCHEMA,
-          required: ["score", "summary", "strengths", "improvements"],
+          required: ["score", "suggestion", "improvements", "comment"],
         },
       },
     ],
@@ -159,21 +197,33 @@ async function gradeWithClaude(userAnswer, referenceAnswer, vietnameseText, leve
   return toolBlock.input;
 }
 
-async function gradeWithGemini(userAnswer, referenceAnswer, vietnameseText, level, contentType) {
+async function gradeWithGemini(
+  userAnswer,
+  referenceAnswer,
+  vietnameseText,
+  level,
+  contentType,
+) {
   const response = await genai.models.generateContent({
     model: "gemini-2.5-flash",
-    contents: GRADING_PROMPT(userAnswer, referenceAnswer, vietnameseText, level, contentType),
+    contents: GRADING_PROMPT(
+      userAnswer,
+      referenceAnswer,
+      vietnameseText,
+      level,
+      contentType,
+    ),
     config: {
       responseMimeType: "application/json",
       responseJsonSchema: {
         type: Type.OBJECT,
         properties: {
           score: { type: Type.NUMBER },
-          summary: { type: Type.STRING },
-          strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+          suggestion: { type: Type.STRING },
           improvements: { type: Type.ARRAY, items: { type: Type.STRING } },
+          comment: { type: Type.STRING },
         },
-        propertyOrdering: ["score", "summary", "strengths", "improvements"],
+        propertyOrdering: ["score", "suggestion", "improvements", "comment"],
       },
     },
   });
@@ -193,8 +243,22 @@ export async function aiGradeAnswer(
 ) {
   return withFallback(
     "grading",
-    () => gradeWithClaude(userAnswer, referenceAnswer, vietnameseText, level, contentType),
-    () => gradeWithGemini(userAnswer, referenceAnswer, vietnameseText, level, contentType),
+    () =>
+      gradeWithClaude(
+        userAnswer,
+        referenceAnswer,
+        vietnameseText,
+        level,
+        contentType,
+      ),
+    () =>
+      gradeWithGemini(
+        userAnswer,
+        referenceAnswer,
+        vietnameseText,
+        level,
+        contentType,
+      ),
   );
 }
 
@@ -228,10 +292,14 @@ const SEE_WRITE_PROMPT = (userAnswer, lesson, wordCount, level) => {
   const requiredCount = lesson.requiredWords?.length || 0;
   const minWc = lesson.minWordCount ? lesson.minWordCount : null;
   const maxWc = lesson.maxWordCount ? lesson.maxWordCount : null;
-  const wcRequirement = minWc && maxWc ? `${minWc}–${maxWc} words`
-    : minWc ? `at least ${minWc} words`
-    : maxWc ? `at most ${maxWc} words`
-    : "no specific requirement";
+  const wcRequirement =
+    minWc && maxWc
+      ? `${minWc}–${maxWc} words`
+      : minWc
+        ? `at least ${minWc} words`
+        : maxWc
+          ? `at most ${maxWc} words`
+          : "no specific requirement";
 
   return `You are an English teacher grading a Vietnamese student's image description.
 Look at the image carefully FIRST, then evaluate whether the student's writing accurately describes what you see.
@@ -311,18 +379,33 @@ Rewrite as improved version that:
 
 const SW_GRADING_SCHEMA = {
   score: { type: "number", description: "Total score 0-100" },
-  summary: { type: "string", description: "1-sentence evaluation in Vietnamese" },
-  enhancedVersion: { type: "string", description: "Improved version describing only what's in the image, using all keywords" },
+  summary: {
+    type: "string",
+    description: "1-sentence evaluation in Vietnamese",
+  },
+  enhancedVersion: {
+    type: "string",
+    description:
+      "Improved version describing only what's in the image, using all keywords",
+  },
   criteria: {
     type: "array",
     description: "4 criteria with concise comments",
     items: {
       type: "object",
       properties: {
-        name: { type: "string", description: "task_achievement | coherence_cohesion | lexical_resource | grammatical_range_accuracy" },
+        name: {
+          type: "string",
+          description:
+            "task_achievement | coherence_cohesion | lexical_resource | grammatical_range_accuracy",
+        },
         score: { type: "number", description: "0-25" },
         maxScore: { type: "number", description: "Always 25" },
-        comment: { type: "string", description: "Concise Vietnamese comment (1-2 sentences), quote English phrases" },
+        comment: {
+          type: "string",
+          description:
+            "Concise Vietnamese comment (1-2 sentences), quote English phrases",
+        },
       },
       required: ["name", "score", "maxScore", "comment"],
     },
@@ -333,9 +416,15 @@ const SW_GRADING_SCHEMA = {
     items: {
       type: "object",
       properties: {
-        original: { type: "string", description: "Problematic phrase from student" },
+        original: {
+          type: "string",
+          description: "Problematic phrase from student",
+        },
         suggestion: { type: "string", description: "Better alternative" },
-        explanation: { type: "string", description: "Brief Vietnamese explanation (1 sentence)" },
+        explanation: {
+          type: "string",
+          description: "Brief Vietnamese explanation (1 sentence)",
+        },
       },
       required: ["original", "suggestion", "explanation"],
     },
@@ -345,7 +434,10 @@ const SW_GRADING_SCHEMA = {
 async function gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level) {
   const content = [
     { type: "image", source: { type: "url", url: lesson.mediaUrl } },
-    { type: "text", text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level) },
+    {
+      type: "text",
+      text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level),
+    },
   ];
 
   const response = await claude.messages.create({
@@ -359,7 +451,13 @@ async function gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level) {
         input_schema: {
           type: "object",
           properties: SW_GRADING_SCHEMA,
-          required: ["score", "summary", "enhancedVersion", "criteria", "corrections"],
+          required: [
+            "score",
+            "summary",
+            "enhancedVersion",
+            "criteria",
+            "corrections",
+          ],
         },
       },
     ],
@@ -411,7 +509,13 @@ async function gradeSeeWriteWithGemini(userAnswer, lesson, wordCount, level) {
             },
           },
         },
-        propertyOrdering: ["score", "summary", "enhancedVersion", "criteria", "corrections"],
+        propertyOrdering: [
+          "score",
+          "summary",
+          "enhancedVersion",
+          "criteria",
+          "corrections",
+        ],
       },
     },
   });
@@ -485,47 +589,41 @@ Student's rewrite: "${userAnswer}"
 
 Total = sum (0-100).
 
-═══ CORRECTIONS ═══
-1-5 corrections: quote problematic phrase → corrected version → brief Vietnamese explanation (1 sentence max). Empty if perfect.
+═══ OUTPUT FORMAT ═══
 
-═══ MODEL ANSWER ═══
-One model paraphrase showing good technique. Different from student's version.
+1. "suggestion": The corrected/improved version of the student's rewrite with INLINE DIFF showing what changed. Format: write the correct word in bold followed by the student's wrong word in parentheses. Example: if student wrote "He **opted** to **remaining**(remain) at home." → show the error inline. If score is 100, return the student's answer as-is. If student copied original exactly, return empty string.
+
+2. "improvements": Array of specific error corrections in Vietnamese. Each item explains ONE issue: what was wrong and what it should be. Example: ["Cần đổi **remaining** thành **remain** vì sau 'to' dùng động từ nguyên thể.", "Cấu trúc câu chưa thay đổi nhiều so với câu gốc, thử dùng câu bị động."]. If score is 100, return empty array [].
+
+3. "comment": Brief overall comment in Vietnamese (1-2 sentences max). If score is 100, give SHORT praise. If score < 100, briefly summarize what needs fixing. Keep it concise — no filler.
+
+4. "modelAnswer": One model paraphrase showing good technique. Different from student's version.
 
 ═══ RULES ═══
 - Copy original exactly → structural_change = 0
-- Summary: 1 sentence in Vietnamese, mention the paraphrase strategy used`;
+- Spelling errors: each misspelled word counts as a grammar error`;
 
 const RW_GRADING_SCHEMA = {
   score: { type: "number", description: "Total score 0-100" },
-  summary: { type: "string", description: "Teacher-style evaluation summary in Vietnamese (2-3 sentences), mentioning specific techniques used" },
-  criteria: {
-    type: "array",
-    description: "4 paraphrasing criteria with detailed comments",
-    items: {
-      type: "object",
-      properties: {
-        name: { type: "string", description: "Criterion name: meaning_preservation | structural_change | grammar_accuracy | vocabulary_quality" },
-        score: { type: "number", description: "Score for this criterion" },
-        maxScore: { type: "number", description: "Max score: 35, 30, 20, or 15" },
-        comment: { type: "string", description: "Detailed comment in Vietnamese with quoted English examples from student's writing" },
-      },
-      required: ["name", "score", "maxScore", "comment"],
-    },
+  suggestion: {
+    type: "string",
+    description:
+      "Corrected rewrite with inline diff: **correct**(wrong). Empty if copied original or gibberish",
   },
-  corrections: {
+  improvements: {
     type: "array",
-    description: "1-5 specific corrections with quoted phrases. Empty if perfect.",
-    items: {
-      type: "object",
-      properties: {
-        original: { type: "string", description: "Exact problematic phrase quoted from student's writing" },
-        correction: { type: "string", description: "Corrected version in English" },
-        explanation: { type: "string", description: "Why it's wrong — grammar rule, meaning shift, or collocation issue — in Vietnamese" },
-      },
-      required: ["original", "correction", "explanation"],
-    },
+    items: { type: "string" },
+    description: "Array of specific error corrections in Vietnamese. Empty if score is 100",
   },
-  modelAnswer: { type: "string", description: "A model paraphrase demonstrating good technique, different from student's answer" },
+  comment: {
+    type: "string",
+    description: "Brief overall comment in Vietnamese (1-2 sentences)",
+  },
+  modelAnswer: {
+    type: "string",
+    description:
+      "A model paraphrase demonstrating good technique, different from student's answer",
+  },
 };
 
 async function gradeRewriteWithClaude(userAnswer, targetSentence, level) {
@@ -533,7 +631,10 @@ async function gradeRewriteWithClaude(userAnswer, targetSentence, level) {
     model: "claude-haiku-4-5-20251001",
     max_tokens: 2048,
     messages: [
-      { role: "user", content: REWRITE_PROMPT(userAnswer, targetSentence, level) },
+      {
+        role: "user",
+        content: REWRITE_PROMPT(userAnswer, targetSentence, level),
+      },
     ],
     tools: [
       {
@@ -542,7 +643,13 @@ async function gradeRewriteWithClaude(userAnswer, targetSentence, level) {
         input_schema: {
           type: "object",
           properties: RW_GRADING_SCHEMA,
-          required: ["score", "summary", "criteria", "corrections", "modelAnswer"],
+          required: [
+            "score",
+            "suggestion",
+            "improvements",
+            "comment",
+            "modelAnswer",
+          ],
         },
       },
     ],
@@ -563,35 +670,18 @@ async function gradeRewriteWithGemini(userAnswer, targetSentence, level) {
         type: Type.OBJECT,
         properties: {
           score: { type: Type.NUMBER },
-          summary: { type: Type.STRING },
-          criteria: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                score: { type: Type.NUMBER },
-                maxScore: { type: Type.NUMBER },
-                comment: { type: Type.STRING },
-              },
-              propertyOrdering: ["name", "score", "maxScore", "comment"],
-            },
-          },
-          corrections: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                original: { type: Type.STRING },
-                correction: { type: Type.STRING },
-                explanation: { type: Type.STRING },
-              },
-              propertyOrdering: ["original", "correction", "explanation"],
-            },
-          },
+          suggestion: { type: Type.STRING },
+          improvements: { type: Type.ARRAY, items: { type: Type.STRING } },
+          comment: { type: Type.STRING },
           modelAnswer: { type: Type.STRING },
         },
-        propertyOrdering: ["score", "summary", "criteria", "corrections", "modelAnswer"],
+        propertyOrdering: [
+          "score",
+          "suggestion",
+          "improvements",
+          "comment",
+          "modelAnswer",
+        ],
       },
     },
   });
@@ -602,7 +692,11 @@ async function gradeRewriteWithGemini(userAnswer, targetSentence, level) {
 /**
  * Grade Rewrite (Paraphrasing) answer: Claude (primary) → Gemini (fallback)
  */
-export async function aiGradeRewrite(userAnswer, targetSentence, level = "intermediate") {
+export async function aiGradeRewrite(
+  userAnswer,
+  targetSentence,
+  level = "intermediate",
+) {
   return withFallback(
     "grading-rewrite",
     () => gradeRewriteWithClaude(userAnswer, targetSentence, level),
@@ -644,9 +738,11 @@ ${userAnswer}
 ═══ BAND SCORING — 4 IELTS criteria, each Band 1-9 ═══
 
 1. **${criterion1Name}** (Band 1-9):
-   ${isTask1
-    ? `Did they describe key features? Overview present? Data accurately reported? ${wordCount < minWords ? `PENALIZE: only ${wordCount}/${minWords} words.` : ""}`
-    : `Did they address all parts? Clear position throughout? Ideas supported? ${wordCount < minWords ? `PENALIZE: only ${wordCount}/${minWords} words.` : ""}`}
+   ${
+     isTask1
+       ? `Did they describe key features? Overview present? Data accurately reported? ${wordCount < minWords ? `PENALIZE: only ${wordCount}/${minWords} words.` : ""}`
+       : `Did they address all parts? Clear position throughout? Ideas supported? ${wordCount < minWords ? `PENALIZE: only ${wordCount}/${minWords} words.` : ""}`
+   }
 
 2. **coherence_cohesion** (Band 1-9):
    Logical paragraph structure? Cohesive devices used naturally (not mechanically)? Clear progression of ideas?
@@ -672,18 +768,35 @@ Rewrite the student's essay as an improved band 7.5+ version. Fix all errors, im
 };
 
 const EXAM_GRADING_SCHEMA = {
-  overallBand: { type: "number", description: "Overall IELTS band 1-9, rounded to nearest 0.5" },
-  summary: { type: "string", description: "1-sentence evaluation in Vietnamese" },
-  enhancedVersion: { type: "string", description: "AI-improved band 7.5+ version" },
+  overallBand: {
+    type: "number",
+    description: "Overall IELTS band 1-9, rounded to nearest 0.5",
+  },
+  summary: {
+    type: "string",
+    description: "1-sentence evaluation in Vietnamese",
+  },
+  enhancedVersion: {
+    type: "string",
+    description: "AI-improved band 7.5+ version",
+  },
   criteria: {
     type: "array",
     description: "4 IELTS criteria",
     items: {
       type: "object",
       properties: {
-        name: { type: "string", description: "task_achievement|task_response|coherence_cohesion|lexical_resource|grammatical_range_accuracy" },
+        name: {
+          type: "string",
+          description:
+            "task_achievement|task_response|coherence_cohesion|lexical_resource|grammatical_range_accuracy",
+        },
         band: { type: "number", description: "Band 1-9" },
-        comment: { type: "string", description: "Concise comment in Vietnamese (1-2 sentences), quote English phrases" },
+        comment: {
+          type: "string",
+          description:
+            "Concise comment in Vietnamese (1-2 sentences), quote English phrases",
+        },
       },
       required: ["name", "band", "comment"],
     },
@@ -694,9 +807,15 @@ const EXAM_GRADING_SCHEMA = {
     items: {
       type: "object",
       properties: {
-        original: { type: "string", description: "Problematic phrase from student" },
+        original: {
+          type: "string",
+          description: "Problematic phrase from student",
+        },
         suggestion: { type: "string", description: "Corrected version" },
-        explanation: { type: "string", description: "Brief explanation in Vietnamese" },
+        explanation: {
+          type: "string",
+          description: "Brief explanation in Vietnamese",
+        },
       },
       required: ["original", "suggestion", "explanation"],
     },
@@ -706,12 +825,13 @@ const EXAM_GRADING_SCHEMA = {
 async function gradeExamWithClaude(userAnswer, exam, wordCount) {
   const isTask1 = exam.examType === "ielts_task1";
 
-  const content = isTask1 && exam.imageUrl
-    ? [
-        { type: "image", source: { type: "url", url: exam.imageUrl } },
-        { type: "text", text: EXAM_PROMPT(userAnswer, exam, wordCount) },
-      ]
-    : [{ type: "text", text: EXAM_PROMPT(userAnswer, exam, wordCount) }];
+  const content =
+    isTask1 && exam.imageUrl
+      ? [
+          { type: "image", source: { type: "url", url: exam.imageUrl } },
+          { type: "text", text: EXAM_PROMPT(userAnswer, exam, wordCount) },
+        ]
+      : [{ type: "text", text: EXAM_PROMPT(userAnswer, exam, wordCount) }];
 
   const response = await claude.messages.create({
     model: "claude-haiku-4-5-20251001",
@@ -724,7 +844,13 @@ async function gradeExamWithClaude(userAnswer, exam, wordCount) {
         input_schema: {
           type: "object",
           properties: EXAM_GRADING_SCHEMA,
-          required: ["overallBand", "summary", "enhancedVersion", "criteria", "corrections"],
+          required: [
+            "overallBand",
+            "summary",
+            "enhancedVersion",
+            "criteria",
+            "corrections",
+          ],
         },
       },
     ],
@@ -738,12 +864,13 @@ async function gradeExamWithClaude(userAnswer, exam, wordCount) {
 async function gradeExamWithGemini(userAnswer, exam, wordCount) {
   const isTask1 = exam.examType === "ielts_task1";
 
-  const contents = isTask1 && exam.imageUrl
-    ? [
-        { text: EXAM_PROMPT(userAnswer, exam, wordCount) },
-        createPartFromUri(exam.imageUrl, "image/jpeg"),
-      ]
-    : [{ text: EXAM_PROMPT(userAnswer, exam, wordCount) }];
+  const contents =
+    isTask1 && exam.imageUrl
+      ? [
+          { text: EXAM_PROMPT(userAnswer, exam, wordCount) },
+          createPartFromUri(exam.imageUrl, "image/jpeg"),
+        ]
+      : [{ text: EXAM_PROMPT(userAnswer, exam, wordCount) }];
 
   const response = await genai.models.generateContent({
     model: "gemini-2.5-flash",
@@ -781,7 +908,13 @@ async function gradeExamWithGemini(userAnswer, exam, wordCount) {
             },
           },
         },
-        propertyOrdering: ["overallBand", "summary", "enhancedVersion", "criteria", "corrections"],
+        propertyOrdering: [
+          "overallBand",
+          "summary",
+          "enhancedVersion",
+          "criteria",
+          "corrections",
+        ],
       },
     },
   });
@@ -804,7 +937,11 @@ export async function aiGradeExam(userAnswer, exam) {
 /**
  * Grade See & Write answer: Claude (primary) → Gemini (fallback)
  */
-export async function aiGradeSeeWrite(userAnswer, lesson, level = "intermediate") {
+export async function aiGradeSeeWrite(
+  userAnswer,
+  lesson,
+  level = "intermediate",
+) {
   const wordCount = userAnswer.trim().split(/\s+/).filter(Boolean).length;
   return withFallback(
     "grading-see-write",

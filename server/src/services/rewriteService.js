@@ -10,6 +10,9 @@ import {
   buildSentenceAttempts,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_THRESHOLD } from "@server/const/exercise";
+import { WRITING_TYPE } from "@server/const/writting";
+import { createWriting } from "@server/services/writingService";
+import { validateFields } from "@server/helpers/validateFields";
 
 /**
  * GET /writing/rewrite — List lessons
@@ -108,9 +111,9 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
     score,
     gradedBy: provider,
     feedback: {
-      summary: grading.summary,
-      criteria: grading.criteria || [],
-      corrections: grading.corrections || [],
+      suggestion: grading.suggestion || "",
+      improvements: grading.improvements || [],
+      comment: grading.comment || "",
       modelAnswer: grading.modelAnswer || null,
     },
     isCompleted: score >= COMPLETION_THRESHOLD,
@@ -122,7 +125,7 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
     feedback: submission.feedback,
     gradedBy: provider,
     bestScore: progress.bestScore,
-    isCompleted: progress.isCompleted,
+    isCompleted: score >= COMPLETION_THRESHOLD,
   };
 }
 
@@ -173,5 +176,128 @@ export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}
       submissions: (grouped[p.sentenceOrder] || []).reverse(),
     })),
     pagination: { page, limit, total },
+  };
+}
+
+/**
+ * GET /writing/rewrite — Admin list (all lessons, full data)
+ */
+export async function listLessonsAdmin({ page = 1, limit = 20 } = {}) {
+  const [lessons, total] = await Promise.all([
+    Rewrite.find()
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    Rewrite.countDocuments(),
+  ]);
+
+  return {
+    items: lessons.map((l) => ({
+      id: l._id,
+      title: l.title,
+      level: l.level,
+      topic: l.topic,
+      totalSentences: l.totalSentences,
+      sentences: l.sentences || [],
+      createdAt: l.createdAt,
+    })),
+    total,
+  };
+}
+
+/**
+ * GET /writing/rewrite/:id — Admin detail (full data)
+ */
+export async function getLessonAdmin(lessonId) {
+  const lesson = await Rewrite.findById(lessonId).lean();
+  if (!lesson) throw ApiError.notFound("Lesson not found");
+
+  return {
+    id: lesson._id,
+    title: lesson.title,
+    level: lesson.level,
+    topic: lesson.topic,
+    description: lesson.description,
+    sentences: lesson.sentences || [],
+    totalSentences: lesson.totalSentences,
+    sortOrder: lesson.sortOrder,
+    createdAt: lesson.createdAt,
+    updatedAt: lesson.updatedAt,
+  };
+}
+
+/**
+ * POST /writing/rewrite — Create lesson
+ */
+export async function createLesson(body) {
+  return createWriting({ ...body, type: WRITING_TYPE.PARAPHRASING });
+}
+
+/**
+ * PUT /writing/rewrite/:id — Update lesson
+ */
+/**
+ * DELETE /writing/rewrite/:id — Delete lesson
+ */
+export async function deleteLesson(lessonId) {
+  const lesson = await Rewrite.findById(lessonId);
+  if (!lesson) throw ApiError.notFound("Lesson not found");
+  await Rewrite.findByIdAndDelete(lessonId);
+  return { id: lessonId };
+}
+
+/**
+ * PUT /writing/rewrite/:id — Update lesson
+ */
+export async function updateLesson(lessonId, body) {
+  const lesson = await Rewrite.findById(lessonId);
+  if (!lesson) throw ApiError.notFound("Lesson not found");
+
+  const allowedFields = [
+    "title", "level", "topic", "description", "sortOrder",
+  ];
+
+  const updates = {};
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) updates[field] = body[field];
+  }
+
+  if (body.sentences !== undefined) {
+    const { sentences } = body;
+    if (!Array.isArray(sentences) || sentences.length === 0) {
+      throw ApiError.badRequest("sentences must be a non-empty array");
+    }
+
+    updates.sentences = sentences.map((s, i) => {
+      validateFields(s, ["targetSentence"]);
+      return {
+        order: i + 1,
+        targetSentence: s.targetSentence.trim(),
+      };
+    });
+    updates.totalSentences = updates.sentences.length;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw ApiError.badRequest("No valid fields to update");
+  }
+
+  const updated = await Rewrite.findByIdAndUpdate(
+    lessonId,
+    { $set: updates },
+    { new: true, runValidators: true },
+  ).lean();
+
+  return {
+    id: updated._id,
+    title: updated.title,
+    level: updated.level,
+    topic: updated.topic,
+    description: updated.description,
+    sentences: updated.sentences || [],
+    totalSentences: updated.totalSentences,
+    sortOrder: updated.sortOrder,
+    updatedAt: updated.updatedAt,
   };
 }

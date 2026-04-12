@@ -1,18 +1,21 @@
 import * as seeWriteService from "@server/services/seeWriteService";
 import { ApiError } from "@server/helpers/ApiError";
+import { validateFields } from "@server/helpers/validateFields";
+import { USER_ROLE } from "@server/const/user";
 
 /**
- * GET /api/writing/see-and-write
+ * GET /api/writing/see-and-write — admin: all, user: filtered
  */
 export async function listLessons(req, res, next) {
   try {
     const { level, topic, page = 1, limit = 12 } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
-    const { items, total } = await seeWriteService.listLessons(
-      { level, topic },
-      { page: p, limit: l },
-    );
+
+    const { items, total } = req.user.role === USER_ROLE.ADMIN
+      ? await seeWriteService.listLessonsAdmin({ page: p, limit: l })
+      : await seeWriteService.listLessons({ level, topic }, { page: p, limit: l });
+
     res.json({
       success: true,
       data: items,
@@ -24,11 +27,13 @@ export async function listLessons(req, res, next) {
 }
 
 /**
- * GET /api/writing/see-and-write/:lessonId
+ * GET /api/writing/see-and-write/:id — admin: full (no shuffle), user: limited
  */
 export async function getLesson(req, res, next) {
   try {
-    const data = await seeWriteService.getLesson(req.params.id);
+    const data = req.user.role === USER_ROLE.ADMIN
+      ? await seeWriteService.getLessonAdmin(req.params.id)
+      : await seeWriteService.getLesson(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -117,6 +122,43 @@ export async function getHistory(req, res, next) {
       req.params.id,
       { page: Math.max(1, +page), limit: Math.min(Math.max(1, +limit), 50) },
     );
+    res.json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * POST /api/writing/see-and-write — [ADMIN]
+ */
+export async function createLesson(req, res, next) {
+  try {
+    validateFields(req.body, ["title", "level", "mediaUrl"]);
+    const data = await seeWriteService.createLesson(req.body);
+    res.status(201).json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * PUT /api/writing/see-and-write/:id — [ADMIN]
+ */
+export async function updateLesson(req, res, next) {
+  try {
+    const data = await seeWriteService.updateLesson(req.params.id, req.body);
+    res.json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * DELETE /api/writing/see-and-write/:id — [ADMIN] Delete
+ */
+export async function deleteLesson(req, res, next) {
+  try {
+    const data = await seeWriteService.deleteLesson(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);

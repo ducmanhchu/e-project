@@ -77,6 +77,19 @@ export async function submitAndUpdateProgress(attempt, {
 }
 
 /**
+ * Reset attempt for retry — clear progress, keep history.
+ */
+export async function resetAttempt(attempt) {
+  attempt.status = "in_progress";
+  attempt.completedSentences = 0;
+  attempt.bestScore = 0;
+  attempt.completedAt = null;
+  attempt.sentenceProgress = [];
+  await attempt.save();
+  return attempt;
+}
+
+/**
  * Get last submission for ALL sentences in 1 query (fixes N+1).
  * Returns Map<sentenceOrder, submission>
  */

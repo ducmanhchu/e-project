@@ -1,4 +1,5 @@
 import * as exerciseService from "@server/services/exerciseService";
+import * as writingService from "@server/services/writingService";
 import { ApiError } from "@server/helpers/ApiError";
 
 /**
@@ -99,6 +100,69 @@ export async function getHistory(req, res, next) {
       req.params.id,
       { page: Math.max(1, +page), limit: Math.min(Math.max(1, +limit), 50) },
     );
+    res.json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * POST /api/writing/reverse-translation/preview — [ADMIN]
+ */
+export async function previewWriting(req, res, next) {
+  try {
+    const data = await writingService.previewWriting(req.body);
+    res.json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * POST /api/writing/reverse-translation — [ADMIN] Create
+ */
+export async function createLesson(req, res, next) {
+  try {
+    const data = await writingService.createWriting(req.body);
+    res.status(201).json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * POST /api/writing/reverse-translation/:id/dictionary — [ADMIN]
+ */
+export async function saveDictionary(req, res, next) {
+  try {
+    const data = await writingService.saveDictionary(
+      req.params.id,
+      req.body.entries,
+    );
+    res.status(201).json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * PUT /api/writing/reverse-translation/:id — [ADMIN] Update
+ */
+export async function updateLesson(req, res, next) {
+  try {
+    const data = await exerciseService.updateLesson(req.params.id, req.body);
+    res.json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * DELETE /api/writing/reverse-translation/:id — [ADMIN] Delete
+ */
+export async function deleteLesson(req, res, next) {
+  try {
+    const data = await exerciseService.deleteLesson(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);

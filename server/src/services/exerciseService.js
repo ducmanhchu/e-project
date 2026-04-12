@@ -117,9 +117,9 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
     score,
     gradedBy: provider,
     feedback: {
-      summary: grading.summary,
-      strengths: grading.strengths || [],
+      suggestion: grading.suggestion || "",
       improvements: grading.improvements || [],
+      comment: grading.comment || "",
     },
     isCompleted: score >= COMPLETION_THRESHOLD,
     totalSentences: lesson.totalSentences,
@@ -130,7 +130,7 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
     feedback: submission.feedback,
     gradedBy: provider,
     bestScore: progress.bestScore,
-    isCompleted: progress.isCompleted,
+    isCompleted: score >= COMPLETION_THRESHOLD,
   };
 }
 
@@ -182,4 +182,66 @@ export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}
     })),
     pagination: { page, limit, total },
   };
+}
+
+/**
+ * PUT /writing/reverse-translation/:id — Update lesson
+ */
+export async function updateLesson(lessonId, body) {
+  const lesson = await ReverseTranslation.findById(lessonId);
+  if (!lesson) throw ApiError.notFound("Lesson not found");
+
+  const allowedFields = ["title", "level", "topic", "contentType", "description", "sortOrder"];
+  const updates = {};
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) updates[field] = body[field];
+  }
+
+  if (body.sentences !== undefined) {
+    const { sentences } = body;
+    if (!Array.isArray(sentences) || sentences.length === 0) {
+      throw ApiError.badRequest("sentences must be a non-empty array");
+    }
+    updates.sentences = sentences.map((s, i) => ({
+      order: i + 1,
+      vietnameseText: s.vietnameseText,
+      referenceAnswer: s.referenceAnswer,
+    }));
+    updates.totalSentences = updates.sentences.length;
+  }
+
+  if (body.vietnameseParagraph !== undefined) {
+    updates.vietnameseParagraph = body.vietnameseParagraph;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw ApiError.badRequest("No valid fields to update");
+  }
+
+  const updated = await ReverseTranslation.findByIdAndUpdate(
+    lessonId,
+    { $set: updates },
+    { new: true, runValidators: true },
+  ).lean();
+
+  return {
+    id: updated._id,
+    title: updated.title,
+    level: updated.level,
+    topic: updated.topic,
+    contentType: updated.contentType,
+    description: updated.description,
+    totalSentences: updated.totalSentences,
+    updatedAt: updated.updatedAt,
+  };
+}
+
+/**
+ * DELETE /writing/reverse-translation/:id — Delete lesson
+ */
+export async function deleteLesson(lessonId) {
+  const lesson = await ReverseTranslation.findById(lessonId);
+  if (!lesson) throw ApiError.notFound("Lesson not found");
+  await ReverseTranslation.findByIdAndDelete(lessonId);
+  return { id: lessonId };
 }
