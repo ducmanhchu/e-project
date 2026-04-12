@@ -1,21 +1,20 @@
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
-import { WRITING_TYPE, EXAM_TYPE } from "@server/const/writting";
+import { WRITING_TYPE } from "@server/const/writting";
 
 /**
- * Validate type-specific fields and return { content, totalSentences }
- * content gets stored in WritingLesson.content (Mixed)
+ * Validate type-specific fields and return flat fields + totalSentences
  */
 export function prepareContentByType(type, body) {
   switch (type) {
     case WRITING_TYPE.REVERSE_TRANSLATION:
       return prepareReverseTranslation(body);
     case WRITING_TYPE.SEE_AND_WRITE:
-      return prepareSeeAndWrite(body);
+      return prepareDescribe(body);
     case WRITING_TYPE.PARAPHRASING:
-      return prepareParaphrasing(body);
+      return prepareRewrite(body);
     case WRITING_TYPE.EXAM_SIMULATION:
-      return prepareExamSimulation(body);
+      return prepareExam(body);
     default:
       throw ApiError.badRequest(`Invalid writing type: ${type}`);
   }
@@ -34,12 +33,11 @@ function prepareReverseTranslation(body) {
       order: i + 1,
       vietnameseText: s.vietnameseText.trim(),
       referenceAnswer: s.referenceAnswer.trim(),
-      ...(s.explanation && { explanation: s.explanation.trim() }),
     };
   });
 
   return {
-    content: {
+    fields: {
       vietnameseParagraph: vietnameseParagraph?.trim() || null,
       sentences: cleaned,
     },
@@ -47,18 +45,18 @@ function prepareReverseTranslation(body) {
   };
 }
 
-function prepareSeeAndWrite(body) {
-  validateFields(body, ["mediaUrl", "mediaType"]);
+function prepareDescribe(body) {
+  validateFields(body, ["mediaUrl"]);
 
-  if (!["image", "video"].includes(body.mediaType)) {
-    throw ApiError.badRequest("mediaType must be 'image' or 'video'");
-  }
+  const requiredWords = body.requiredWords || [];
+  const distractorWords = body.distractorWords || [];
+  const wordPool = [...requiredWords, ...distractorWords];
 
   return {
-    content: {
+    fields: {
       mediaUrl: body.mediaUrl,
-      mediaType: body.mediaType,
-      ...(body.requiredKeywords && { requiredKeywords: body.requiredKeywords }),
+      ...(requiredWords.length > 0 && { requiredWords }),
+      ...(wordPool.length > 0 && { wordPool }),
       ...(body.minWordCount != null && { minWordCount: body.minWordCount }),
       ...(body.maxWordCount != null && { maxWordCount: body.maxWordCount }),
     },
@@ -66,32 +64,44 @@ function prepareSeeAndWrite(body) {
   };
 }
 
-function prepareParaphrasing(body) {
-  validateFields(body, ["targetSentence"]);
+function prepareRewrite(body) {
+  const { sentences } = body;
+
+  if (!Array.isArray(sentences) || sentences.length === 0) {
+    throw ApiError.badRequest("sentences must be a non-empty array");
+  }
+
+  const cleaned = sentences.map((s, i) => {
+    validateFields(s, ["targetSentence"]);
+    return {
+      order: i + 1,
+      targetSentence: s.targetSentence.trim(),
+    };
+  });
 
   return {
-    content: {
-      targetSentence: body.targetSentence.trim(),
-    },
-    totalSentences: 1,
+    fields: { sentences: cleaned },
+    totalSentences: cleaned.length,
   };
 }
 
-function prepareExamSimulation(body) {
-  validateFields(body, ["examType", "examPrompt", "examDuration"]);
+function prepareExam(body) {
+  validateFields(body, ["examType", "examPrompt"]);
 
-  if (!Object.values(EXAM_TYPE).includes(body.examType)) {
-    throw ApiError.badRequest(
-      `examType must be one of: ${Object.values(EXAM_TYPE).join(", ")}`,
-    );
+  const ALLOWED_TYPES = ["ielts_task1", "ielts_task2"];
+  if (!ALLOWED_TYPES.includes(body.examType)) {
+    throw ApiError.badRequest(`examType must be one of: ${ALLOWED_TYPES.join(", ")}`);
+  }
+
+  if (body.examType === "ielts_task1" && !body.imageUrl?.trim()) {
+    throw ApiError.badRequest("imageUrl is required for IELTS Task 1");
   }
 
   return {
-    content: {
+    fields: {
       examType: body.examType,
       examPrompt: body.examPrompt.trim(),
-      examDuration: body.examDuration,
-      ...(body.sampleAnswer && { sampleAnswer: body.sampleAnswer.trim() }),
+      ...(body.imageUrl && { imageUrl: body.imageUrl.trim() }),
     },
     totalSentences: 1,
   };

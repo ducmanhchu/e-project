@@ -7,30 +7,43 @@ Given the English word or phrase: "${word}"
 
 Provide:
 1. IPA phonetic transcription
-2. Up to 3 definitions (each with: partOfSpeech, English definition, example sentence using the word)
-3. Up to 5 synonyms
-4. Up to 3 antonyms (empty array if none apply)
-5. Up to 5 related words (words commonly used together or in similar contexts)
+2. Up to 4 definitions, each with:
+   - CEFR level (A1, A2, B1, B2, C1, C2)
+   - English definition
+   - Vietnamese definition
+   - Example sentence in English and Vietnamese translation
+   - Up to 5 synonyms (empty array if none)
+   - Up to 3 antonyms (null if none apply)
 
-Keep definitions clear and suitable for intermediate English learners.`;
+Order definitions from most common/basic (A1/A2) to advanced (B2/C1).
+Keep definitions clear and suitable for Vietnamese learners of English.`;
+
+const DEFINITION_SCHEMA_PROPS = {
+  definitionCefrLevel: { type: "string", description: "CEFR level: A1, A2, B1, B2, C1, C2" },
+  engDef: { type: "string", description: "English definition" },
+  viDef: { type: "string", description: "Vietnamese definition" },
+  example: {
+    type: "object",
+    properties: {
+      engEx: { type: "string", description: "Example sentence in English" },
+      viEx: { type: "string", description: "Example sentence in Vietnamese" },
+    },
+    required: ["engEx", "viEx"],
+  },
+  synonyms: { type: "array", items: { type: "string" } },
+  antonyms: { type: "array", items: { type: "string" }, nullable: true },
+};
 
 const ENRICH_SCHEMA_PROPS = {
-  phonetic: { type: "string", description: "IPA phonetic transcription" },
+  ipa: { type: "string", description: "IPA phonetic transcription" },
   definitions: {
     type: "array",
     items: {
       type: "object",
-      properties: {
-        partOfSpeech: { type: "string" },
-        definition: { type: "string", description: "English definition" },
-        example: { type: "string", description: "Example sentence" },
-      },
-      required: ["partOfSpeech", "definition", "example"],
+      properties: DEFINITION_SCHEMA_PROPS,
+      required: ["definitionCefrLevel", "engDef", "viDef", "example"],
     },
   },
-  synonyms: { type: "array", items: { type: "string" } },
-  antonyms: { type: "array", items: { type: "string" } },
-  relatedWords: { type: "array", items: { type: "string" } },
 };
 
 async function enrichWithClaude(word) {
@@ -45,7 +58,7 @@ async function enrichWithClaude(word) {
         input_schema: {
           type: "object",
           properties: ENRICH_SCHEMA_PROPS,
-          required: ["phonetic", "definitions", "synonyms", "antonyms", "relatedWords"],
+          required: ["ipa", "definitions"],
         },
       },
     ],
@@ -65,24 +78,31 @@ async function enrichWithGemini(word) {
       responseJsonSchema: {
         type: Type.OBJECT,
         properties: {
-          phonetic: { type: Type.STRING },
+          ipa: { type: Type.STRING },
           definitions: {
             type: Type.ARRAY,
             items: {
               type: Type.OBJECT,
               properties: {
-                partOfSpeech: { type: Type.STRING },
-                definition: { type: Type.STRING },
-                example: { type: Type.STRING },
+                definitionCefrLevel: { type: Type.STRING },
+                engDef: { type: Type.STRING },
+                viDef: { type: Type.STRING },
+                example: {
+                  type: Type.OBJECT,
+                  properties: {
+                    engEx: { type: Type.STRING },
+                    viEx: { type: Type.STRING },
+                  },
+                  propertyOrdering: ["engEx", "viEx"],
+                },
+                synonyms: { type: Type.ARRAY, items: { type: Type.STRING } },
+                antonyms: { type: Type.ARRAY, items: { type: Type.STRING } },
               },
-              propertyOrdering: ["partOfSpeech", "definition", "example"],
+              propertyOrdering: ["definitionCefrLevel", "engDef", "viDef", "example", "synonyms", "antonyms"],
             },
           },
-          synonyms: { type: Type.ARRAY, items: { type: Type.STRING } },
-          antonyms: { type: Type.ARRAY, items: { type: Type.STRING } },
-          relatedWords: { type: Type.ARRAY, items: { type: Type.STRING } },
         },
-        propertyOrdering: ["phonetic", "definitions", "synonyms", "antonyms", "relatedWords"],
+        propertyOrdering: ["ipa", "definitions"],
       },
     },
   });

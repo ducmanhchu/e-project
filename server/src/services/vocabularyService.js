@@ -5,26 +5,148 @@ import { aiEnrichWord } from "@server/services/ai/enrichProvider";
 
 const LEARNED_STREAK_THRESHOLD = 3;
 
-/**
- * Enrich a Vocabulary document with AI data if not already enriched
- */
-async function ensureEnriched(vocab) {
-  if (vocab.enrichedAt) return vocab;
+/** Get primary Vietnamese meaning from definitions array */
+function getPrimaryMeaning(vocab) {
+  return vocab.definitions?.[0]?.viDef || "";
+}
 
-  const { result, provider } = await aiEnrichWord(vocab.word);
+/**
+ * Fetch word data from Vocaxis API (free, rich dictionary data)
+ * Returns mapped data matching Vocabulary schema, or null on failure.
+ */
+async function fetchFromVocaxis(word) {
+  try {
+    const res = await fetch(
+      `https://workers.vocaxis.com/lookup/${encodeURIComponent(word)}`,
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const entry = data[0];
+    if (!entry?.definitions?.length) return null;
+
+    return {
+      ipa: entry.ipa?.us || entry.ipa?.uk || null,
+      definitions: entry.definitions.map((def) => ({
+        definitionCefrLevel: def.definition_cefr_level || "",
+        engDef: def.english || "",
+        viDef: def.equivalents?.vi || "",
+        example: def.examples?.[0]
+          ? {
+              engEx: def.examples[0].english || "",
+              viEx: def.examples[0].translations?.vi || "",
+            }
+          : undefined,
+        synonyms: def.synonyms || [],
+        antonyms: def.antonyms || [],
+      })),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch audio URL from free Dictionary API
+ */
+async function fetchAudioUrl(word) {
+  try {
+    const res = await fetch(
+      `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`,
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const phonetics = data[0]?.phonetics || [];
+    const withAudio = phonetics.find((p) => p.audio && p.audio.length > 0);
+    return withAudio?.audio || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Enrich a Vocabulary document if not already enriched.
+ * Priority: Vocaxis API → AI fallback. Audio from Dictionary API.
+ */
+export async function ensureEnriched(vocab) {
+  const hasDefinitions = vocab.definitions && vocab.definitions.length > 0;
+  const hasAudio = !!vocab.audio;
+
+  // Already fully enriched
+  if (hasDefinitions && hasAudio) return vocab;
+
+  // Has definitions but missing audio — just fetch audio
+  if (hasDefinitions && !hasAudio) {
+    const audioUrl = await fetchAudioUrl(vocab.word);
+    if (audioUrl) {
+      return Vocabulary.findByIdAndUpdate(
+        vocab._id,
+        { audio: audioUrl },
+        { new: true },
+      );
+    }
+    return vocab;
+  }
+
+  // Try Vocaxis + audio in parallel
+  const [vocaxis, audioUrl] = await Promise.all([
+    fetchFromVocaxis(vocab.word),
+    fetchAudioUrl(vocab.word),
+  ]);
+
+  let enrichData;
+
+  if (vocaxis) {
+    enrichData = vocaxis;
+  } else {
+    // Fallback: AI enrich
+    const { result } = await aiEnrichWord(vocab.word);
+    enrichData = {
+      ipa: result.ipa,
+      definitions: result.definitions || [],
+    };
+  }
+
   return Vocabulary.findByIdAndUpdate(
     vocab._id,
     {
-      phonetic: result.phonetic,
-      definitions: result.definitions || [],
-      synonyms: result.synonyms || [],
-      antonyms: result.antonyms || [],
-      relatedWords: result.relatedWords || [],
-      enrichedBy: provider,
-      enrichedAt: new Date(),
+      ipa: enrichData.ipa,
+      definitions: enrichData.definitions,
+      ...(audioUrl && { audio: audioUrl }),
     },
     { new: true },
   );
+}
+
+/**
+ * Fire-and-forget enrich — logs errors but doesn't block caller.
+ */
+function enrichInBackground(vocab) {
+  ensureEnriched(vocab).catch((err) =>
+    console.error(`[enrich] Failed for "${vocab.word}":`, err.message),
+  );
+}
+
+/**
+ * Get vocabulary words by list of IDs
+ */
+export async function getWordsByIds(ids) {
+  if (!ids || ids.length === 0) return [];
+
+  const vocabs = await Vocabulary.find({ _id: { $in: ids } })
+    .select("word partOfSpeech ipa definitions")
+    .lean();
+
+  return vocabs.map((v) => {
+    const firstDef = v.definitions?.[0];
+    return {
+      id: v._id,
+      word: v.word,
+      partOfSpeech: v.partOfSpeech,
+      ipa: v.ipa,
+      meaning: firstDef?.viDef || "",
+      example: firstDef?.example?.engEx || "",
+    };
+  });
 }
 
 /**
@@ -43,18 +165,14 @@ export async function addWord(userId, payload) {
     if (!word?.trim()) throw ApiError.badRequest("word is required");
     const normalized = word.toLowerCase().trim();
 
-    vocab = await Vocabulary.findOne({
-      word: normalized,
-      ...(meaning && { meaning }),
-    });
+    vocab = await Vocabulary.findOneAndUpdate(
+      { word: normalized },
+      { $setOnInsert: { word: normalized, partOfSpeech, definitions: [] } },
+      { upsert: true, new: true },
+    );
 
-    if (!vocab) {
-      vocab = await Vocabulary.create({
-        word: normalized,
-        partOfSpeech,
-        meaning: meaning || normalized,
-        example,
-      });
+    if (!vocab.definitions || vocab.definitions.length === 0) {
+      enrichInBackground(vocab);
     }
   }
 
@@ -73,7 +191,7 @@ export async function addWord(userId, payload) {
   return {
     id: userVocab._id,
     word: vocab.word,
-    meaning: vocab.meaning,
+    meaning: getPrimaryMeaning(vocab),
     partOfSpeech: vocab.partOfSpeech,
     status: userVocab.status,
     addedAt: userVocab.addedAt,
@@ -122,8 +240,9 @@ export async function listWords(userId, filters, pagination) {
   const words = results.map((r) => ({
     id: r._id,
     word: r.vocab.word,
-    meaning: r.vocab.meaning,
+    meaning: r.vocab.definitions?.[0]?.viDef || "",
     partOfSpeech: r.vocab.partOfSpeech,
+    ipa: r.vocab.ipa,
     status: r.status,
     reviewCount: r.reviewCount,
     addedAt: r.addedAt,
@@ -153,8 +272,8 @@ export async function getWordDetail(userId, wordId) {
   let vocab = await Vocabulary.findById(userVocab.vocabularyId).lean();
   if (!vocab) throw ApiError.notFound("Vocabulary entry not found");
 
-  // Enrich if not already
-  if (!vocab.enrichedAt) {
+  // Enrich if no definitions yet
+  if (!vocab.definitions || vocab.definitions.length === 0) {
     const enriched = await ensureEnriched(vocab);
     vocab = enriched.toObject ? enriched.toObject() : enriched;
   }
@@ -162,18 +281,14 @@ export async function getWordDetail(userId, wordId) {
   return {
     id: userVocab._id,
     word: vocab.word,
-    meaning: vocab.meaning,
     partOfSpeech: vocab.partOfSpeech,
-    example: vocab.example,
+    ipa: vocab.ipa,
+    definitions: vocab.definitions || [],
+    audio: vocab.audio || null,
     status: userVocab.status,
     reviewCount: userVocab.reviewCount,
     addedAt: userVocab.addedAt,
     lastReviewedAt: userVocab.lastReviewedAt,
-    phonetic: vocab.phonetic,
-    definitions: vocab.definitions || [],
-    synonyms: vocab.synonyms || [],
-    antonyms: vocab.antonyms || [],
-    relatedWords: vocab.relatedWords || [],
   };
 }
 
@@ -189,13 +304,13 @@ export async function updateStatus(userId, wordId, status) {
     { _id: wordId, userId },
     { status },
     { new: true },
-  ).populate("vocabularyId", "word meaning");
+  ).populate("vocabularyId", "word definitions");
   if (!userVocab) throw ApiError.notFound("Word not found");
 
   return {
     id: userVocab._id,
     word: userVocab.vocabularyId.word,
-    meaning: userVocab.vocabularyId.meaning,
+    meaning: userVocab.vocabularyId.definitions?.[0]?.viDef || "",
     status: userVocab.status,
   };
 }
@@ -261,18 +376,18 @@ export async function getReviewQuestions(userId, type, limit = 5) {
 
   // Get all user's words for distractor pool
   const allUserVocabs = await UserVocabulary.find({ userId })
-    .populate("vocabularyId", "word meaning")
+    .populate("vocabularyId", "word definitions")
     .lean();
 
   const pool = allUserVocabs
-    .filter((uv) => uv.vocabularyId?.meaning)
+    .filter((uv) => uv.vocabularyId?.definitions?.[0]?.viDef)
     .map((uv) => ({
       word: uv.vocabularyId.word,
-      meaning: uv.vocabularyId.meaning,
+      meaning: uv.vocabularyId.definitions[0].viDef,
     }));
 
   const questions = targets.map((t) => {
-    const correctAnswer = t.vocab.meaning;
+    const correctAnswer = t.vocab.definitions?.[0]?.viDef || "";
     const distractors = pool
       .filter((p) => p.word !== t.vocab.word)
       .sort(() => Math.random() - 0.5)

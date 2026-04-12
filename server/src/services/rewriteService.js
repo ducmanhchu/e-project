@@ -1,7 +1,7 @@
-import { ReverseTranslation } from "@server/models/writing/ReverseTranslation";
+import { Rewrite } from "@server/models/writing/Rewrite";
 import { Attempt } from "@server/models/attempt/Attempt";
 import { ApiError } from "@server/helpers/ApiError";
-import { aiGradeAnswer } from "@server/services/ai/gradingProvider";
+import { aiGradeRewrite } from "@server/services/ai/gradingProvider";
 import {
   findOrCreateAttempt,
   submitAndUpdateProgress,
@@ -10,28 +10,30 @@ import {
   buildSentenceAttempts,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_THRESHOLD } from "@server/const/exercise";
+import { WRITING_TYPE } from "@server/const/writting";
+import { createWriting } from "@server/services/writingService";
+import { validateFields } from "@server/helpers/validateFields";
 
 /**
- * GET /writing/reverse-translation — List published lessons
+ * GET /writing/rewrite — List lessons
  */
 export async function listLessons(filters, pagination) {
-  const { level, contentType, topic } = filters;
+  const { level, topic } = filters;
   const { page, limit } = pagination;
 
   const query = {
     ...(level && { level }),
-    ...(contentType && { contentType }),
     ...(topic && { topic }),
   };
 
   const [lessons, total] = await Promise.all([
-    ReverseTranslation.find(query)
-      .select("title level topic contentType totalSentences createdAt")
+    Rewrite.find(query)
+      .select("title level topic totalSentences createdAt")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .lean(),
-    ReverseTranslation.countDocuments(query),
+    Rewrite.countDocuments(query),
   ]);
 
   return {
@@ -40,7 +42,7 @@ export async function listLessons(filters, pagination) {
       title: lesson.title,
       level: lesson.level,
       topic: lesson.topic,
-      contentType: lesson.contentType,
+
       totalSentences: lesson.totalSentences,
       createdAt: lesson.createdAt,
     })),
@@ -49,10 +51,10 @@ export async function listLessons(filters, pagination) {
 }
 
 /**
- * GET /writing/reverse-translation/:id — Lesson data only
+ * GET /writing/rewrite/:lessonId — Lesson detail
  */
 export async function getLesson(lessonId) {
-  const lesson = await ReverseTranslation.findOne({ _id: lessonId }).lean();
+  const lesson = await Rewrite.findById(lessonId).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
   return {
@@ -60,25 +62,19 @@ export async function getLesson(lessonId) {
     title: lesson.title,
     level: lesson.level,
     topic: lesson.topic,
-    contentType: lesson.contentType,
     totalSentences: lesson.totalSentences,
-    vietnameseParagraph: lesson.vietnameseParagraph || null,
     sentences: (lesson.sentences || []).map((s) => ({
       order: s.order,
-      vietnameseText: s.vietnameseText,
-    })),
-    vocabularyRefs: (lesson.vocabularyRefs || []).map((ref) => ({
-      id: ref.id,
-      sentenceIndex: ref.sentenceIndex ?? null,
+      targetSentence: s.targetSentence,
     })),
   };
 }
 
 /**
- * GET /attempts/:lessonId — Upsert + return attempt progress
+ * GET /writing/rewrite/:lessonId/attempt — Upsert + return attempt
  */
 export async function getAttempt(userId, lessonId) {
-  const attempt = await findOrCreateAttempt(userId, lessonId, "ReverseTranslation");
+  const attempt = await findOrCreateAttempt(userId, lessonId, "Rewrite");
   const lastSubMap = await getLastSubmissions(attempt._id);
 
   return {
@@ -91,26 +87,24 @@ export async function getAttempt(userId, lessonId) {
 }
 
 /**
- * POST /attempts/:lessonId/submit — Submit answer → AI grade
+ * POST /writing/rewrite/:lessonId/submit — Grade answer
  */
 export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) {
-  const lesson = await ReverseTranslation.findOne({ _id: lessonId }).lean();
+  const lesson = await Rewrite.findById(lessonId).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
   const sentence = (lesson.sentences || []).find((s) => s.order === sentenceOrder);
   if (!sentence) throw ApiError.badRequest(`Sentence order ${sentenceOrder} not found`);
 
-  const { result: grading, provider } = await aiGradeAnswer(
+  const { result: grading, provider } = await aiGradeRewrite(
     userAnswer,
-    sentence.referenceAnswer,
-    sentence.vietnameseText,
+    sentence.targetSentence,
     lesson.level,
-    lesson.contentType,
   );
 
   const score = Math.min(100, Math.max(0, Math.round(grading.score)));
 
-  const attempt = await findOrCreateAttempt(userId, lessonId, "ReverseTranslation");
+  const attempt = await findOrCreateAttempt(userId, lessonId, "Rewrite");
   const { submission, progress } = await submitAndUpdateProgress(attempt, {
     sentenceOrder,
     userAnswer,
@@ -120,6 +114,7 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
       suggestion: grading.suggestion || "",
       improvements: grading.improvements || [],
       comment: grading.comment || "",
+      modelAnswer: grading.modelAnswer || null,
     },
     isCompleted: score >= COMPLETION_THRESHOLD,
     totalSentences: lesson.totalSentences,
@@ -135,7 +130,7 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
 }
 
 /**
- * GET /attempts/:lessonId/progress
+ * GET /writing/rewrite/:lessonId/progress
  */
 export async function getProgress(userId, lessonId) {
   const attempt = await Attempt.findOne({ userId, lessonId });
@@ -154,7 +149,7 @@ export async function getProgress(userId, lessonId) {
 }
 
 /**
- * GET /attempts/:lessonId/history
+ * GET /writing/rewrite/:lessonId/history
  */
 export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}) {
   const attempt = await Attempt.findOne({ userId, lessonId });
@@ -185,13 +180,84 @@ export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}
 }
 
 /**
- * PUT /writing/reverse-translation/:id — Update lesson
+ * GET /writing/rewrite — Admin list (all lessons, full data)
  */
-export async function updateLesson(lessonId, body) {
-  const lesson = await ReverseTranslation.findById(lessonId);
+export async function listLessonsAdmin({ page = 1, limit = 20 } = {}) {
+  const [lessons, total] = await Promise.all([
+    Rewrite.find()
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    Rewrite.countDocuments(),
+  ]);
+
+  return {
+    items: lessons.map((l) => ({
+      id: l._id,
+      title: l.title,
+      level: l.level,
+      topic: l.topic,
+      totalSentences: l.totalSentences,
+      sentences: l.sentences || [],
+      createdAt: l.createdAt,
+    })),
+    total,
+  };
+}
+
+/**
+ * GET /writing/rewrite/:id — Admin detail (full data)
+ */
+export async function getLessonAdmin(lessonId) {
+  const lesson = await Rewrite.findById(lessonId).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  const allowedFields = ["title", "level", "topic", "contentType", "description", "sortOrder"];
+  return {
+    id: lesson._id,
+    title: lesson.title,
+    level: lesson.level,
+    topic: lesson.topic,
+    description: lesson.description,
+    sentences: lesson.sentences || [],
+    totalSentences: lesson.totalSentences,
+    sortOrder: lesson.sortOrder,
+    createdAt: lesson.createdAt,
+    updatedAt: lesson.updatedAt,
+  };
+}
+
+/**
+ * POST /writing/rewrite — Create lesson
+ */
+export async function createLesson(body) {
+  return createWriting({ ...body, type: WRITING_TYPE.PARAPHRASING });
+}
+
+/**
+ * PUT /writing/rewrite/:id — Update lesson
+ */
+/**
+ * DELETE /writing/rewrite/:id — Delete lesson
+ */
+export async function deleteLesson(lessonId) {
+  const lesson = await Rewrite.findById(lessonId);
+  if (!lesson) throw ApiError.notFound("Lesson not found");
+  await Rewrite.findByIdAndDelete(lessonId);
+  return { id: lessonId };
+}
+
+/**
+ * PUT /writing/rewrite/:id — Update lesson
+ */
+export async function updateLesson(lessonId, body) {
+  const lesson = await Rewrite.findById(lessonId);
+  if (!lesson) throw ApiError.notFound("Lesson not found");
+
+  const allowedFields = [
+    "title", "level", "topic", "description", "sortOrder",
+  ];
+
   const updates = {};
   for (const field of allowedFields) {
     if (body[field] !== undefined) updates[field] = body[field];
@@ -202,23 +268,22 @@ export async function updateLesson(lessonId, body) {
     if (!Array.isArray(sentences) || sentences.length === 0) {
       throw ApiError.badRequest("sentences must be a non-empty array");
     }
-    updates.sentences = sentences.map((s, i) => ({
-      order: i + 1,
-      vietnameseText: s.vietnameseText,
-      referenceAnswer: s.referenceAnswer,
-    }));
-    updates.totalSentences = updates.sentences.length;
-  }
 
-  if (body.vietnameseParagraph !== undefined) {
-    updates.vietnameseParagraph = body.vietnameseParagraph;
+    updates.sentences = sentences.map((s, i) => {
+      validateFields(s, ["targetSentence"]);
+      return {
+        order: i + 1,
+        targetSentence: s.targetSentence.trim(),
+      };
+    });
+    updates.totalSentences = updates.sentences.length;
   }
 
   if (Object.keys(updates).length === 0) {
     throw ApiError.badRequest("No valid fields to update");
   }
 
-  const updated = await ReverseTranslation.findByIdAndUpdate(
+  const updated = await Rewrite.findByIdAndUpdate(
     lessonId,
     { $set: updates },
     { new: true, runValidators: true },
@@ -229,19 +294,10 @@ export async function updateLesson(lessonId, body) {
     title: updated.title,
     level: updated.level,
     topic: updated.topic,
-    contentType: updated.contentType,
     description: updated.description,
+    sentences: updated.sentences || [],
     totalSentences: updated.totalSentences,
+    sortOrder: updated.sortOrder,
     updatedAt: updated.updatedAt,
   };
-}
-
-/**
- * DELETE /writing/reverse-translation/:id — Delete lesson
- */
-export async function deleteLesson(lessonId) {
-  const lesson = await ReverseTranslation.findById(lessonId);
-  if (!lesson) throw ApiError.notFound("Lesson not found");
-  await ReverseTranslation.findByIdAndDelete(lessonId);
-  return { id: lessonId };
 }

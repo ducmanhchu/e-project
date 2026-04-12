@@ -11,6 +11,8 @@
     "@anthropic-ai/sdk": "^0.78.0",
     "@google/genai": "^1.44.0",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.9.0",
+    "compromise": "^14.15.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -19,6 +21,7 @@
     "googleapis": "^171.4.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.1",
+    "multer": "^2.1.1",
     "yup": "^1.7.1"
   },
   "devDependencies": {
