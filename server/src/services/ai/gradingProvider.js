@@ -318,7 +318,7 @@ ${userAnswer}
 ═══ WRITING STYLE FOR ALL COMMENTS ═══
 - Vietnamese, CONCISE — max 1-2 short sentences per criterion
 - Quote specific English phrases from student's writing using single quotes
-- NO filler: skip "Học sinh đã", "Bài viết của bạn"
+- NO filler: skip "Học sinh đã", "Bài viết của bạn". Dùng "bạn" thay vì "Học sinh" làm chủ ngữ
 - Go straight to the point
 
 ═══ STEP 1: IMAGE VERIFICATION ═══
@@ -562,7 +562,7 @@ Student's rewrite: "${userAnswer}"
 ═══ WRITING STYLE FOR ALL COMMENTS ═══
 - Write in Vietnamese, CONCISE — max 1-2 short sentences per criterion comment
 - Quote specific English words/phrases from student's writing using single quotes
-- NO filler phrases: skip "Học sinh đã", "Việc dùng", "Tuy nhiên", "Mặc dù"
+- NO filler phrases: skip "Học sinh đã", "Việc dùng", "Tuy nhiên", "Mặc dù". Dùng "bạn" thay vì "Học sinh" làm chủ ngữ
 - Go straight to the point: what's good, what's wrong, quote the evidence
 - Example good comment: "'decided' → 'opted': chính xác. 'stay at home' → 'remain indoors': collocation tự nhiên."
 - Example bad comment (too long): "Học sinh đã thực hiện việc thay đổi từ 'decided' sang 'opted', đây là một sự thay thế chính xác và phù hợp với ngữ cảnh của câu gốc."
@@ -732,7 +732,7 @@ ${userAnswer}
 ═══ WRITING STYLE ═══
 - Vietnamese, CONCISE — max 1-2 short sentences per criterion comment
 - Quote specific English phrases from student's writing using single quotes
-- NO filler: skip "Học sinh đã", "Việc dùng", "Tuy nhiên"
+- NO filler: skip "Học sinh đã", "Việc dùng", "Tuy nhiên". Dùng "bạn" thay vì "Học sinh" làm chủ ngữ
 - Go straight to the point
 
 ═══ BAND SCORING — 4 IELTS criteria, each Band 1-9 ═══

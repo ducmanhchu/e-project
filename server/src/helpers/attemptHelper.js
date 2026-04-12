@@ -104,11 +104,24 @@ export async function getLastSubmissions(attemptId) {
       },
     },
     { $replaceRoot: { newRoot: "$doc" } },
+    {
+      $project: {
+        _id: 0,
+        sentenceOrder: 1,
+        userAnswer: 1,
+        score: 1,
+        gradedBy: 1,
+        feedback: 1,
+        createdAt: 1,
+      },
+    },
   ]);
 
   const map = new Map();
   for (const sub of results) {
-    map.set(sub.sentenceOrder, sub);
+    const order = sub.sentenceOrder;
+    delete sub.sentenceOrder;
+    map.set(order, sub);
   }
   return map;
 }
@@ -118,6 +131,7 @@ export async function getLastSubmissions(attemptId) {
  */
 export async function getLastSubmission(attemptId, sentenceOrder) {
   return Submission.findOne({ attemptId, sentenceOrder })
+    .select("userAnswer score gradedBy feedback createdAt -_id")
     .sort({ createdAt: -1 })
     .lean();
 }
