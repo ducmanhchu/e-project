@@ -13,6 +13,24 @@ import { COMPLETION_THRESHOLD } from "@server/const/exercise";
 import { WRITING_TYPE } from "@server/const/writting";
 import { createWriting } from "@server/services/writingService";
 
+function buildMeaningMap(wordPool) {
+  const map = {};
+  for (const w of wordPool || []) {
+    map[w.word.toLowerCase()] = w.meaning;
+  }
+  return map;
+}
+
+function populateQuizMeanings(quiz, meaningMap) {
+  const withMeaning = (words) => (words || []).map((w) => ({ word: w, meaning: meaningMap[w.toLowerCase()] || "" }));
+  return {
+    score: quiz.score,
+    correct: withMeaning(quiz.correct),
+    missed: withMeaning(quiz.missed),
+    wrong: withMeaning(quiz.wrong),
+  };
+}
+
 function shuffleArray(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -36,7 +54,7 @@ export async function listLessons(filters, pagination) {
 
   const [lessons, total] = await Promise.all([
     SeeWrite.find(query)
-      .select("title level topic totalSentences createdAt")
+      .select("title level topic image createdAt")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -50,8 +68,7 @@ export async function listLessons(filters, pagination) {
       title: lesson.title,
       level: lesson.level,
       topic: lesson.topic,
-
-      totalSentences: lesson.totalSentences,
+      image: lesson.image,
       createdAt: lesson.createdAt,
     })),
     total,
@@ -70,12 +87,10 @@ export async function getLesson(lessonId) {
     title: lesson.title,
     level: lesson.level,
     topic: lesson.topic,
-    mediaUrl: lesson.mediaUrl,
-    wordPool: shuffleArray(lesson.wordPool || []),
-    keywordCount: (lesson.requiredWords || []).length,
+    image: lesson.image,
+    wordPool: shuffleArray((lesson.wordPool || []).map((w) => w.word)),
     minWordCount: lesson.minWordCount || null,
     maxWordCount: lesson.maxWordCount || null,
-    totalSentences: lesson.totalSentences,
   };
 }
 
@@ -90,16 +105,23 @@ export async function getAttempt(userId, lessonId) {
     ? await getLastSubmission(attempt._id, 1)
     : null;
 
+  // Populate meanings from lesson when quiz exists
+  let keywordQuiz = null;
+  if (attempt.keywordQuiz) {
+    const lesson = await SeeWrite.findById(lessonId).select("wordPool").lean();
+    const meaningMap = buildMeaningMap(lesson?.wordPool);
+    keywordQuiz = populateQuizMeanings(attempt.keywordQuiz, meaningMap);
+  }
+
   return {
     id: attempt._id,
     status: attempt.status,
-    completedSentences: attempt.completedSentences,
     bestScore: attempt.bestScore,
-    keywordQuiz: attempt.keywordQuiz || null,
+    completedAt: attempt.completedAt || null,
+    keywordQuiz,
     sentenceAttempts: progress
       ? [{
           sentenceOrder: 1,
-          attemptCount: progress.attemptCount,
           bestScore: progress.bestScore,
           isCompleted: progress.isCompleted,
           lastSubmission: lastSub,
@@ -119,20 +141,17 @@ export async function checkKeywords(userId, lessonId, selectedKeywords) {
   const lesson = await SeeWrite.findById(lessonId).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  const correctSet = new Set(
-    (lesson.requiredWords || []).map((w) => w.toLowerCase()),
-  );
-  const selectedSet = new Set(
-    selectedKeywords.map((w) => w.toLowerCase()),
-  );
+  const required = (lesson.wordPool || []).filter((w) => w.isRequired);
+  const correctSet = new Set(required.map((w) => w.word.toLowerCase()));
+  const selectedSet = new Set(selectedKeywords.map((w) => w.toLowerCase()));
 
   const results = { correct: [], missed: [], wrong: [] };
 
-  for (const word of lesson.requiredWords || []) {
-    if (selectedSet.has(word.toLowerCase())) {
-      results.correct.push(word);
+  for (const w of required) {
+    if (selectedSet.has(w.word.toLowerCase())) {
+      results.correct.push(w.word);
     } else {
-      results.missed.push(word);
+      results.missed.push(w.word);
     }
   }
 
@@ -143,42 +162,22 @@ export async function checkKeywords(userId, lessonId, selectedKeywords) {
   }
 
   const quizScore = Math.round(
-    (results.correct.length / (lesson.requiredWords?.length || 1)) * 100,
+    (results.correct.length / (required.length || 1)) * 100,
   );
 
-  // Check cached translations first
+  // Save quiz result
   const attempt = await findOrCreateAttempt(userId, lessonId, "SeeWrite");
-  let translations = attempt.keywordQuiz?.translations || null;
-  let translatedBy = "cached";
-
-  if (!translations) {
-    const allWords = lesson.wordPool || [];
-    const { result: aiResult, provider } = await aiTranslateKeywords(allWords);
-    translations = {};
-    for (const item of aiResult.translations) {
-      translations[item.word.toLowerCase()] = item.viMeaning;
-    }
-    translatedBy = provider;
-  }
-
-  // Save quiz result + translations cache
   attempt.keywordQuiz = {
-    selectedKeywords,
     correct: results.correct,
     missed: results.missed,
     wrong: results.wrong,
     score: quizScore,
-    translations,
   };
   attempt.markModified("keywordQuiz");
   await attempt.save();
 
-  return {
-    results,
-    score: quizScore,
-    translations,
-    translatedBy,
-  };
+  const meaningMap = buildMeaningMap(lesson.wordPool);
+  return populateQuizMeanings(attempt.keywordQuiz, meaningMap);
 }
 
 /**
@@ -188,8 +187,8 @@ export async function submitAnswer(userId, lessonId, userAnswer) {
   const lesson = await SeeWrite.findById(lessonId).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  // Enforce quiz if lesson has requiredWords
-  const hasKeywords = (lesson.requiredWords || []).length > 0;
+  // Enforce quiz if lesson has required words
+  const hasKeywords = (lesson.wordPool || []).some((w) => w.isRequired);
   const attempt = await findOrCreateAttempt(userId, lessonId, "SeeWrite");
 
   if (hasKeywords && !attempt.keywordQuiz) {
@@ -236,22 +235,6 @@ export async function submitAnswer(userId, lessonId, userAnswer) {
 }
 
 /**
- * GET /writing/see-and-write/:lessonId/progress
- */
-export async function getProgress(userId, lessonId) {
-  const attempt = await Attempt.findOne({ userId, lessonId });
-  if (!attempt) throw ApiError.notFound("No attempt found for this lesson");
-
-  return {
-    lessonId,
-    status: attempt.status,
-    completedSentences: attempt.completedSentences,
-    bestScore: attempt.bestScore,
-    completedAt: attempt.completedAt,
-  };
-}
-
-/**
  * GET /writing/see-and-write/:lessonId/history
  */
 export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}) {
@@ -265,7 +248,7 @@ export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}
     status: attempt.status,
     bestScore: attempt.bestScore,
     submissions: docs.reverse(),
-    pagination: { page, limit, total },
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };
 }
 
@@ -288,12 +271,10 @@ export async function listLessonsAdmin({ page = 1, limit = 20 } = {}) {
       title: l.title,
       level: l.level,
       topic: l.topic,
-      mediaUrl: l.mediaUrl,
-      requiredWords: l.requiredWords || [],
+      image: l.image,
       wordPool: l.wordPool || [],
       minWordCount: l.minWordCount,
       maxWordCount: l.maxWordCount,
-      totalSentences: l.totalSentences,
       createdAt: l.createdAt,
     })),
     total,
@@ -313,13 +294,10 @@ export async function getLessonAdmin(lessonId) {
     level: lesson.level,
     topic: lesson.topic,
     description: lesson.description,
-    mediaUrl: lesson.mediaUrl,
-    requiredWords: lesson.requiredWords || [],
-    wordPool: shuffleArray(lesson.wordPool || []),
-    keywordCount: (lesson.requiredWords || []).length,
+    image: lesson.image,
+    wordPool: lesson.wordPool || [],
     minWordCount: lesson.minWordCount,
     maxWordCount: lesson.maxWordCount,
-    sortOrder: lesson.sortOrder,
     createdAt: lesson.createdAt,
     updatedAt: lesson.updatedAt,
   };
@@ -329,7 +307,15 @@ export async function getLessonAdmin(lessonId) {
  * POST /writing/see-and-write — Create lesson
  */
 export async function createLesson(body) {
-  return createWriting({ ...body, type: WRITING_TYPE.SEE_AND_WRITE });
+  const lesson = await createWriting({ ...body, type: WRITING_TYPE.SEE_AND_WRITE });
+  // AI translate wordPool in background
+  translateWordPool(lesson._id).catch((err) =>
+    console.error(`[translate] Failed for SW "${lesson._id}":`, err.message),
+  );
+  return {
+    id: lesson._id,
+    title: lesson.title,
+  };
 }
 
 /**
@@ -340,8 +326,8 @@ export async function updateLesson(lessonId, body) {
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
   const allowedFields = [
-    "title", "level", "topic", "description", "sortOrder",
-    "mediaUrl", "requiredWords", "minWordCount", "maxWordCount",
+    "title", "level", "topic", "description",
+    "image", "minWordCount", "maxWordCount",
   ];
 
   const updates = {};
@@ -349,11 +335,15 @@ export async function updateLesson(lessonId, body) {
     if (body[field] !== undefined) updates[field] = body[field];
   }
 
+  let needsTranslate = false;
   if (body.requiredWords !== undefined || body.distractorWords !== undefined) {
-    const requiredWords = body.requiredWords ?? lesson.requiredWords ?? [];
-    const distractorWords = body.distractorWords ?? computeDistractorWords(lesson) ?? [];
-    updates.wordPool = [...requiredWords, ...distractorWords];
-    updates.requiredWords = requiredWords;
+    const requiredWords = body.requiredWords || [];
+    const distractorWords = body.distractorWords || [];
+    updates.wordPool = [
+      ...requiredWords.map((w) => ({ word: w, meaning: "", isRequired: true })),
+      ...distractorWords.map((w) => ({ word: w, meaning: "", isRequired: false })),
+    ];
+    needsTranslate = true;
   }
 
   if (Object.keys(updates).length === 0) {
@@ -366,14 +356,19 @@ export async function updateLesson(lessonId, body) {
     { new: true, runValidators: true },
   ).lean();
 
+  if (needsTranslate) {
+    translateWordPool(lessonId).catch((err) =>
+      console.error(`[translate] Failed for SW "${lessonId}":`, err.message),
+    );
+  }
+
   return {
     id: updated._id,
     title: updated.title,
     level: updated.level,
     topic: updated.topic,
     description: updated.description,
-    mediaUrl: updated.mediaUrl,
-    requiredWords: updated.requiredWords || [],
+    image: updated.image,
     wordPool: updated.wordPool || [],
     minWordCount: updated.minWordCount,
     maxWordCount: updated.maxWordCount,
@@ -391,7 +386,22 @@ export async function deleteLesson(lessonId) {
   return { id: lessonId };
 }
 
-function computeDistractorWords(lesson) {
-  const requiredSet = new Set((lesson.requiredWords || []).map((w) => w.toLowerCase()));
-  return (lesson.wordPool || []).filter((w) => !requiredSet.has(w.toLowerCase()));
+async function translateWordPool(lessonId) {
+  const lesson = await SeeWrite.findById(lessonId);
+  if (!lesson || !lesson.wordPool?.length) return;
+
+  const words = lesson.wordPool.map((w) => w.word);
+  const { result } = await aiTranslateKeywords(words);
+  const meaningMap = {};
+  for (const item of result.translations) {
+    meaningMap[item.word.toLowerCase()] = item.viMeaning;
+  }
+
+  lesson.wordPool = lesson.wordPool.map((w) => ({
+    word: w.word,
+    meaning: meaningMap[w.word.toLowerCase()] || "",
+    isRequired: w.isRequired,
+  }));
+  lesson.markModified("wordPool");
+  await lesson.save();
 }

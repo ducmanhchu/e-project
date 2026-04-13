@@ -2,6 +2,13 @@ import { Type, claude, genai, withFallback } from "./client";
 import { createPartFromUri } from "@google/genai";
 import { EXAM_MIN_WORDS } from "@server/const/exercise";
 
+function getMimeType(url) {
+  if (/\.png(\?|$)/i.test(url)) return "image/png";
+  if (/\.webp(\?|$)/i.test(url)) return "image/webp";
+  if (/\.gif(\?|$)/i.test(url)) return "image/gif";
+  return "image/jpeg";
+}
+
 const LEVEL_CRITERIA = {
   beginner: `Level: BEGINNER — Be encouraging but still accurate.
 - Accept simple sentence structures (S+V+O) even if the reference uses more complex forms
@@ -286,10 +293,9 @@ const SW_LEVEL_CRITERIA = {
 };
 
 const SEE_WRITE_PROMPT = (userAnswer, lesson, wordCount, level) => {
-  const requiredWords = lesson.requiredWords?.length
-    ? lesson.requiredWords.join(", ")
-    : "none";
-  const requiredCount = lesson.requiredWords?.length || 0;
+  const required = (lesson.wordPool || []).filter((w) => w.isRequired).map((w) => w.word);
+  const requiredWords = required.length ? required.join(", ") : "none";
+  const requiredCount = required.length;
   const minWc = lesson.minWordCount ? lesson.minWordCount : null;
   const maxWc = lesson.maxWordCount ? lesson.maxWordCount : null;
   const wcRequirement =
@@ -433,7 +439,7 @@ const SW_GRADING_SCHEMA = {
 
 async function gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level) {
   const content = [
-    { type: "image", source: { type: "url", url: lesson.mediaUrl } },
+    { type: "image", source: { type: "url", url: lesson.image } },
     {
       type: "text",
       text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level),
@@ -473,7 +479,7 @@ async function gradeSeeWriteWithGemini(userAnswer, lesson, wordCount, level) {
     model: "gemini-2.5-flash",
     contents: [
       { text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level) },
-      createPartFromUri(lesson.mediaUrl, "image/jpeg"),
+      createPartFromUri(lesson.image, getMimeType(lesson.image)),
     ],
     config: {
       responseMimeType: "application/json",
@@ -868,7 +874,7 @@ async function gradeExamWithGemini(userAnswer, exam, wordCount) {
     isTask1 && exam.imageUrl
       ? [
           { text: EXAM_PROMPT(userAnswer, exam, wordCount) },
-          createPartFromUri(exam.imageUrl, "image/jpeg"),
+          createPartFromUri(exam.imageUrl, getMimeType(exam.imageUrl)),
         ]
       : [{ text: EXAM_PROMPT(userAnswer, exam, wordCount) }];
 

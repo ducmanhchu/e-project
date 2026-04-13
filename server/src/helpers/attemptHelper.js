@@ -28,15 +28,16 @@ export async function submitAndUpdateProgress(attempt, {
   feedback,
   isCompleted: isNowCompleted,
   totalSentences,
+  keepOnlyLast = false,
 }) {
-  const submission = await Submission.create({
-    attemptId: attempt._id,
-    sentenceOrder,
-    userAnswer,
-    score,
-    gradedBy,
-    feedback,
-  });
+  const submissionData = { attemptId: attempt._id, sentenceOrder, userAnswer, score, gradedBy, feedback };
+  const submission = keepOnlyLast
+    ? await Submission.findOneAndUpdate(
+        { attemptId: attempt._id, sentenceOrder },
+        submissionData,
+        { upsert: true, new: true },
+      )
+    : await Submission.create(submissionData);
 
   let progress = attempt.sentenceProgress.find(
     (p) => p.sentenceOrder === sentenceOrder,
@@ -45,20 +46,18 @@ export async function submitAndUpdateProgress(attempt, {
     attempt.sentenceProgress.push({
       sentenceOrder,
       bestScore: 0,
-      attemptCount: 0,
       isCompleted: false,
     });
     progress = attempt.sentenceProgress[attempt.sentenceProgress.length - 1];
   }
 
-  progress.attemptCount += 1;
   if (score > progress.bestScore) progress.bestScore = score;
   if (isNowCompleted) progress.isCompleted = true;
 
   const completedCount = attempt.sentenceProgress.filter((p) => p.isCompleted).length;
   attempt.completedSentences = completedCount;
 
-  const scoredProgress = attempt.sentenceProgress.filter((p) => p.attemptCount > 0);
+  const scoredProgress = attempt.sentenceProgress.filter((p) => p.bestScore > 0);
   attempt.bestScore =
     scoredProgress.length > 0
       ? Math.round(
@@ -69,6 +68,8 @@ export async function submitAndUpdateProgress(attempt, {
   if (completedCount >= totalSentences && attempt.status !== "completed") {
     attempt.status = "completed";
     attempt.completedAt = new Date();
+  } else if (attempt.status === "not_started") {
+    attempt.status = "in_progress";
   }
 
   await attempt.save();
@@ -85,6 +86,7 @@ export async function resetAttempt(attempt) {
   attempt.bestScore = 0;
   attempt.completedAt = null;
   attempt.sentenceProgress = [];
+  attempt.keywordQuiz = undefined;
   await attempt.save();
   return attempt;
 }
@@ -161,7 +163,6 @@ export async function getSubmissions(attemptId, { sentenceOrder, limit = 20, pag
 export function buildSentenceAttempts(sentenceProgress, lastSubMap) {
   return sentenceProgress.map((p) => ({
     sentenceOrder: p.sentenceOrder,
-    attemptCount: p.attemptCount,
     bestScore: p.bestScore,
     isCompleted: p.isCompleted,
     lastSubmission: lastSubMap.get(p.sentenceOrder) || null,

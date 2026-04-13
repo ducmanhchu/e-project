@@ -74,37 +74,6 @@ export async function submitAnswer(req, res, next) {
   }
 }
 
-/**
- * GET /api/attempts/:lessonId/progress
- */
-export async function getProgress(req, res, next) {
-  try {
-    const data = await exerciseService.getProgress(
-      req.user._id,
-      req.params.id,
-    );
-    res.json({ success: true, data });
-  } catch (e) {
-    next(e);
-  }
-}
-
-/**
- * GET /api/attempts/:lessonId/history
- */
-export async function getHistory(req, res, next) {
-  try {
-    const { page = 1, limit = 20 } = req.query;
-    const data = await exerciseService.getHistory(
-      req.user._id,
-      req.params.id,
-      { page: Math.max(1, +page), limit: Math.min(Math.max(1, +limit), 50) },
-    );
-    res.json({ success: true, data });
-  } catch (e) {
-    next(e);
-  }
-}
 
 /**
  * POST /api/writing/reverse-translation/preview — [ADMIN]
@@ -137,7 +106,7 @@ export async function saveDictionary(req, res, next) {
   try {
     const data = await writingService.saveDictionary(
       req.params.id,
-      req.body.entries,
+      req.body,
     );
     res.status(201).json({ success: true, data });
   } catch (e) {

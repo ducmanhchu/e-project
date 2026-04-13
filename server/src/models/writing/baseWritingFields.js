@@ -15,7 +15,6 @@ export function getBaseWritingFields() {
       type: String,
       enum: Object.values(WRITING_LEVEL),
     },
-    sortOrder: Number,
     totalSentences: { type: Number, default: 0 },
   };
 }

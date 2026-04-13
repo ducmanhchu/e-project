@@ -46,16 +46,18 @@ function prepareReverseTranslation(body) {
 }
 
 function prepareDescribe(body) {
-  validateFields(body, ["mediaUrl"]);
+  validateFields(body, ["image"]);
 
   const requiredWords = body.requiredWords || [];
   const distractorWords = body.distractorWords || [];
-  const wordPool = [...requiredWords, ...distractorWords];
+  const wordPool = [
+    ...requiredWords.map((w) => ({ word: w, meaning: "", isRequired: true })),
+    ...distractorWords.map((w) => ({ word: w, meaning: "", isRequired: false })),
+  ];
 
   return {
     fields: {
-      mediaUrl: body.mediaUrl,
-      ...(requiredWords.length > 0 && { requiredWords }),
+      image: body.image,
       ...(wordPool.length > 0 && { wordPool }),
       ...(body.minWordCount != null && { minWordCount: body.minWordCount }),
       ...(body.maxWordCount != null && { maxWordCount: body.maxWordCount }),

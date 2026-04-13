@@ -96,20 +96,6 @@ export async function submitAnswer(req, res, next) {
   }
 }
 
-/**
- * GET /api/writing/see-and-write/:lessonId/progress
- */
-export async function getProgress(req, res, next) {
-  try {
-    const data = await seeWriteService.getProgress(
-      req.user._id,
-      req.params.id,
-    );
-    res.json({ success: true, data });
-  } catch (e) {
-    next(e);
-  }
-}
 
 /**
  * GET /api/writing/see-and-write/:lessonId/history
@@ -133,7 +119,7 @@ export async function getHistory(req, res, next) {
  */
 export async function createLesson(req, res, next) {
   try {
-    validateFields(req.body, ["title", "level", "mediaUrl"]);
+    validateFields(req.body, ["title", "level", "image"]);
     const data = await seeWriteService.createLesson(req.body);
     res.status(201).json({ success: true, data });
   } catch (e) {
