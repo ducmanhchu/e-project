@@ -67,15 +67,6 @@ router.post(
   "/writing/reverse-translation/:id/submit",
   exerciseController.submitAnswer,
 );
-router.get(
-  "/writing/reverse-translation/:id/progress",
-  exerciseController.getProgress,
-);
-router.get(
-  "/writing/reverse-translation/:id/history",
-  exerciseController.getHistory,
-);
-
 // ── See & Write ──────────────────────────────────────────
 router.get("/writing/see-and-write", seeWriteController.listLessons);
 router.post("/writing/see-and-write", admin, seeWriteController.createLesson);
@@ -99,10 +90,6 @@ router.post(
   "/writing/see-and-write/:id/submit",
   seeWriteController.submitAnswer,
 );
-router.get(
-  "/writing/see-and-write/:id/progress",
-  seeWriteController.getProgress,
-);
 router.get("/writing/see-and-write/:id/history", seeWriteController.getHistory);
 
 // ── Rewrite ──────────────────────────────────────────────
@@ -113,7 +100,6 @@ router.put("/writing/rewrite/:id", admin, rewriteController.updateLesson);
 router.delete("/writing/rewrite/:id", admin, rewriteController.deleteLesson);
 router.get("/writing/rewrite/:id/attempt", rewriteController.getAttempt);
 router.post("/writing/rewrite/:id/submit", rewriteController.submitAnswer);
-router.get("/writing/rewrite/:id/progress", rewriteController.getProgress);
 router.get("/writing/rewrite/:id/history", rewriteController.getHistory);
 
 // ── Exam ─────────────────────────────────────────────────
@@ -124,7 +110,6 @@ router.put("/writing/exam/:id", admin, examController.updateExam);
 router.delete("/writing/exam/:id", admin, examController.deleteExam);
 router.get("/writing/exam/:id/attempt", examController.getAttempt);
 router.post("/writing/exam/:id/submit", examController.submitAnswer);
-router.get("/writing/exam/:id/progress", examController.getProgress);
 router.get("/writing/exam/:id/history", examController.getHistory);
 
 // ── Attempts (shared) ────────────────────────────────────

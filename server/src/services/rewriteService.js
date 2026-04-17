@@ -82,6 +82,7 @@ export async function getAttempt(userId, lessonId) {
     status: attempt.status,
     completedSentences: attempt.completedSentences,
     bestScore: attempt.bestScore,
+    completedAt: attempt.completedAt || null,
     sentenceAttempts: buildSentenceAttempts(attempt.sentenceProgress, lastSubMap),
   };
 }
@@ -130,25 +131,6 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
 }
 
 /**
- * GET /writing/rewrite/:lessonId/progress
- */
-export async function getProgress(userId, lessonId) {
-  const attempt = await Attempt.findOne({ userId, lessonId });
-  if (!attempt) throw ApiError.notFound("No attempt found for this lesson");
-
-  const lastSubMap = await getLastSubmissions(attempt._id);
-
-  return {
-    lessonId,
-    status: attempt.status,
-    completedSentences: attempt.completedSentences,
-    bestScore: attempt.bestScore,
-    completedAt: attempt.completedAt,
-    sentenceAttempts: buildSentenceAttempts(attempt.sentenceProgress, lastSubMap),
-  };
-}
-
-/**
  * GET /writing/rewrite/:lessonId/history
  */
 export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}) {
@@ -170,7 +152,6 @@ export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}
     bestScore: attempt.bestScore,
     sentenceAttempts: attempt.sentenceProgress.map((p) => ({
       sentenceOrder: p.sentenceOrder,
-      attemptCount: p.attemptCount,
       bestScore: p.bestScore,
       isCompleted: p.isCompleted,
       submissions: (grouped[p.sentenceOrder] || []).reverse(),
@@ -221,7 +202,6 @@ export async function getLessonAdmin(lessonId) {
     description: lesson.description,
     sentences: lesson.sentences || [],
     totalSentences: lesson.totalSentences,
-    sortOrder: lesson.sortOrder,
     createdAt: lesson.createdAt,
     updatedAt: lesson.updatedAt,
   };
@@ -255,7 +235,7 @@ export async function updateLesson(lessonId, body) {
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
   const allowedFields = [
-    "title", "level", "topic", "description", "sortOrder",
+    "title", "level", "topic", "description",
   ];
 
   const updates = {};
@@ -297,7 +277,6 @@ export async function updateLesson(lessonId, body) {
     description: updated.description,
     sentences: updated.sentences || [],
     totalSentences: updated.totalSentences,
-    sortOrder: updated.sortOrder,
     updatedAt: updated.updatedAt,
   };
 }

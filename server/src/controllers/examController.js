@@ -74,18 +74,6 @@ export async function submitAnswer(req, res, next) {
 }
 
 /**
- * GET /api/writing/exam/:examId/progress
- */
-export async function getProgress(req, res, next) {
-  try {
-    const data = await examService.getProgress(req.user._id, req.params.id);
-    res.json({ success: true, data });
-  } catch (e) {
-    next(e);
-  }
-}
-
-/**
  * GET /api/writing/exam/:examId/history
  */
 export async function getHistory(req, res, next) {

@@ -67,6 +67,11 @@ ${level === "beginner" ? "- For vocabulary: focus on common, high-frequency word
   - Set phrases/idioms: "once again", "as a matter of fact", "on the other hand"
   - Polite structures (WITHOUT subject): "would like to", "would love to"
 
+  NO DUPLICATES:
+  - Each word/phrase must appear ONLY ONCE across ALL sentences
+  - If "grateful" was extracted in sentence 1, do NOT extract it again in sentence 3
+  - Pick the sentence where the word is most meaningful/clear for learning
+
   MUST NOT EXTRACT (bad examples):
   - Subject + verb: "I hope" → extract "hope"; "I appreciate" → extract "appreciate"; "you know" → extract "know"
   - Subject + adverb + verb: "I really love" → extract "love" and "really" separately

@@ -2,6 +2,13 @@ import { Type, claude, genai, withFallback } from "./client";
 import { createPartFromUri } from "@google/genai";
 import { EXAM_MIN_WORDS } from "@server/const/exercise";
 
+function getMimeType(url) {
+  if (/\.png(\?|$)/i.test(url)) return "image/png";
+  if (/\.webp(\?|$)/i.test(url)) return "image/webp";
+  if (/\.gif(\?|$)/i.test(url)) return "image/gif";
+  return "image/jpeg";
+}
+
 const LEVEL_CRITERIA = {
   beginner: `Level: BEGINNER — Be encouraging but still accurate.
 - Accept simple sentence structures (S+V+O) even if the reference uses more complex forms
@@ -286,10 +293,9 @@ const SW_LEVEL_CRITERIA = {
 };
 
 const SEE_WRITE_PROMPT = (userAnswer, lesson, wordCount, level) => {
-  const requiredWords = lesson.requiredWords?.length
-    ? lesson.requiredWords.join(", ")
-    : "none";
-  const requiredCount = lesson.requiredWords?.length || 0;
+  const required = (lesson.wordPool || []).filter((w) => w.isRequired).map((w) => w.word);
+  const requiredWords = required.length ? required.join(", ") : "none";
+  const requiredCount = required.length;
   const minWc = lesson.minWordCount ? lesson.minWordCount : null;
   const maxWc = lesson.maxWordCount ? lesson.maxWordCount : null;
   const wcRequirement =
@@ -318,7 +324,7 @@ ${userAnswer}
 ═══ WRITING STYLE FOR ALL COMMENTS ═══
 - Vietnamese, CONCISE — max 1-2 short sentences per criterion
 - Quote specific English phrases from student's writing using single quotes
-- NO filler: skip "Học sinh đã", "Bài viết của bạn"
+- NO filler: skip "Học sinh đã", "Bài viết của bạn". Dùng "bạn" thay vì "Học sinh" làm chủ ngữ
 - Go straight to the point
 
 ═══ STEP 1: IMAGE VERIFICATION ═══
@@ -433,7 +439,7 @@ const SW_GRADING_SCHEMA = {
 
 async function gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level) {
   const content = [
-    { type: "image", source: { type: "url", url: lesson.mediaUrl } },
+    { type: "image", source: { type: "url", url: lesson.image } },
     {
       type: "text",
       text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level),
@@ -473,7 +479,7 @@ async function gradeSeeWriteWithGemini(userAnswer, lesson, wordCount, level) {
     model: "gemini-2.5-flash",
     contents: [
       { text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level) },
-      createPartFromUri(lesson.mediaUrl, "image/jpeg"),
+      createPartFromUri(lesson.image, getMimeType(lesson.image)),
     ],
     config: {
       responseMimeType: "application/json",
@@ -562,7 +568,7 @@ Student's rewrite: "${userAnswer}"
 ═══ WRITING STYLE FOR ALL COMMENTS ═══
 - Write in Vietnamese, CONCISE — max 1-2 short sentences per criterion comment
 - Quote specific English words/phrases from student's writing using single quotes
-- NO filler phrases: skip "Học sinh đã", "Việc dùng", "Tuy nhiên", "Mặc dù"
+- NO filler phrases: skip "Học sinh đã", "Việc dùng", "Tuy nhiên", "Mặc dù". Dùng "bạn" thay vì "Học sinh" làm chủ ngữ
 - Go straight to the point: what's good, what's wrong, quote the evidence
 - Example good comment: "'decided' → 'opted': chính xác. 'stay at home' → 'remain indoors': collocation tự nhiên."
 - Example bad comment (too long): "Học sinh đã thực hiện việc thay đổi từ 'decided' sang 'opted', đây là một sự thay thế chính xác và phù hợp với ngữ cảnh của câu gốc."
@@ -732,7 +738,7 @@ ${userAnswer}
 ═══ WRITING STYLE ═══
 - Vietnamese, CONCISE — max 1-2 short sentences per criterion comment
 - Quote specific English phrases from student's writing using single quotes
-- NO filler: skip "Học sinh đã", "Việc dùng", "Tuy nhiên"
+- NO filler: skip "Học sinh đã", "Việc dùng", "Tuy nhiên". Dùng "bạn" thay vì "Học sinh" làm chủ ngữ
 - Go straight to the point
 
 ═══ BAND SCORING — 4 IELTS criteria, each Band 1-9 ═══
@@ -868,7 +874,7 @@ async function gradeExamWithGemini(userAnswer, exam, wordCount) {
     isTask1 && exam.imageUrl
       ? [
           { text: EXAM_PROMPT(userAnswer, exam, wordCount) },
-          createPartFromUri(exam.imageUrl, "image/jpeg"),
+          createPartFromUri(exam.imageUrl, getMimeType(exam.imageUrl)),
         ]
       : [{ text: EXAM_PROMPT(userAnswer, exam, wordCount) }];
 

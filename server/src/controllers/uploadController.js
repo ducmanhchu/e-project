@@ -2,7 +2,7 @@ import cloudinary from "@server/config/cloudinary";
 import { ApiError } from "@server/helpers/ApiError";
 
 /**
- * POST /api/admin/upload
+ * POST /api/upload — [ADMIN]
  * Upload file to Cloudinary (image or video)
  */
 export async function uploadMedia(req, res, next) {

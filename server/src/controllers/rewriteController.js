@@ -80,20 +80,6 @@ export async function submitAnswer(req, res, next) {
   }
 }
 
-/**
- * GET /api/writing/rewrite/:lessonId/progress
- */
-export async function getProgress(req, res, next) {
-  try {
-    const data = await rewriteService.getProgress(
-      req.user._id,
-      req.params.id,
-    );
-    res.json({ success: true, data });
-  } catch (e) {
-    next(e);
-  }
-}
 
 /**
  * GET /api/writing/rewrite/:lessonId/history

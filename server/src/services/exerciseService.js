@@ -86,6 +86,7 @@ export async function getAttempt(userId, lessonId) {
     status: attempt.status,
     completedSentences: attempt.completedSentences,
     bestScore: attempt.bestScore,
+    completedAt: attempt.completedAt || null,
     sentenceAttempts: buildSentenceAttempts(attempt.sentenceProgress, lastSubMap),
   };
 }
@@ -123,66 +124,17 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
     },
     isCompleted: score >= COMPLETION_THRESHOLD,
     totalSentences: lesson.totalSentences,
+    keepOnlyLast: true,
   });
 
   return {
     score,
     feedback: submission.feedback,
     gradedBy: provider,
-    bestScore: progress.bestScore,
     isCompleted: score >= COMPLETION_THRESHOLD,
   };
 }
 
-/**
- * GET /attempts/:lessonId/progress
- */
-export async function getProgress(userId, lessonId) {
-  const attempt = await Attempt.findOne({ userId, lessonId });
-  if (!attempt) throw ApiError.notFound("No attempt found for this lesson");
-
-  const lastSubMap = await getLastSubmissions(attempt._id);
-
-  return {
-    lessonId,
-    status: attempt.status,
-    completedSentences: attempt.completedSentences,
-    bestScore: attempt.bestScore,
-    completedAt: attempt.completedAt,
-    sentenceAttempts: buildSentenceAttempts(attempt.sentenceProgress, lastSubMap),
-  };
-}
-
-/**
- * GET /attempts/:lessonId/history
- */
-export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}) {
-  const attempt = await Attempt.findOne({ userId, lessonId });
-  if (!attempt) throw ApiError.notFound("No attempt found for this lesson");
-
-  const { docs, total } = await getSubmissions(attempt._id, { page, limit });
-
-  const grouped = {};
-  for (const sub of docs) {
-    if (!grouped[sub.sentenceOrder]) grouped[sub.sentenceOrder] = [];
-    grouped[sub.sentenceOrder].push(sub);
-  }
-
-  return {
-    lessonId,
-    status: attempt.status,
-    completedSentences: attempt.completedSentences,
-    bestScore: attempt.bestScore,
-    sentenceAttempts: attempt.sentenceProgress.map((p) => ({
-      sentenceOrder: p.sentenceOrder,
-      attemptCount: p.attemptCount,
-      bestScore: p.bestScore,
-      isCompleted: p.isCompleted,
-      submissions: (grouped[p.sentenceOrder] || []).reverse(),
-    })),
-    pagination: { page, limit, total },
-  };
-}
 
 /**
  * PUT /writing/reverse-translation/:id — Update lesson
@@ -191,7 +143,7 @@ export async function updateLesson(lessonId, body) {
   const lesson = await ReverseTranslation.findById(lessonId);
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  const allowedFields = ["title", "level", "topic", "contentType", "description", "sortOrder"];
+  const allowedFields = ["title", "level", "topic", "contentType", "description"];
   const updates = {};
   for (const field of allowedFields) {
     if (body[field] !== undefined) updates[field] = body[field];

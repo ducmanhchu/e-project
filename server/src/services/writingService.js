@@ -28,14 +28,22 @@ export async function previewWriting(body) {
     vietnameseText: s.vietnameseText.trim(),
   }));
 
+  const seen = new Set();
   const vocabulary = parsed.results.flatMap((s, i) =>
-    (s.vocabulary || []).map((v) => ({
-      sentenceIndex: i + 1,
-      word: normalizeWord(v.word, v.partOfSpeech, s.referenceAnswer),
-      partOfSpeech: v.partOfSpeech,
-      meaning: v.meaning,
-      example: v.example,
-    })),
+    (s.vocabulary || []).reduce((acc, v) => {
+      const word = normalizeWord(v.word, v.partOfSpeech, s.referenceAnswer);
+      if (!seen.has(word)) {
+        seen.add(word);
+        acc.push({
+          sentenceIndex: i + 1,
+          word,
+          partOfSpeech: v.partOfSpeech,
+          meaning: v.meaning,
+          example: v.example,
+        });
+      }
+      return acc;
+    }, []),
   );
 
   return {
@@ -63,7 +71,6 @@ export async function createWriting(body) {
     contentType: body.contentType,
     topic: body.topic,
     description: body.description,
-    sortOrder: body.sortOrder,
     totalSentences,
     ...fields,
   });

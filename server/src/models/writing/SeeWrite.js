@@ -3,10 +3,9 @@ import { getBaseWritingFields, BASE_SCHEMA_OPTIONS } from "./baseWritingFields";
 
 const seeWriteSchema = new mongoose.Schema(
   {
-    ...getBaseWritingFields(),
-    mediaUrl: { type: String, required: true },
-    requiredWords: [String],
-    wordPool: [String],
+    ...(() => { const { totalSentences, ...rest } = getBaseWritingFields(); return rest; })(),
+    image: { type: String, required: true },
+    wordPool: [{ word: String, meaning: String, isRequired: Boolean }],
     minWordCount: Number,
     maxWordCount: Number,
   },

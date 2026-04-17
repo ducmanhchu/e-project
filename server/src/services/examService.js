@@ -85,10 +85,10 @@ export async function getAttempt(userId, examId) {
     status: attempt.status,
     completedSentences: attempt.completedSentences,
     bestScore: attempt.bestScore,
+    completedAt: attempt.completedAt || null,
     sentenceAttempts: progress
       ? [{
           sentenceOrder: 1,
-          attemptCount: progress.attemptCount,
           bestScore: progress.bestScore,
           isCompleted: progress.isCompleted,
           lastSubmission: lastSub,
@@ -140,22 +140,6 @@ export async function submitAnswer(userId, examId, userAnswer) {
     bestScore: progress.bestScore,
     bestBand: roundBand(progress.bestScore / 10),
     isCompleted: band >= COMPLETION_BAND,
-  };
-}
-
-/**
- * GET /writing/exam/:examId/progress
- */
-export async function getProgress(userId, examId) {
-  const attempt = await Attempt.findOne({ userId, lessonId: examId });
-  if (!attempt) throw ApiError.notFound("No attempt found for this exam");
-
-  return {
-    lessonId: examId,
-    status: attempt.status,
-    completedSentences: attempt.completedSentences,
-    bestScore: attempt.bestScore,
-    completedAt: attempt.completedAt,
   };
 }
 
@@ -222,7 +206,6 @@ export async function getExamAdmin(examId) {
     examType: exam.examType,
     examPrompt: exam.examPrompt,
     imageUrl: exam.imageUrl || null,
-    sortOrder: exam.sortOrder,
     createdAt: exam.createdAt,
     updatedAt: exam.updatedAt,
   };
@@ -242,7 +225,7 @@ export async function updateExam(examId, body) {
   const exam = await Exam.findById(examId);
   if (!exam) throw ApiError.notFound("Exam not found");
 
-  const allowedFields = ["title", "level", "topic", "description", "sortOrder", "examPrompt", "imageUrl"];
+  const allowedFields = ["title", "level", "topic", "description", "examPrompt", "imageUrl"];
   const updates = {};
   for (const field of allowedFields) {
     if (body[field] !== undefined) updates[field] = body[field];

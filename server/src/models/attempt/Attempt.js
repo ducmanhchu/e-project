@@ -6,7 +6,6 @@ const sentenceProgressSchema = new mongoose.Schema(
   {
     sentenceOrder: { type: Number, required: true },
     bestScore: { type: Number, default: 0 },
-    attemptCount: { type: Number, default: 0 },
     isCompleted: { type: Boolean, default: false },
   },
   { _id: false },
@@ -14,12 +13,10 @@ const sentenceProgressSchema = new mongoose.Schema(
 
 const keywordQuizSchema = new mongoose.Schema(
   {
-    selectedKeywords: [String],
     correct: [String],
     missed: [String],
     wrong: [String],
     score: { type: Number, default: 0 },
-    translations: { type: mongoose.Schema.Types.Mixed },
   },
   { _id: false },
 );
@@ -43,8 +40,8 @@ const attemptSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["in_progress", "completed"],
-      default: "in_progress",
+      enum: ["not_started", "in_progress", "completed"],
+      default: "not_started",
     },
     bestScore: { type: Number, default: 0 },
     completedSentences: { type: Number, default: 0 },
