@@ -15,4 +15,12 @@ export const env = {
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+
+  GMAIL_USER: process.env.GMAIL_USER,
+  GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD,
+  EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || "English Platform",
+  APP_URL: process.env.APP_URL || "http://localhost:5000",
+  FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:5173",
 };

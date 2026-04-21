@@ -5,6 +5,7 @@ import User from "@server/models/user/User";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { TOKEN_LIFE } from "@server/const/auth";
+import * as googleAuthProvider from "@server/services/auth/googleAuthProvider";
 
 /**
  * @param {Object} data
@@ -16,6 +17,12 @@ export async function signIn(data) {
   const user = await User.findOne({ email });
   const isValid = user && (await bcrypt.compare(password, user.password));
   if (!isValid) throw ApiError.unauthorized("Invalid email or password");
+
+  if (!user.googleId && !user.isEmailVerified) {
+    throw ApiError.forbidden(
+      "Email chưa verify. Vui lòng kiểm tra inbox hoặc gọi /auth/resend-verification",
+    );
+  }
 
   const userInfo = { id: user.id, email: user.email, role: user.role };
 
@@ -62,4 +69,70 @@ export async function refreshToken(token) {
   const accessToken = generateToken(userInfo, env.ACCESS_TOKEN_SECRET, TOKEN_LIFE.ACCESS);
 
   return { accessToken };
+}
+
+/**
+ * Verify Google ID token, auto-create/auto-link user, issue JWT tokens.
+ * @param {string} idToken
+ * @returns {Promise<{ accessToken: string, refreshToken: string, isNewUser: boolean }>}
+ */
+export async function googleLogin(idToken) {
+  const profile = await googleAuthProvider.verifyIdToken(idToken);
+
+  if (!profile.emailVerified) {
+    throw ApiError.unauthorized("Google email is not verified");
+  }
+
+  let user = await User.findOne({
+    $or: [{ googleId: profile.googleId }, { email: profile.email }],
+  });
+  let isNewUser = false;
+
+  if (!user) {
+    try {
+      user = await User.create({
+        email: profile.email,
+        fullName: profile.fullName,
+        avatarUrl: profile.avatarUrl,
+        googleId: profile.googleId,
+        isEmailVerified: true,
+      });
+      isNewUser = true;
+    } catch (err) {
+      if (err.code === 11000) {
+        user = await User.findOne({
+          $or: [{ googleId: profile.googleId }, { email: profile.email }],
+        });
+        if (!user) throw err;
+      } else {
+        throw err;
+      }
+    }
+  } else if (!user.googleId) {
+    user.googleId = profile.googleId;
+    if (!user.avatarUrl && profile.avatarUrl) {
+      user.avatarUrl = profile.avatarUrl;
+    }
+    if (!user.isEmailVerified) {
+      // Local account was never email-verified → password may have been set by an attacker
+      // who signed up with this email without mailbox access. Neutralize by clearing it.
+      // Google has verified the email owner, so they become the sole authenticator.
+      user.password = undefined;
+      console.warn(
+        `[auth] Auto-link Google to unverified local account ${user.email}; password cleared`,
+      );
+    }
+    user.isEmailVerified = true;
+    await user.save();
+  } else if (user.googleId !== profile.googleId) {
+    throw ApiError.conflict(
+      "Account conflict: email is linked to a different Google account",
+    );
+  }
+
+  const userInfo = { id: user.id, email: user.email, role: user.role };
+  const accessToken = generateToken(userInfo, env.ACCESS_TOKEN_SECRET, TOKEN_LIFE.ACCESS);
+  const refreshToken = generateToken(userInfo, env.REFRESH_TOKEN_SECRET, TOKEN_LIFE.REFRESH);
+
+  return { accessToken, refreshToken, isNewUser };
 }

@@ -27,9 +27,15 @@ router.post("/auth/signup", authController.signUp);
 router.post("/auth/signin", authController.signIn);
 router.post("/auth/signout", authController.signOut);
 router.post("/auth/refresh", authController.refreshToken);
+router.post("/auth/google", authController.googleSignIn);
+router.get("/auth/verify-email", authController.verifyEmail);
+router.post("/auth/resend-verification", authController.resendVerification);
+router.post("/auth/forgot-password", authController.forgotPassword);
+router.post("/auth/reset-password", authController.resetPassword);
 
 router.use(protectedRoute);
 router.get("/me", userController.authMe);
+router.post("/auth/change-password", authController.changePassword);
 
 // ── Reverse Translation ─────────────────────────────────
 router.get("/writing/reverse-translation", exerciseController.listLessons);
