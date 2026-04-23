@@ -1,7 +1,7 @@
 import { Sun, Moon } from "lucide-react";
 
-import { LoginForm } from "@admin/components/login-form";
-import { useTheme } from "@/shared/hooks/use-theme";
+import { LoginForm } from "@/domains/admin/features/auth/components/login-form";
+import { useTheme } from "@shared/hooks/use-theme";
 import { Button } from "@shared/components/ui/button";
 
 export function Login() {
