@@ -26,4 +26,10 @@ export type SignInResponse = {
 	success: boolean;
 };
 
+export type SignUpPayload = {
+	email: string;
+	password: string;
+	fullName: string;
+};
+
 export type RefreshResponse = SignInResponse;

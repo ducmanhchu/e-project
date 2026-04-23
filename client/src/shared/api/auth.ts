@@ -4,21 +4,34 @@ import type {
 	SignInResponse,
 	User,
 	APIResponse,
+	SignUpPayload,
 } from "@/shared/types/auth";
-
-const baseURL = import.meta.env.VITE_BASE_URL;
 
 export const signIn = async (
 	payload: SignInPayload,
 ): Promise<SignInResponse> => {
 	const { data } = await axiosPublic.post<SignInResponse>(
-		`${baseURL}/auth/signin`,
+		"/auth/signin",
 		payload,
 	);
 	return data;
 };
 
+export const signUp = async (
+	payload: SignUpPayload,
+): Promise<APIResponse<User>> => {
+	const { data } = await axiosPublic.post<APIResponse<User>>(
+		"/auth/signup",
+		payload,
+	);
+	return data;
+};
+
+export const signOut = async (): Promise<void> => {
+	await axiosPrivate.post<void>("/auth/signout");
+};
+
 export const fetchMe = async (): Promise<User> => {
-	const { data } = await axiosPrivate.get<APIResponse<User>>(`${baseURL}/me`);
+	const { data } = await axiosPrivate.get<APIResponse<User>>("/me");
 	return data.data;
 };
