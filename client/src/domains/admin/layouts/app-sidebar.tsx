@@ -1,7 +1,8 @@
 import { Link } from "react-router";
-import { ChevronDown, LogIn, Moon, Pen, Speech, Sun } from "lucide-react";
+import { ChevronDown, LogOut, Moon, Pen, Speech, Sun } from "lucide-react";
+import { useNavigate } from "react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { useTheme } from "@/shared/hooks/use-theme";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -10,6 +11,7 @@ import {
 import {
 	Sidebar,
 	SidebarContent,
+	SidebarHeader,
 	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupLabel,
@@ -20,6 +22,15 @@ import {
 	SidebarMenuSubButton,
 	SidebarMenuSubItem,
 } from "@shared/components/ui/sidebar";
+import {
+	Avatar,
+	AvatarFallback,
+	AvatarImage,
+} from "@/shared/components/ui/avatar";
+import { useTheme } from "@shared/hooks/use-theme";
+import { useAuthStore } from "@shared/store/use-auth-store";
+import { signOut } from "@shared/api/auth";
+import { useFetchMe } from "@shared/hooks/use-fetch-me";
 
 const features = [
 	{
@@ -42,10 +53,41 @@ const features = [
 ];
 
 export function AppSidebar() {
+	const navigate = useNavigate();
+	const queryClient = useQueryClient();
+
+	const { data: me } = useFetchMe();
 	const { theme, toggleTheme } = useTheme();
+	const clearAuth = useAuthStore((s) => s.clearAuth);
+
+	const logout = useMutation({
+		mutationFn: signOut,
+		onSuccess: () => {
+			clearAuth();
+			queryClient.clear();
+			navigate("/admin/login");
+		},
+	});
 
 	return (
 		<Sidebar variant="inset">
+			<SidebarHeader className="p-4">
+				<SidebarMenu>
+					<SidebarMenuItem className="flex items-center gap-4">
+						<Avatar>
+							<AvatarImage
+								src={me?.avatarUrl ?? "https://github.com/shadcn.png"}
+								alt="Admin"
+							/>
+							<AvatarFallback>Admin</AvatarFallback>
+						</Avatar>
+						<div className="flex flex-col">
+							<p className="text-sm font-medium">{me?.fullName}</p>
+							<p className="text-xs text-muted-foreground">{me?.email}</p>
+						</div>
+					</SidebarMenuItem>
+				</SidebarMenu>
+			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
 					<SidebarGroupLabel>Kỹ năng</SidebarGroupLabel>
@@ -101,16 +143,17 @@ export function AppSidebar() {
 					<SidebarMenuItem className="flex items-center gap-2">
 						<SidebarMenuButton
 							onClick={toggleTheme}
-							className="w-auto shrink-0"
+							className="w-auto shrink-0 rounded-full"
 						>
 							{theme === "light" ? <Moon /> : <Sun />}
 							<span className="sr-only">Chuyển đổi giao diện</span>
 						</SidebarMenuButton>
-						<SidebarMenuButton asChild className="flex-1">
-							<Link to="/login">
-								<LogIn />
-								Đăng nhập
-							</Link>
+						<SidebarMenuButton
+							onClick={() => logout.mutate()}
+							className="flex-1 rounded-full"
+						>
+							<LogOut />
+							Đăng xuất
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 				</SidebarMenu>

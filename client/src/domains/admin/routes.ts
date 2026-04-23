@@ -1,7 +1,7 @@
 import type { RouteObject } from "react-router";
 
 import { AdminLayout } from "@admin/layouts/admin-layout";
-import { Login } from "@admin/pages/Login";
+import { Login } from "@admin/pages/login";
 import { BackTranslate } from "@admin/pages/back-translate";
 import { SeeAndWrite } from "@admin/pages/see-and-write";
 import { Paraphrase } from "@admin/pages/paraphrase";
