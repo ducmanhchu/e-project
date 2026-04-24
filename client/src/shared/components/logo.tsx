@@ -4,7 +4,7 @@ export const Logo = ({ className, ...props }: React.ComponentProps<"svg">) => {
 	return (
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
-			viewBox="0 0 144 1"
+			viewBox="0 0 144 14"
 			className={cn("h-14 w-36", className)}
 			role="img"
 			aria-label="Wordwise"
