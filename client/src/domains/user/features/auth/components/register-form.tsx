@@ -7,7 +7,6 @@ import { isAxiosError } from "axios";
 import { Loader2Icon } from "lucide-react";
 
 import { cn } from "@/shared/lib/utils";
-import { Logo } from "@/shared/components/logo";
 import { Button } from "@/shared/components/ui/button";
 import {
 	Field,
@@ -77,14 +76,13 @@ export function RegisterForm({
 	const serverError = form.formState.errors.root?.message;
 
 	return (
-		<div className={cn("flex flex-col gap-6", className)} {...props}>
+		<div className={cn("flex flex-col", className)} {...props}>
 			<form onSubmit={onSubmit} noValidate>
 				<FieldGroup>
 					<div className="flex flex-col items-center gap-2 text-center">
-						<Link to="/" className="flex flex-col">
-							<Logo />
-						</Link>
-						<h1 className="text-xl font-bold">Đăng ký tài khoản</h1>
+						<h1 className="font-heading text-xl font-medium">
+							Đăng ký tài khoản
+						</h1>
 						<FieldDescription>
 							Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
 						</FieldDescription>

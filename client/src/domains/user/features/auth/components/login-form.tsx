@@ -66,14 +66,16 @@ export function LoginForm({
 	const serverError = form.formState.errors.root?.message;
 
 	return (
-		<div className={cn("flex flex-col gap-6", className)} {...props}>
+		<div className={cn("flex flex-col", className)} {...props}>
 			<form onSubmit={onSubmit} noValidate>
 				<FieldGroup>
 					<div className="flex flex-col items-center gap-2 text-center">
 						<Link to="/" className="flex flex-col">
 							<Logo />
 						</Link>
-						<h1 className="text-xl font-bold">Chào mừng tới với Wordwise.</h1>
+						<h1 className="font-heading text-xl font-medium">
+							Chào mừng tới với Wordwise
+						</h1>
 						<FieldDescription>
 							Không có tài khoản? <Link to="/register">Đăng ký</Link>
 						</FieldDescription>
