@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, NavLink } from "react-router";
+import { useLayoutEffect, useRef, useState } from "react";
+import { Link, NavLink, useLocation } from "react-router";
 import { Settings, LogOut, Menu, User } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
@@ -123,41 +123,88 @@ function MobileHeaderContent({ me, isLoading, onLogout }: HeaderContentProps) {
 }
 
 function DesktopNav() {
+	const location = useLocation();
+	const navRef = useRef<HTMLElement>(null);
+	const activeLinkRef = useRef<HTMLAnchorElement | null>(null);
+	const [pillStyle, setPillStyle] = useState({ left: 0, width: 0 });
+	const [isPillReady, setIsPillReady] = useState(false);
+
+	useLayoutEffect(() => {
+		const updatePill = () => {
+			const nav = navRef.current;
+			const activeLink = activeLinkRef.current;
+
+			if (!nav || !activeLink) return;
+
+			const navRect = nav.getBoundingClientRect();
+			const activeRect = activeLink.getBoundingClientRect();
+
+			setPillStyle({
+				left: activeRect.left - navRect.left,
+				width: activeRect.width,
+			});
+			setIsPillReady(true);
+		};
+
+		updatePill();
+
+		const resizeObserver = new ResizeObserver(updatePill);
+
+		if (navRef.current) resizeObserver.observe(navRef.current);
+		if (activeLinkRef.current) resizeObserver.observe(activeLinkRef.current);
+
+		window.addEventListener("resize", updatePill);
+
+		return () => {
+			resizeObserver.disconnect();
+			window.removeEventListener("resize", updatePill);
+		};
+	}, [location.pathname]);
+
 	return (
 		<nav
+			ref={navRef}
 			aria-label="Điều hướng chính"
-			className="flex gap-3 rounded-full border border-primary bg-transparent p-1 whitespace-nowrap"
+			className="relative flex gap-3 rounded-full border border-primary bg-transparent p-1 whitespace-nowrap"
 		>
-			{NAV_ITEMS.map((item) => (
-				<NavLink
-					key={item.to}
-					to={item.to}
-					end={item.end}
-					className={({ isActive }) =>
-						cn(
-							"relative flex items-center justify-center rounded-full px-6 py-2 text-sm font-medium",
+			<motion.span
+				aria-hidden="true"
+				initial={false}
+				animate={{
+					x: pillStyle.left,
+					width: pillStyle.width,
+					opacity: isPillReady ? 1 : 0,
+				}}
+				transition={{
+					type: "spring",
+					stiffness: 380,
+					damping: 30,
+				}}
+				className="pointer-events-none absolute top-1 bottom-1 left-0 rounded-full bg-foreground"
+			/>
+			{NAV_ITEMS.map((item) => {
+				const isActive = item.end
+					? location.pathname === item.to
+					: location.pathname === item.to ||
+						location.pathname.startsWith(`${item.to}/`);
+
+				return (
+					<NavLink
+						key={item.to}
+						ref={(node) => {
+							if (isActive) activeLinkRef.current = node;
+						}}
+						to={item.to}
+						end={item.end}
+						className={cn(
+							"relative z-10 flex items-center justify-center rounded-full px-6 py-2 text-sm font-medium transition-colors",
 							isActive && "text-background",
-						)
-					}
-				>
-					{({ isActive }) => (
-						<>
-							{isActive && (
-								<motion.span
-									layoutId="active-nav-pill"
-									className="absolute inset-0 rounded-full bg-foreground"
-									transition={{
-										type: "spring",
-										stiffness: 380,
-										damping: 30,
-									}}
-								/>
-							)}
-							<span className="relative z-10">{item.label}</span>
-						</>
-					)}
-				</NavLink>
-			))}
+						)}
+					>
+						{item.label}
+					</NavLink>
+				);
+			})}
 		</nav>
 	);
 }
@@ -203,7 +250,11 @@ function UserAction({ me, isLoading, onLogout }: HeaderContentProps) {
 
 	if (!me) {
 		return (
-			<Button asChild>
+			<Button
+				variant="outline"
+				className="border border-primary transition-transform duration-300 hover:scale-105"
+				asChild
+			>
 				<Link to="/login">
 					<span>Đăng nhập</span>
 				</Link>

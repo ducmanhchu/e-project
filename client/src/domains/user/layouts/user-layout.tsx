@@ -7,9 +7,9 @@ export function UserLayout() {
 	return (
 		<div className="flex flex-col gap-4 min-h-svh">
 			<Header />
-			<div className="flex-1 px-4 md:px-10 lg:px-20">
+			<main className="flex-1 px-4 md:px-10 lg:px-20">
 				<Outlet />
-			</div>
+			</main>
 			<Footer />
 		</div>
 	);

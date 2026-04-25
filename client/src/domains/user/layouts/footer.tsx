@@ -7,7 +7,7 @@ export function Footer() {
 	const { theme, toggleTheme } = useTheme();
 
 	return (
-		<div className="flex justify-between items-center w-full bg-secondary text-secondary-foreground p-4 md:px-10 lg:px-20">
+		<footer className="flex justify-between items-center border-t border-primary w-full bg-secondary text-secondary-foreground p-4 md:px-10 lg:px-20">
 			<div className="flex flex-col justify-start">
 				<Logo className="h-14 w-32" />
 				<p className="text-sm text-muted-foreground">
@@ -24,6 +24,6 @@ export function Footer() {
 					{theme === "light" ? <Moon /> : <Sun />}
 				</Button>
 			</div>
-		</div>
+		</footer>
 	);
 }
