@@ -10,29 +10,23 @@ import {
 } from "motion/react";
 
 import { Button } from "@shared/components/ui/button";
-import Vector1 from "@shared/assets/Vector-1.svg";
-import Vector2 from "@shared/assets/Vector-2.svg";
-import Vector3 from "@shared/assets/Vector-3.svg";
-import Vector4 from "@shared/assets/Vector-4.svg";
-import Vector5 from "@shared/assets/Vector-5.svg";
-import Vector6 from "@shared/assets/Vector-6.svg";
-import Vector7 from "@shared/assets/Vector-7.svg";
-import Vector8 from "@shared/assets/Vector-8.svg";
-import Vector9 from "@shared/assets/Vector-9.svg";
-import Vector10 from "@shared/assets/Vector-10.svg";
-import Vector11 from "@shared/assets/Vector-11.svg";
-import Vector12 from "@shared/assets/Vector-12.svg";
-import Vector13 from "@shared/assets/Vector-13.svg";
-import Vector14 from "@shared/assets/Vector-14.svg";
-import Vector15 from "@shared/assets/Vector-15.svg";
-import Vector16 from "@shared/assets/Vector-16.svg";
-
-type BackgroundIllustration = {
-	src: string;
-	className: string;
-	rotate: number;
-	delay: number;
-};
+import Vector1 from "@shared/assets/alphabet/Vector-1.svg";
+import Vector2 from "@shared/assets/alphabet/Vector-2.svg";
+import Vector3 from "@shared/assets/alphabet/Vector-3.svg";
+import Vector4 from "@shared/assets/alphabet/Vector-4.svg";
+import Vector5 from "@shared/assets/alphabet/Vector-5.svg";
+import Vector6 from "@shared/assets/alphabet/Vector-6.svg";
+import Vector7 from "@shared/assets/alphabet/Vector-7.svg";
+import Vector8 from "@shared/assets/alphabet/Vector-8.svg";
+import Vector9 from "@shared/assets/alphabet/Vector-9.svg";
+import Vector10 from "@shared/assets/alphabet/Vector-10.svg";
+import Vector11 from "@shared/assets/alphabet/Vector-11.svg";
+import Vector12 from "@shared/assets/alphabet/Vector-12.svg";
+import Vector13 from "@shared/assets/alphabet/Vector-13.svg";
+import Vector14 from "@shared/assets/alphabet/Vector-14.svg";
+import Vector15 from "@shared/assets/alphabet/Vector-15.svg";
+import Vector16 from "@shared/assets/alphabet/Vector-16.svg";
+import type { BackgroundIllustration } from "@shared/types/utils";
 
 const heroIllustrations = [
 	{
@@ -289,7 +283,7 @@ export function Home() {
 
 	return (
 		<div className="w-full flex flex-col gap-3">
-			<section className="relative isolate min-h-[70vh] overflow-hidden flex flex-col justify-center items-center gap-6 px-4">
+			<section className="relative isolate min-h-svh overflow-hidden flex flex-col justify-start items-center gap-6 px-4">
 				<BackgroundIllustrations
 					illustrations={heroIllustrations}
 					y={backgroundY}
@@ -299,7 +293,7 @@ export function Home() {
 					variants={heroContainerVariants}
 					initial="hidden"
 					animate="show"
-					className="flex flex-col items-center gap-6"
+					className="flex flex-col items-center gap-6 mt-[25vh]"
 				>
 					<motion.h1
 						variants={heroItemVariants}
@@ -314,7 +308,7 @@ export function Home() {
 					>
 						Làm chủ kỹ năng <u>Viết</u> và <u>Nói</u> thông qua nhận xét cá nhân
 						hóa từ AI.
-						<br />
+						<br className="hidden md:block" />
 						Ngừng học thụ động, bắt đầu luyện tập chủ động ngay hôm nay.
 					</motion.p>
 					<motion.div variants={heroItemVariants}>
@@ -330,11 +324,15 @@ export function Home() {
 					</motion.div>
 				</motion.div>
 			</section>
-			<section className="relative isolate min-h-svh overflow-hidden">
+			<section className="relative isolate min-h-svh overflow-hidden flex flex-col justify-start items-center">
 				<BackgroundIllustrations
 					illustrations={secondSectionIllustrations}
 					y={backgroundY}
 				/>
+
+				<h2 className="font-heading text-3xl font-bold">
+					Tại sao lại là Wordwise?
+				</h2>
 			</section>
 			<section className="relative isolate min-h-svh overflow-hidden">
 				<BackgroundIllustrations

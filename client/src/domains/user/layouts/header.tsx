@@ -34,7 +34,8 @@ import {
 	SheetTitle,
 	SheetTrigger,
 } from "@shared/components/ui/sheet";
-import type { User as AuthUser } from "@shared/types/auth";
+import DefaultAvatar from "@shared/assets/avatar/avatar4.png";
+import type { HeaderContentProps } from "@shared/types/utils";
 
 const NAV_ITEMS = [
 	{ to: "/", label: "Trang chủ", end: true },
@@ -91,12 +92,6 @@ export function Header() {
 		</motion.header>
 	);
 }
-
-type HeaderContentProps = {
-	me?: AuthUser;
-	isLoading: boolean;
-	onLogout: () => void;
-};
 
 function DesktopHeaderContent({ me, isLoading, onLogout }: HeaderContentProps) {
 	return (
@@ -268,7 +263,7 @@ function UserAction({ me, isLoading, onLogout }: HeaderContentProps) {
 				<Button variant="ghost" size="icon" className="rounded-full">
 					<Avatar className="border border-primary">
 						<AvatarImage
-							src={me.avatarUrl ?? "https://github.com/shadcn.png"}
+							src={me.avatarUrl ?? DefaultAvatar}
 							alt="User avatar"
 						/>
 						<AvatarFallback>User</AvatarFallback>
