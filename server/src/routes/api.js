@@ -8,18 +8,14 @@ import * as examController from "@server/controllers/examController";
 import * as attemptController from "@server/controllers/attemptController";
 import * as vocabularyController from "@server/controllers/vocabularyController";
 import * as uploadController from "@server/controllers/uploadController";
-import { MAX_FILE_SIZE } from "@server/const/upload";
-import multer from "multer";
+import * as slangHangController from "@server/controllers/slangHangController";
+import { mediaUpload, audioUpload } from "@server/middlewares/upload";
 import {
   protectedRoute,
   authorizeRoles,
 } from "@server/middlewares/authMiddleware";
 import { USER_ROLE } from "@server/const/user";
 const router = express.Router();
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_FILE_SIZE },
-});
 const admin = authorizeRoles(USER_ROLE.ADMIN);
 
 // auth routes
@@ -134,11 +130,22 @@ router.get("/vocabulary/:id", vocabularyController.getWordDetail);
 router.patch("/vocabulary/:id/status", vocabularyController.updateStatus);
 router.delete("/vocabulary/:id", vocabularyController.deleteWord);
 
+// ── Slang Hang ──────────────────────────────────────────
+router.post("/slang-hang/generate", slangHangController.generate);
+router.get("/slang-hang/dialogues", slangHangController.list);
+router.get("/slang-hang/dialogues/:id", slangHangController.getOne);
+router.delete("/slang-hang/dialogues/:id", slangHangController.remove);
+router.post(
+  "/slang-hang/grade-pronunciation",
+  audioUpload.single("audio"),
+  slangHangController.grade,
+);
+
 // ── Upload (admin only) ─────────────────────────────────
 router.post(
   "/upload",
   admin,
-  upload.single("file"),
+  mediaUpload.single("file"),
   uploadController.uploadMedia,
 );
 
