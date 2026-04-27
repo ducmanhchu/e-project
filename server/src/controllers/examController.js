@@ -1,6 +1,6 @@
 import * as examService from "@server/services/examService";
 import { ApiError } from "@server/helpers/ApiError";
-import { validateFields } from "@server/helpers/validateFields";
+import { validateFields, validateObjectId } from "@server/helpers/validateFields";
 import { USER_ROLE } from "@server/const/user";
 
 /**
@@ -31,6 +31,7 @@ export async function listExams(req, res, next) {
  */
 export async function getExam(req, res, next) {
   try {
+    validateObjectId(req.params.id);
     const data = req.user.role === USER_ROLE.ADMIN
       ? await examService.getExamAdmin(req.params.id)
       : await examService.getExam(req.params.id);
@@ -113,6 +114,7 @@ export async function createExam(req, res, next) {
  */
 export async function updateExam(req, res, next) {
   try {
+    validateObjectId(req.params.id);
     const data = await examService.updateExam(req.params.id, req.body);
     res.json({ success: true, data });
   } catch (e) {
@@ -125,6 +127,7 @@ export async function updateExam(req, res, next) {
  */
 export async function deleteExam(req, res, next) {
   try {
+    validateObjectId(req.params.id);
     const data = await examService.deleteExam(req.params.id);
     res.json({ success: true, data });
   } catch (e) {

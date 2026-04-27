@@ -106,7 +106,6 @@ router.put("/writing/rewrite/:id", admin, rewriteController.updateLesson);
 router.delete("/writing/rewrite/:id", admin, rewriteController.deleteLesson);
 router.get("/writing/rewrite/:id/attempt", rewriteController.getAttempt);
 router.post("/writing/rewrite/:id/submit", rewriteController.submitAnswer);
-router.get("/writing/rewrite/:id/history", rewriteController.getHistory);
 
 // ── Exam ─────────────────────────────────────────────────
 router.get("/writing/exam", examController.listExams);

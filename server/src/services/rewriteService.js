@@ -131,36 +131,6 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
 }
 
 /**
- * GET /writing/rewrite/:lessonId/history
- */
-export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}) {
-  const attempt = await Attempt.findOne({ userId, lessonId });
-  if (!attempt) throw ApiError.notFound("No attempt found for this lesson");
-
-  const { docs, total } = await getSubmissions(attempt._id, { page, limit });
-
-  const grouped = {};
-  for (const sub of docs) {
-    if (!grouped[sub.sentenceOrder]) grouped[sub.sentenceOrder] = [];
-    grouped[sub.sentenceOrder].push(sub);
-  }
-
-  return {
-    lessonId,
-    status: attempt.status,
-    completedSentences: attempt.completedSentences,
-    bestScore: attempt.bestScore,
-    sentenceAttempts: attempt.sentenceProgress.map((p) => ({
-      sentenceOrder: p.sentenceOrder,
-      bestScore: p.bestScore,
-      isCompleted: p.isCompleted,
-      submissions: (grouped[p.sentenceOrder] || []).reverse(),
-    })),
-    pagination: { page, limit, total },
-  };
-}
-
-/**
  * GET /writing/rewrite — Admin list (all lessons, full data)
  */
 export async function listLessonsAdmin({ page = 1, limit = 20 } = {}) {

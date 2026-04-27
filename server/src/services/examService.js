@@ -1,5 +1,6 @@
 import { Exam } from "@server/models/writing/Exam";
 import { Attempt } from "@server/models/attempt/Attempt";
+import { Submission } from "@server/models/attempt/Submission";
 import { ApiError } from "@server/helpers/ApiError";
 import { aiGradeExam } from "@server/services/ai/gradingProvider";
 import {
@@ -9,7 +10,7 @@ import {
   getSubmissions,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_BAND, EXAM_MIN_WORDS, bandToScore, roundBand } from "@server/const/exercise";
-import { WRITING_TYPE } from "@server/const/writting";
+import { WRITING_TYPE, WRITING_LEVEL, WRITING_TOPIC } from "@server/const/writting";
 import { createWriting } from "@server/services/writingService";
 
 /**
@@ -27,7 +28,7 @@ export async function listExams(filters, pagination) {
 
   const [exams, total] = await Promise.all([
     Exam.find(query)
-      .select("title level topic examType totalSentences createdAt")
+      .select("title level topic examType createdAt")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -42,7 +43,6 @@ export async function listExams(filters, pagination) {
       level: e.level,
       topic: e.topic,
       examType: e.examType,
-      totalSentences: e.totalSentences,
       createdAt: e.createdAt,
     })),
     total,
@@ -65,7 +65,6 @@ export async function getExam(examId) {
     examPrompt: exam.examPrompt,
     imageUrl: exam.imageUrl || null,
     minWordCount: EXAM_MIN_WORDS[exam.examType],
-    totalSentences: exam.totalSentences,
   };
 }
 
@@ -183,7 +182,6 @@ export async function listExamsAdmin({ page = 1, limit = 20 } = {}) {
       examType: e.examType,
       examPrompt: e.examPrompt,
       imageUrl: e.imageUrl || null,
-      totalSentences: e.totalSentences,
       createdAt: e.createdAt,
     })),
     total,
@@ -228,11 +226,25 @@ export async function updateExam(examId, body) {
   const allowedFields = ["title", "level", "topic", "description", "examPrompt", "imageUrl"];
   const updates = {};
   for (const field of allowedFields) {
-    if (body[field] !== undefined) updates[field] = body[field];
+    if (body[field] !== undefined) {
+      updates[field] = typeof body[field] === "string" ? body[field].trim() : body[field];
+    }
   }
 
   if (Object.keys(updates).length === 0) {
     throw ApiError.badRequest("No valid fields to update");
+  }
+
+  if (updates.title === "") throw ApiError.badRequest("title cannot be empty");
+  if (updates.examPrompt === "") throw ApiError.badRequest("examPrompt cannot be empty");
+  if (updates.level && !Object.values(WRITING_LEVEL).includes(updates.level)) {
+    throw ApiError.badRequest(`Invalid level: ${updates.level}`);
+  }
+  if (updates.topic && !Object.values(WRITING_TOPIC).includes(updates.topic)) {
+    throw ApiError.badRequest(`Invalid topic: ${updates.topic}`);
+  }
+  if (exam.examType === "ielts_task1" && "imageUrl" in updates && !updates.imageUrl) {
+    throw ApiError.badRequest("imageUrl is required for IELTS Task 1");
   }
 
   const updated = await Exam.findByIdAndUpdate(
@@ -254,11 +266,23 @@ export async function updateExam(examId, body) {
 }
 
 /**
- * DELETE /writing/exam/:id — Delete exam
+ * DELETE /writing/exam/:id — Delete exam + cascade attempts/submissions
  */
 export async function deleteExam(examId) {
-  const exam = await Exam.findById(examId);
-  if (!exam) throw ApiError.notFound("Exam not found");
-  await Exam.findByIdAndDelete(examId);
-  return { id: examId };
+  const deleted = await Exam.findByIdAndDelete(examId);
+  if (!deleted) throw ApiError.notFound("Exam not found");
+
+  const attempts = await Attempt.find({ lessonId: examId, lessonType: "Exam" })
+    .select("_id")
+    .lean();
+
+  if (attempts.length > 0) {
+    const attemptIds = attempts.map((a) => a._id);
+    await Promise.all([
+      Submission.deleteMany({ attemptId: { $in: attemptIds } }),
+      Attempt.deleteMany({ _id: { $in: attemptIds } }),
+    ]);
+  }
+
+  return { id: examId, deletedAttempts: attempts.length };
 }

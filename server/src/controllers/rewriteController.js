@@ -82,23 +82,6 @@ export async function submitAnswer(req, res, next) {
 
 
 /**
- * GET /api/writing/rewrite/:lessonId/history
- */
-export async function getHistory(req, res, next) {
-  try {
-    const { page = 1, limit = 20 } = req.query;
-    const data = await rewriteService.getHistory(
-      req.user._id,
-      req.params.id,
-      { page: Math.max(1, +page), limit: Math.min(Math.max(1, +limit), 50) },
-    );
-    res.json({ success: true, data });
-  } catch (e) {
-    next(e);
-  }
-}
-
-/**
  * POST /api/writing/rewrite — [ADMIN]
  */
 export async function createLesson(req, res, next) {
