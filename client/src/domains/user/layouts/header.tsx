@@ -218,9 +218,13 @@ function MobileNavSheet() {
 					<HugeiconsIcon icon={Menu01Icon} />
 				</Button>
 			</SheetTrigger>
-			<SheetContent side="left" aria-describedby={undefined}>
+			<SheetContent
+				className="rounded-r-4xl"
+				side="left"
+				aria-describedby={undefined}
+			>
 				<SheetHeader>
-					<SheetTitle>Điều hướng</SheetTitle>
+					<SheetTitle className="text-sm">Điều hướng</SheetTitle>
 				</SheetHeader>
 				<nav aria-label="Điều hướng chính" className="flex flex-col gap-4 ps-6">
 					{NAV_ITEMS.map((item) => (
@@ -228,9 +232,9 @@ function MobileNavSheet() {
 							<NavLink
 								to={item.to}
 								end={item.end}
-								className="text-2xl font-semibold"
+								className="text-2xl font-bold"
 							>
-								{item.label}
+								<i>{item.label}</i>
 							</NavLink>
 						</SheetClose>
 					))}
