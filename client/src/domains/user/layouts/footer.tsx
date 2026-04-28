@@ -1,7 +1,8 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Moon02Icon, Sun01Icon } from "@hugeicons/core-free-icons";
 import { Logo } from "@shared/components/logo";
 import { useTheme } from "@shared/hooks/use-theme";
 import { Button } from "@shared/components/ui/button";
-import { Sun, Moon } from "lucide-react";
 
 export function Footer() {
 	const { theme, toggleTheme } = useTheme();
@@ -21,7 +22,11 @@ export function Footer() {
 					aria-label="Chuyển đổi chủ đề sáng/tối"
 					onClick={toggleTheme}
 				>
-					{theme === "light" ? <Moon /> : <Sun />}
+					{theme === "light" ? (
+						<HugeiconsIcon icon={Moon02Icon} />
+					) : (
+						<HugeiconsIcon icon={Sun01Icon} />
+					)}
 				</Button>
 			</div>
 		</footer>

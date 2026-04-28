@@ -1,5 +1,6 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUp01Icon } from "@hugeicons/core-free-icons";
 import { Link } from "react-router";
-import { ArrowUp } from "lucide-react";
 import {
 	motion,
 	useScroll,
@@ -318,7 +319,7 @@ export function Home() {
 						>
 							<Link to="/writing">
 								Học ngay
-								<ArrowUp />
+								<HugeiconsIcon icon={ArrowUp01Icon} />
 							</Link>
 						</Button>
 					</motion.div>

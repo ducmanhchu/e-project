@@ -1,5 +1,5 @@
-import { Sun, Moon } from "lucide-react";
-
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Moon02Icon, Sun01Icon } from "@hugeicons/core-free-icons";
 import { LoginForm } from "@/domains/admin/features/auth/components/login-form";
 import { useTheme } from "@shared/hooks/use-theme";
 import { Button } from "@shared/components/ui/button";
@@ -18,7 +18,11 @@ export function Login() {
 					onClick={toggleTheme}
 					aria-label="Chuyển đổi chủ đề sáng/tối"
 				>
-					{theme === "light" ? <Moon /> : <Sun />}
+					{theme === "light" ? (
+						<HugeiconsIcon icon={Moon02Icon} />
+					) : (
+						<HugeiconsIcon icon={Sun01Icon} />
+					)}
 				</Button>
 			</div>
 		</div>

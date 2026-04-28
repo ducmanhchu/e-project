@@ -1,11 +1,11 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Loading02Icon, Shield01Icon } from "@hugeicons/core-free-icons";
 import * as z from "zod";
 import { useNavigate, useSearchParams } from "react-router";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Loader2Icon, ShieldAlertIcon } from "lucide-react";
-
 import { cn } from "@shared/lib/utils";
 import { Button } from "@shared/components/ui/button";
 import {
@@ -87,7 +87,7 @@ export function LoginForm({
 							role="alert"
 							className="mb-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
 						>
-							<ShieldAlertIcon className="mt-0.5 size-4 shrink-0" />
+							<HugeiconsIcon icon={Shield01Icon} className="mt-0.5 size-4 shrink-0" />
 							<span>
 								Tài khoản của bạn không có quyền truy cập trang quản trị.
 							</span>
@@ -151,7 +151,7 @@ export function LoginForm({
 								)}
 								<Button type="submit" disabled={login.isPending}>
 									{login.isPending && (
-										<Loader2Icon className="size-4 animate-spin" />
+										<HugeiconsIcon icon={Loading02Icon} className="size-4 animate-spin" />
 									)}
 									Đăng nhập
 								</Button>

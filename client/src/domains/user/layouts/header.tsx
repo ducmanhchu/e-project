@@ -1,6 +1,12 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+	LogoutCircle01Icon,
+	Menu01Icon,
+	Settings03Icon,
+	User03Icon,
+} from "@hugeicons/core-free-icons";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router";
-import { Settings, LogOut, Menu, User } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
@@ -209,7 +215,7 @@ function MobileNavSheet() {
 		<Sheet>
 			<SheetTrigger asChild>
 				<Button variant="ghost" size="icon" aria-label="Mở menu điều hướng">
-					<Menu />
+					<HugeiconsIcon icon={Menu01Icon} />
 				</Button>
 			</SheetTrigger>
 			<SheetContent side="left" aria-describedby={undefined}>
@@ -274,18 +280,18 @@ function UserAction({ me, isLoading, onLogout }: HeaderContentProps) {
 				<DropdownMenuGroup>
 					<DropdownMenuLabel>{me.fullName}</DropdownMenuLabel>
 					<DropdownMenuItem>
-						<User />
+						<HugeiconsIcon icon={User03Icon} />
 						Trang cá nhân
 					</DropdownMenuItem>
 					<DropdownMenuItem>
-						<Settings />
+						<HugeiconsIcon icon={Settings03Icon} />
 						Cài đặt
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					<DropdownMenuItem variant="destructive" onClick={onLogout}>
-						<LogOut />
+						<HugeiconsIcon icon={LogoutCircle01Icon} />
 						Đăng xuất
 					</DropdownMenuItem>
 				</DropdownMenuGroup>

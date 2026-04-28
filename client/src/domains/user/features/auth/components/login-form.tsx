@@ -1,11 +1,11 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Loading03Icon } from "@hugeicons/core-free-icons";
 import * as z from "zod";
 import { useNavigate, Link } from "react-router";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Loader2Icon } from "lucide-react";
-
 import { cn } from "@/shared/lib/utils";
 import { Logo } from "@/shared/components/logo";
 import { Button } from "@/shared/components/ui/button";
@@ -140,7 +140,10 @@ export function LoginForm({
 						)}
 						<Button type="submit" disabled={login.isPending}>
 							{login.isPending && (
-								<Loader2Icon className="size-4 animate-spin" />
+								<HugeiconsIcon
+									icon={Loading03Icon}
+									className="size-4 animate-spin"
+								/>
 							)}
 							Đăng nhập
 						</Button>

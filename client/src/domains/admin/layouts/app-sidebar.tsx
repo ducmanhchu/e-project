@@ -1,5 +1,13 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+	ArrowDown01Icon,
+	LogoutCircle01Icon,
+	Moon02Icon,
+	Mic02Icon,
+	TextFontIcon,
+	Sun01Icon,
+} from "@hugeicons/core-free-icons";
 import { Link } from "react-router";
-import { ChevronDown, LogOut, Moon, Pen, Speech, Sun } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -35,7 +43,7 @@ import { useFetchMe } from "@shared/hooks/use-fetch-me";
 const features = [
 	{
 		title: "Viết",
-		icon: Pen,
+		icon: TextFontIcon,
 		children: [
 			{
 				title: "Dịch ngược",
@@ -47,7 +55,7 @@ const features = [
 	},
 	{
 		title: "Nói",
-		icon: Speech,
+		icon: Mic02Icon,
 		children: [{ title: "Hội thoại", href: "/admin/conversation" }],
 	},
 ];
@@ -101,9 +109,12 @@ export function AppSidebar() {
 								<SidebarMenuItem>
 									<CollapsibleTrigger asChild>
 										<SidebarMenuButton>
-											<item.icon />
+											<HugeiconsIcon icon={item.icon} />
 											{item.title}
-											<ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+											<HugeiconsIcon
+												icon={ArrowDown01Icon}
+												className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180"
+											/>
 										</SidebarMenuButton>
 									</CollapsibleTrigger>
 									<CollapsibleContent>
@@ -145,14 +156,18 @@ export function AppSidebar() {
 							onClick={toggleTheme}
 							className="w-auto shrink-0 rounded-full"
 						>
-							{theme === "light" ? <Moon /> : <Sun />}
+							{theme === "light" ? (
+								<HugeiconsIcon icon={Moon02Icon} />
+							) : (
+								<HugeiconsIcon icon={Sun01Icon} />
+							)}
 							<span className="sr-only">Chuyển đổi giao diện</span>
 						</SidebarMenuButton>
 						<SidebarMenuButton
 							onClick={() => logout.mutate()}
 							className="flex-1 rounded-full"
 						>
-							<LogOut />
+							<HugeiconsIcon icon={LogoutCircle01Icon} />
 							Đăng xuất
 						</SidebarMenuButton>
 					</SidebarMenuItem>
