@@ -1,12 +1,26 @@
 import type { RouteObject } from "react-router";
 
-import { UserLayout } from "@user/layouts/user-layout";
-import { Login } from "@user/pages/login";
-import { Register } from "@/domains/user/pages/register";
-import { Home } from "@user/pages/home";
-import { Writing } from "@user/pages/writing";
-import { Speaking } from "@user/pages/speaking";
-import { Vocabulary } from "@user/pages/vocabulary";
+import { UserLayout } from "@user/shell/user-layout";
+import { Home } from "@user/features/home/pages";
+
+import { Login } from "@user/features/auth/pages/login";
+import { Register } from "@user/features/auth/pages/register";
+
+import { WritingLayout } from "@user/features/writing/layout/writing-layout";
+import { WritingMethod } from "@user/features/writing/pages";
+import { ReverseTranslateList } from "@user/features/writing/methods/reverse-translate/pages/list";
+import { ReverseTranslateExercise } from "@user/features/writing/methods/reverse-translate/pages/exercise";
+import { SeeAndWriteList } from "@user/features/writing/methods/see-and-write/pages/list";
+import { SeeAndWriteExercise } from "@user/features/writing/methods/see-and-write/pages/exercise";
+import { ParaphraseList } from "@user/features/writing/methods/paraphrase/pages/list";
+import { ParaphraseExercise } from "@user/features/writing/methods/paraphrase/pages/exercise";
+
+import { SpeakingLayout } from "@user/features/speaking/layout/speaking-layout";
+import { SpeakingMethod } from "@user/features/speaking/pages";
+import { ConversationList } from "@user/features/speaking/methods/conversation/pages/list";
+import { ConversationExercise } from "@user/features/speaking/methods/conversation/pages/exercise";
+
+import { Vocabulary } from "@user/features/vocabulary/pages";
 
 export const userRoutes: RouteObject[] = [
 	{
@@ -19,11 +33,51 @@ export const userRoutes: RouteObject[] = [
 			},
 			{
 				path: "writing",
-				Component: Writing,
+				Component: WritingLayout,
+				children: [
+					{
+						index: true,
+						Component: WritingMethod,
+					},
+					{
+						path: "reverse-translate",
+						children: [
+							{ index: true, Component: ReverseTranslateList },
+							{ path: ":id", Component: ReverseTranslateExercise },
+						],
+					},
+					{
+						path: "see-and-write",
+						children: [
+							{ index: true, Component: SeeAndWriteList },
+							{ path: ":id", Component: SeeAndWriteExercise },
+						],
+					},
+					{
+						path: "paraphrase",
+						children: [
+							{ index: true, Component: ParaphraseList },
+							{ path: ":id", Component: ParaphraseExercise },
+						],
+					},
+				],
 			},
 			{
 				path: "speaking",
-				Component: Speaking,
+				Component: SpeakingLayout,
+				children: [
+					{
+						index: true,
+						Component: SpeakingMethod,
+					},
+					{
+						path: "conversation",
+						children: [
+							{ index: true, Component: ConversationList },
+							{ path: ":id", Component: ConversationExercise },
+						],
+					},
+				],
 			},
 			{
 				path: "vocabulary",
