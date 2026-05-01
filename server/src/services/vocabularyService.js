@@ -3,8 +3,6 @@ import { Vocabulary } from "@server/models/vocabulary/Vocabulary";
 import { ApiError } from "@server/helpers/ApiError";
 import { aiEnrichWord } from "@server/services/ai/enrichProvider";
 
-const LEARNED_STREAK_THRESHOLD = 3;
-
 /** Get primary Vietnamese meaning from definitions array */
 function getPrimaryMeaning(vocab) {
   return vocab.definitions?.[0]?.viDef || "";
@@ -131,29 +129,6 @@ function enrichInBackground(vocab) {
 }
 
 /**
- * Get vocabulary words by list of IDs
- */
-export async function getWordsByIds(ids) {
-  if (!ids || ids.length === 0) return [];
-
-  const vocabs = await Vocabulary.find({ _id: { $in: ids } })
-    .select("word partOfSpeech ipa definitions")
-    .lean();
-
-  return vocabs.map((v) => {
-    const firstDef = v.definitions?.[0];
-    return {
-      id: v._id,
-      word: v.word,
-      partOfSpeech: v.partOfSpeech,
-      ipa: v.ipa,
-      meaning: firstDef?.viDef || "",
-      example: firstDef?.example?.engEx || "",
-    };
-  });
-}
-
-/**
  * Add word to user's vocabulary
  * If vocabularyId provided (from exercise), use directly. Otherwise find/create.
  */
@@ -203,9 +178,139 @@ export async function addWord(userId, payload) {
 }
 
 /**
- * List user's vocabulary (paginated, filterable, searchable)
+ * Admin: create a Vocabulary entry. Mode is REQUIRED (no default) to make intent explicit.
+ *  - mode="manual": admin provides full schema (word, partOfSpeech, definitions[], optional ipa/audio)
+ *  - mode="enrich": admin provides only `word` (+ optional partOfSpeech hint),
+ *    server runs Vocaxis → AI fallback enrichment synchronously and returns the enriched doc.
+ * Throws 409 if word already exists.
  */
-export async function listWords(userId, filters, pagination) {
+export async function createVocabulary(payload) {
+  const { mode, word, partOfSpeech, ipa, audio, definitions } = payload;
+
+  if (mode !== "manual" && mode !== "enrich") {
+    throw ApiError.badRequest('mode is required and must be "manual" or "enrich"');
+  }
+  if (!word || typeof word !== "string" || !word.trim()) {
+    throw ApiError.badRequest("word is required");
+  }
+  const normalized = word.toLowerCase().trim();
+
+  const existing = await Vocabulary.findOne({ word: normalized }).lean();
+  if (existing) throw ApiError.conflict(`Vocabulary "${normalized}" already exists`);
+
+  if (mode === "manual") {
+    if (!partOfSpeech || typeof partOfSpeech !== "string") {
+      throw ApiError.badRequest("partOfSpeech is required in manual mode");
+    }
+    if (!Array.isArray(definitions) || definitions.length === 0) {
+      throw ApiError.badRequest("definitions must be a non-empty array in manual mode");
+    }
+    const created = await Vocabulary.create({
+      word: normalized,
+      partOfSpeech,
+      ipa: ipa || undefined,
+      audio: audio || undefined,
+      definitions,
+    });
+    return created.toObject();
+  }
+
+  // mode === "enrich"
+  const created = await Vocabulary.create({
+    word: normalized,
+    partOfSpeech: partOfSpeech || undefined,
+    definitions: [],
+  });
+  const enriched = await ensureEnriched(created);
+  return enriched.toObject ? enriched.toObject() : enriched;
+}
+
+/**
+ * Admin: partial update a Vocabulary entry. Only allowed fields are applied.
+ * 404 if not found, 409 if word rename collides with existing entry.
+ */
+export async function updateVocabulary(id, payload) {
+  const allowed = ["word", "partOfSpeech", "ipa", "audio", "definitions"];
+  const update = {};
+  for (const k of allowed) {
+    if (payload[k] !== undefined) update[k] = payload[k];
+  }
+  if (Object.keys(update).length === 0) {
+    throw ApiError.badRequest("No valid fields to update");
+  }
+  if (update.word) {
+    const normalized = update.word.toLowerCase().trim();
+    if (!normalized) throw ApiError.badRequest("word must not be empty");
+    const dup = await Vocabulary.findOne({
+      word: normalized,
+      _id: { $ne: id },
+    }).lean();
+    if (dup) throw ApiError.conflict(`Vocabulary "${normalized}" already exists`);
+    update.word = normalized;
+  }
+  const updated = await Vocabulary.findByIdAndUpdate(id, update, {
+    new: true,
+    runValidators: true,
+  }).lean();
+  if (!updated) throw ApiError.notFound("Vocabulary not found");
+  return updated;
+}
+
+/**
+ * Admin: delete a Vocabulary entry by _id. 404 if not found.
+ * Note: orphans existing UserVocabulary refs and lesson vocabularyRefs — admin's responsibility.
+ */
+export async function deleteVocabulary(id) {
+  const result = await Vocabulary.findByIdAndDelete(id);
+  if (!result) throw ApiError.notFound("Vocabulary not found");
+  return { deleted: true, id };
+}
+
+/**
+ * List global Vocabulary collection (paginated, searchable by word).
+ * Returns raw lean documents.
+ */
+export async function listDictionary(filters, pagination) {
+  const { search } = filters;
+  const { page, limit } = pagination;
+
+  const query = {};
+  if (search) query.word = { $regex: search, $options: "i" };
+
+  const [items, total] = await Promise.all([
+    Vocabulary.find(query)
+      .sort({ word: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    Vocabulary.countDocuments(query),
+  ]);
+
+  return { items, total };
+}
+
+/**
+ * Get a single global Vocabulary doc by _id.
+ */
+export async function getDictionaryById(id) {
+  const vocab = await Vocabulary.findById(id).lean();
+  if (!vocab) throw ApiError.notFound("Vocabulary not found");
+  return vocab;
+}
+
+/**
+ * Batch lookup global Vocabulary docs by list of _ids. Returns raw lean documents.
+ */
+export async function getDictionaryByIds(ids) {
+  if (!ids || ids.length === 0) return [];
+  return Vocabulary.find({ _id: { $in: ids } }).lean();
+}
+
+/**
+ * List user's UserVocabulary entries (joined with Vocabulary).
+ * Filters: status, search (on word). Paginated. Sorted by addedAt desc.
+ */
+export async function listMyVocabulary(userId, filters, pagination) {
   const { status, search } = filters;
   const { page, limit } = pagination;
 
@@ -243,6 +348,7 @@ export async function listWords(userId, filters, pagination) {
 
   const words = results.map((r) => ({
     id: r._id,
+    vocabularyId: r.vocab._id,
     word: r.vocab.word,
     meaning: r.vocab.definitions?.[0]?.viDef || "",
     partOfSpeech: r.vocab.partOfSpeech,
@@ -264,11 +370,12 @@ export async function listWords(userId, filters, pagination) {
 }
 
 /**
- * Get word detail (UserVocabulary + Vocabulary with rich data)
+ * Get user's vocabulary entry detail by UserVocabulary._id.
+ * Joins with Vocabulary, auto-enriches if definitions missing.
  */
-export async function getWordDetail(userId, wordId) {
+export async function getMyVocabularyById(userId, userVocabId) {
   const userVocab = await UserVocabulary.findOne({
-    _id: wordId,
+    _id: userVocabId,
     userId,
   }).lean();
   if (!userVocab) throw ApiError.notFound("Word not found");
@@ -276,7 +383,6 @@ export async function getWordDetail(userId, wordId) {
   let vocab = await Vocabulary.findById(userVocab.vocabularyId).lean();
   if (!vocab) throw ApiError.notFound("Vocabulary entry not found");
 
-  // Enrich if no definitions yet
   if (!vocab.definitions || vocab.definitions.length === 0) {
     const enriched = await ensureEnriched(vocab);
     vocab = enriched.toObject ? enriched.toObject() : enriched;
@@ -284,6 +390,7 @@ export async function getWordDetail(userId, wordId) {
 
   return {
     id: userVocab._id,
+    vocabularyId: vocab._id,
     word: vocab.word,
     partOfSpeech: vocab.partOfSpeech,
     ipa: vocab.ipa,
@@ -297,154 +404,10 @@ export async function getWordDetail(userId, wordId) {
 }
 
 /**
- * Update learning status
- */
-export async function updateStatus(userId, wordId, status) {
-  const valid = ["new", "learning", "learned"];
-  if (!valid.includes(status))
-    throw ApiError.badRequest(`status must be one of: ${valid.join(", ")}`);
-
-  const userVocab = await UserVocabulary.findOneAndUpdate(
-    { _id: wordId, userId },
-    { status },
-    { new: true },
-  ).populate("vocabularyId", "word definitions");
-  if (!userVocab) throw ApiError.notFound("Word not found");
-
-  return {
-    id: userVocab._id,
-    word: userVocab.vocabularyId.word,
-    meaning: userVocab.vocabularyId.definitions?.[0]?.viDef || "",
-    status: userVocab.status,
-  };
-}
-
-/**
  * Delete word from user's list
  */
 export async function deleteWord(userId, wordId) {
   const result = await UserVocabulary.findOneAndDelete({ _id: wordId, userId });
   if (!result) throw ApiError.notFound("Word not found");
   return { deleted: true };
-}
-
-/**
- * Get stats
- */
-export async function getStats(userId) {
-  const [total, learned, learning] = await Promise.all([
-    UserVocabulary.countDocuments({ userId }),
-    UserVocabulary.countDocuments({ userId, status: "learned" }),
-    UserVocabulary.countDocuments({ userId, status: "learning" }),
-  ]);
-
-  return {
-    total,
-    learned,
-    learning,
-    new: total - learned - learning,
-    completionPercent: total > 0 ? Math.round((learned / total) * 100) : 0,
-  };
-}
-
-/**
- * Get review quiz questions
- */
-export async function getReviewQuestions(userId, type, limit = 5) {
-  const statusFilter =
-    type === "learned_words" ? ["learned"] : ["new", "learning"];
-
-  const totalUserWords = await UserVocabulary.countDocuments({ userId });
-  if (totalUserWords < 4) {
-    return { canReview: false, minRequired: 4, current: totalUserWords };
-  }
-
-  // Get target words
-  const targets = await UserVocabulary.aggregate([
-    { $match: { userId, status: { $in: statusFilter } } },
-    { $sample: { size: limit } },
-    {
-      $lookup: {
-        from: "vocabularies",
-        localField: "vocabularyId",
-        foreignField: "_id",
-        as: "vocab",
-      },
-    },
-    { $unwind: "$vocab" },
-  ]);
-
-  if (targets.length === 0) {
-    return { canReview: false, reason: "No words with matching status" };
-  }
-
-  // Get all user's words for distractor pool
-  const allUserVocabs = await UserVocabulary.find({ userId })
-    .populate("vocabularyId", "word definitions")
-    .lean();
-
-  const pool = allUserVocabs
-    .filter((uv) => uv.vocabularyId?.definitions?.[0]?.viDef)
-    .map((uv) => ({
-      word: uv.vocabularyId.word,
-      meaning: uv.vocabularyId.definitions[0].viDef,
-    }));
-
-  const questions = targets.map((t) => {
-    const correctAnswer = t.vocab.definitions?.[0]?.viDef || "";
-    const distractors = pool
-      .filter((p) => p.word !== t.vocab.word)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3)
-      .map((d) => d.meaning);
-
-    const options = [correctAnswer, ...distractors].sort(
-      () => Math.random() - 0.5,
-    );
-
-    return {
-      wordId: t._id,
-      word: t.vocab.word,
-      options,
-      correctIndex: options.indexOf(correctAnswer),
-    };
-  });
-
-  return { canReview: true, questions };
-}
-
-/**
- * Record review completion — auto-update status
- */
-export async function recordReview(userId, wordIds, correctIds) {
-  const correctSet = new Set(correctIds.map(String));
-
-  const updates = wordIds.map(async (wordId) => {
-    const isCorrect = correctSet.has(String(wordId));
-
-    const uv = await UserVocabulary.findOne({ _id: wordId, userId });
-    if (!uv) return;
-
-    uv.reviewCount += 1;
-    uv.lastReviewedAt = new Date();
-
-    if (isCorrect) {
-      uv.correctStreak += 1;
-      if (uv.status === "new") uv.status = "learning";
-      else if (
-        uv.status === "learning" &&
-        uv.correctStreak >= LEARNED_STREAK_THRESHOLD
-      ) {
-        uv.status = "learned";
-      }
-    } else {
-      uv.correctStreak = 0;
-      if (uv.status === "learned") uv.status = "learning";
-    }
-
-    await uv.save();
-  });
-
-  await Promise.all(updates);
-  return { updated: wordIds.length };
 }
