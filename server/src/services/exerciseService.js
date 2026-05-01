@@ -197,3 +197,51 @@ export async function deleteLesson(lessonId) {
   await ReverseTranslation.findByIdAndDelete(lessonId);
   return { id: lessonId };
 }
+
+/**
+ * Admin: list lessons (identical to listLessons for now; isolated for future divergence)
+ */
+export async function adminListLessons(filters, pagination) {
+  return listLessons(filters, pagination);
+}
+
+/**
+ * Admin: get full lesson with referenceAnswer + populated vocabulary
+ */
+export async function adminGetLesson(lessonId) {
+  const lesson = await ReverseTranslation.findById(lessonId)
+    .populate({
+      path: "vocabularyRefs.id",
+      select: "word partOfSpeech ipa definitions",
+    })
+    .lean();
+  if (!lesson) throw ApiError.notFound("Lesson not found");
+
+  return {
+    id: lesson._id,
+    title: lesson.title,
+    description: lesson.description || "",
+    level: lesson.level,
+    topic: lesson.topic,
+    contentType: lesson.contentType,
+    totalSentences: lesson.totalSentences,
+    vietnameseParagraph: lesson.vietnameseParagraph || "",
+    sentences: (lesson.sentences || []).map((s) => ({
+      order: s.order,
+      vietnameseText: s.vietnameseText,
+      referenceAnswer: s.referenceAnswer,
+    })),
+    vocabulary: (lesson.vocabularyRefs || [])
+      .filter((ref) => ref.id)
+      .map((ref) => ({
+        vocabularyId: ref.id._id,
+        word: ref.id.word,
+        partOfSpeech: ref.id.partOfSpeech || "",
+        ipa: ref.id.ipa || "",
+        definitions: ref.id.definitions || [],
+        sentenceIndex: ref.sentenceIndex ?? null,
+      })),
+    createdAt: lesson.createdAt,
+    updatedAt: lesson.updatedAt,
+  };
+}

@@ -35,32 +35,7 @@ router.post("/auth/change-password", authController.changePassword);
 
 // ── Reverse Translation ─────────────────────────────────
 router.get("/writing/reverse-translation", exerciseController.listLessons);
-router.post(
-  "/writing/reverse-translation",
-  admin,
-  exerciseController.createLesson,
-);
-router.post(
-  "/writing/reverse-translation/preview",
-  admin,
-  exerciseController.previewWriting,
-);
 router.get("/writing/reverse-translation/:id", exerciseController.getLesson);
-router.put(
-  "/writing/reverse-translation/:id",
-  admin,
-  exerciseController.updateLesson,
-);
-router.delete(
-  "/writing/reverse-translation/:id",
-  admin,
-  exerciseController.deleteLesson,
-);
-router.post(
-  "/writing/reverse-translation/:id/dictionary",
-  admin,
-  exerciseController.saveDictionary,
-);
 router.get(
   "/writing/reverse-translation/:id/attempt",
   exerciseController.getAttempt,

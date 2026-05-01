@@ -4,6 +4,7 @@ import cors from "cors";
 import { CONNECT_DB } from "@server/config/mongodb";
 import { env } from "@server/config/environment";
 import apiRouter from "@server/routes/api";
+import adminRouter from "@server/routes/admin";
 import cookieParser from "cookie-parser";
 import { errorHandler } from "@server/middlewares/errorHandler";
 const PORT = env.LOCAL_PORT || 8017;
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // router
+app.use("/api/admin", adminRouter);
 app.use("/api", apiRouter);
 
 // Error handler — must be after all routes
