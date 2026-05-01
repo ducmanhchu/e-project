@@ -20,7 +20,7 @@ export async function verifyEmailByToken(tokenStr) {
   const { userId } = await verificationTokenService.consumeToken(tokenStr, TYPE);
 
   const user = await User.findById(userId);
-  if (!user) throw ApiError.badRequest("User không tồn tại");
+  if (!user) throw ApiError.badRequest("User not found");
 
   user.isEmailVerified = true;
   await user.save();
@@ -32,7 +32,7 @@ export async function resend(email) {
   const user = await User.findOne({ email: normalized });
   if (!user) return { silent: true };
   if (user.isEmailVerified) {
-    throw ApiError.conflict("Email đã được verify");
+    throw ApiError.conflict("Email is already verified");
   }
   await createAndSendToken(user);
   return { silent: false };

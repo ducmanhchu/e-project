@@ -7,14 +7,13 @@ import {
   submitAndUpdateProgress,
   getLastSubmissions,
   getSubmissions,
-  buildSentenceAttempts,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_THRESHOLD } from "@server/const/exercise";
 
 /**
- * GET /writing/reverse-translation — List published lessons
+ * GET /writing/reverse-translation — List published lessons + user's attempt summary
  */
-export async function listLessons(filters, pagination) {
+export async function listLessons(filters, pagination, userId) {
   const { level, contentType, topic } = filters;
   const { page, limit } = pagination;
 
@@ -34,26 +33,52 @@ export async function listLessons(filters, pagination) {
     ReverseTranslation.countDocuments(query),
   ]);
 
+  const attemptMap = new Map();
+  if (userId && lessons.length > 0) {
+    const attempts = await Attempt.find({
+      userId,
+      lessonId: { $in: lessons.map((l) => l._id) },
+      lessonType: "ReverseTranslation",
+    })
+      .select("lessonId status completedSentences completedAt")
+      .lean();
+    for (const a of attempts) {
+      attemptMap.set(String(a.lessonId), a);
+    }
+  }
+
   return {
-    items: lessons.map((lesson) => ({
-      id: lesson._id,
-      title: lesson.title,
-      level: lesson.level,
-      topic: lesson.topic,
-      contentType: lesson.contentType,
-      totalSentences: lesson.totalSentences,
-      createdAt: lesson.createdAt,
-    })),
+    items: lessons.map((lesson) => {
+      const a = attemptMap.get(String(lesson._id));
+      return {
+        id: lesson._id,
+        title: lesson.title,
+        level: lesson.level,
+        topic: lesson.topic,
+        contentType: lesson.contentType,
+        totalSentences: lesson.totalSentences,
+        createdAt: lesson.createdAt,
+        status: a?.status ?? "not_started",
+        completedSentences: a?.completedSentences ?? 0,
+        completedAt: a?.completedAt ?? null,
+      };
+    }),
     total,
   };
 }
 
 /**
- * GET /writing/reverse-translation/:id — Lesson data only
+ * GET /writing/reverse-translation/:id — Lesson + user's attempt (merged)
  */
-export async function getLesson(lessonId) {
+export async function getLesson(lessonId, userId) {
   const lesson = await ReverseTranslation.findOne({ _id: lessonId }).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
+
+  const attempt = await findOrCreateAttempt(userId, lessonId, "ReverseTranslation");
+  const lastSubMap = await getLastSubmissions(attempt._id);
+  const progressMap = new Map(
+    (attempt.sentenceProgress || []).map((p) => [p.sentenceOrder, p]),
+  );
 
   return {
     id: lesson._id,
@@ -63,31 +88,22 @@ export async function getLesson(lessonId) {
     contentType: lesson.contentType,
     totalSentences: lesson.totalSentences,
     vietnameseParagraph: lesson.vietnameseParagraph || null,
-    sentences: (lesson.sentences || []).map((s) => ({
-      order: s.order,
-      vietnameseText: s.vietnameseText,
-    })),
     vocabularyRefs: (lesson.vocabularyRefs || []).map((ref) => ({
       id: ref.id,
       sentenceIndex: ref.sentenceIndex ?? null,
     })),
-  };
-}
-
-/**
- * GET /attempts/:lessonId — Upsert + return attempt progress
- */
-export async function getAttempt(userId, lessonId) {
-  const attempt = await findOrCreateAttempt(userId, lessonId, "ReverseTranslation");
-  const lastSubMap = await getLastSubmissions(attempt._id);
-
-  return {
-    id: attempt._id,
     status: attempt.status,
     completedSentences: attempt.completedSentences,
-    bestScore: attempt.bestScore,
     completedAt: attempt.completedAt || null,
-    sentenceAttempts: buildSentenceAttempts(attempt.sentenceProgress, lastSubMap),
+    sentences: (lesson.sentences || []).map((s) => {
+      const progress = progressMap.get(s.order);
+      return {
+        order: s.order,
+        vietnameseText: s.vietnameseText,
+        isCompleted: progress?.isCompleted ?? false,
+        lastSubmission: lastSubMap.get(s.order) || null,
+      };
+    }),
   };
 }
 

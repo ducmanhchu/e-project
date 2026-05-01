@@ -1,21 +1,20 @@
 import * as rewriteService from "@server/services/rewriteService";
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
-import { USER_ROLE } from "@server/const/user";
 
 /**
- * GET /api/writing/rewrite — admin: all + full data, user: filtered
+ * GET /api/writing/rewrite — Public list (optional auth, user-only shape)
  */
 export async function listLessons(req, res, next) {
   try {
     const { level, topic, page = 1, limit = 12 } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
-
-    const { items, total } = req.user.role === USER_ROLE.ADMIN
-      ? await rewriteService.listLessonsAdmin({ page: p, limit: l })
-      : await rewriteService.listLessons({ level, topic }, { page: p, limit: l });
-
+    const { items, total } = await rewriteService.listLessons(
+      { level, topic },
+      { page: p, limit: l },
+      req.user?._id,
+    );
     res.json({
       success: true,
       data: items,
@@ -27,13 +26,11 @@ export async function listLessons(req, res, next) {
 }
 
 /**
- * GET /api/writing/rewrite/:id — admin: full data, user: limited
+ * GET /api/writing/rewrite/:id — User detail (merged attempt)
  */
 export async function getLesson(req, res, next) {
   try {
-    const data = req.user.role === USER_ROLE.ADMIN
-      ? await rewriteService.getLessonAdmin(req.params.id)
-      : await rewriteService.getLesson(req.params.id);
+    const data = await rewriteService.getLesson(req.params.id, req.user._id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -41,14 +38,30 @@ export async function getLesson(req, res, next) {
 }
 
 /**
- * GET /api/writing/rewrite/:lessonId/attempt
+ * GET /api/admin/writing/rewrite — [ADMIN] List full data
  */
-export async function getAttempt(req, res, next) {
+export async function adminListLessons(req, res, next) {
   try {
-    const data = await rewriteService.getAttempt(
-      req.user._id,
-      req.params.id,
-    );
+    const { page = 1, limit = 12 } = req.query;
+    const p = Math.max(1, +page);
+    const l = Math.min(Math.max(1, +limit), 50);
+    const { items, total } = await rewriteService.listLessonsAdmin({ page: p, limit: l });
+    res.json({
+      success: true,
+      data: items,
+      pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * GET /api/admin/writing/rewrite/:id — [ADMIN] Full data with referenceAnswer
+ */
+export async function adminGetLesson(req, res, next) {
+  try {
+    const data = await rewriteService.getLessonAdmin(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);

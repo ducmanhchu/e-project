@@ -98,10 +98,13 @@ export async function ensureEnriched(vocab) {
   if (vocaxis) {
     enrichData = vocaxis;
   } else {
-    // Fallback: AI enrich
-    const { result } = await aiEnrichWord(vocab.word);
+    // Fallback: AI enrich (pass PoS hint so AI focuses on the right sense)
+    const { result } = await aiEnrichWord(vocab.word, {
+      partOfSpeech: vocab.partOfSpeech,
+    });
     enrichData = {
       ipa: result.ipa,
+      partOfSpeech: result.partOfSpeech,
       definitions: result.definitions || [],
     };
   }
@@ -110,6 +113,7 @@ export async function ensureEnriched(vocab) {
     vocab._id,
     {
       ipa: enrichData.ipa,
+      ...(enrichData.partOfSpeech && { partOfSpeech: enrichData.partOfSpeech }),
       definitions: enrichData.definitions,
       ...(audioUrl && { audio: audioUrl }),
     },

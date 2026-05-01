@@ -14,7 +14,7 @@ export async function sendEmail({ to, subject, text, html }) {
 }
 
 export async function sendVerificationEmail({ to, fullName, token }) {
-  const link = `${env.APP_URL}/api/auth/verify-email?token=${token}`;
+  const link = `${env.FRONTEND_URL}/verify-email?token=${token}`;
   return sendEmail({
     to,
     subject: "Xác thực email — English Platform",

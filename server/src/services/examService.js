@@ -14,9 +14,9 @@ import { WRITING_TYPE, WRITING_LEVEL, WRITING_TOPIC } from "@server/const/writti
 import { createWriting } from "@server/services/writingService";
 
 /**
- * GET /writing/exam — List exams
+ * GET /writing/exam — List exams + user's attempt summary
  */
-export async function listExams(filters, pagination) {
+export async function listExams(filters, pagination, userId) {
   const { level, topic, examType } = filters;
   const { page, limit } = pagination;
 
@@ -36,25 +36,53 @@ export async function listExams(filters, pagination) {
     Exam.countDocuments(query),
   ]);
 
+  const attemptMap = new Map();
+  if (userId && exams.length > 0) {
+    const attempts = await Attempt.find({
+      userId,
+      lessonId: { $in: exams.map((e) => e._id) },
+      lessonType: "Exam",
+    })
+      .select("lessonId status completedSentences bestScore completedAt")
+      .lean();
+    for (const a of attempts) {
+      attemptMap.set(String(a.lessonId), a);
+    }
+  }
+
   return {
-    items: exams.map((e) => ({
-      id: e._id,
-      title: e.title,
-      level: e.level,
-      topic: e.topic,
-      examType: e.examType,
-      createdAt: e.createdAt,
-    })),
+    items: exams.map((e) => {
+      const a = attemptMap.get(String(e._id));
+      return {
+        id: e._id,
+        title: e.title,
+        level: e.level,
+        topic: e.topic,
+        examType: e.examType,
+        createdAt: e.createdAt,
+        status: a?.status ?? "not_started",
+        completedSentences: a?.completedSentences ?? 0,
+        bestScore: a?.bestScore ?? 0,
+        completedAt: a?.completedAt ?? null,
+      };
+    }),
     total,
   };
 }
 
 /**
- * GET /writing/exam/:examId — Exam detail
+ * GET /writing/exam/:id — Exam + user's attempt (merged)
  */
-export async function getExam(examId) {
+export async function getExam(examId, userId) {
   const exam = await Exam.findById(examId).lean();
   if (!exam) throw ApiError.notFound("Exam not found");
+
+  const attempt = await findOrCreateAttempt(userId, examId, "Exam");
+
+  const progress = (attempt.sentenceProgress || []).find((p) => p.sentenceOrder === 1);
+  const lastSubmission = progress
+    ? await getLastSubmission(attempt._id, 1)
+    : null;
 
   return {
     id: exam._id,
@@ -65,34 +93,11 @@ export async function getExam(examId) {
     examPrompt: exam.examPrompt,
     imageUrl: exam.imageUrl || null,
     minWordCount: EXAM_MIN_WORDS[exam.examType],
-  };
-}
-
-/**
- * GET /writing/exam/:examId/attempt — Upsert + return attempt
- */
-export async function getAttempt(userId, examId) {
-  const attempt = await findOrCreateAttempt(userId, examId, "Exam");
-
-  const progress = attempt.sentenceProgress.find((p) => p.sentenceOrder === 1);
-  const lastSub = progress
-    ? await getLastSubmission(attempt._id, 1)
-    : null;
-
-  return {
-    id: attempt._id,
     status: attempt.status,
     completedSentences: attempt.completedSentences,
     bestScore: attempt.bestScore,
     completedAt: attempt.completedAt || null,
-    sentenceAttempts: progress
-      ? [{
-          sentenceOrder: 1,
-          bestScore: progress.bestScore,
-          isCompleted: progress.isCompleted,
-          lastSubmission: lastSub,
-        }]
-      : [],
+    lastSubmission,
   };
 }
 

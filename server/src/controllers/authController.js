@@ -4,7 +4,6 @@ import { TOKEN_LIFE } from "@server/const/auth";
 import * as emailVerificationService from "@server/services/emailVerificationService";
 import { ApiError } from "@server/helpers/ApiError";
 import * as passwordService from "@server/services/passwordService";
-import { renderTemplate } from "@server/helpers/renderTemplate";
 
 const REFRESH_TOKEN_OPTIONS = {
 	httpOnly: true,
@@ -65,18 +64,14 @@ export async function googleSignIn(req, res, next) {
 	}
 }
 
-export async function verifyEmail(req, res) {
+export async function verifyEmail(req, res, next) {
 	try {
-		await emailVerificationService.verifyEmailByToken(req.query?.token);
-		res.status(200).type("html").send(renderSuccessHtml());
-	} catch (err) {
-		if (!(err instanceof ApiError)) {
-			console.error("[verifyEmail] unexpected error:", err);
-		}
-		const status = err.statusCode || 500;
-		const isApiError = err instanceof ApiError;
-		const msg = isApiError ? err.message : "Đã có lỗi xảy ra, vui lòng thử lại";
-		res.status(status).type("html").send(renderErrorHtml(msg));
+		const token = req.body?.token;
+		if (!token) throw ApiError.badRequest("Token is required");
+		await emailVerificationService.verifyEmailByToken(token);
+		res.status(200).json({ success: true, message: "Email verified successfully" });
+	} catch (e) {
+		next(e);
 	}
 }
 
@@ -87,38 +82,11 @@ export async function resendVerification(req, res, next) {
 		await emailVerificationService.resend(email);
 		res.status(200).json({
 			success: true,
-			message: "Nếu email tồn tại, link verify đã được gửi",
+			message: "If the email exists, a verification link has been sent",
 		});
 	} catch (e) {
 		next(e);
 	}
-}
-
-function renderSuccessHtml() {
-	return `<!DOCTYPE html>
-<html lang="vi">
-<head><meta charset="UTF-8"><title>Xác thực thành công</title></head>
-<body style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 80px auto; padding: 20px; text-align: center;">
-  <h1 style="color: #0a7e07;">✓ Xác thực thành công</h1>
-  <p>Email của bạn đã được xác thực. Bạn có thể đóng trang này và quay lại đăng nhập.</p>
-</body></html>`;
-}
-
-function renderErrorHtml(message) {
-	return `<!DOCTYPE html>
-<html lang="vi">
-<head><meta charset="UTF-8"><title>Xác thực thất bại</title></head>
-<body style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 80px auto; padding: 20px; text-align: center;">
-  <h1 style="color: #c00;">✗ Xác thực thất bại</h1>
-  <p>${escapeHtml(message)}</p>
-  <p style="color: #666; font-size: 14px;">Nếu link đã hết hạn, vui lòng đăng nhập và yêu cầu gửi lại email.</p>
-</body></html>`;
-}
-
-function escapeHtml(s) {
-	return String(s).replace(/[&<>"']/g, (c) =>
-		({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]),
-	);
 }
 
 export async function forgotPassword(req, res, next) {
@@ -128,7 +96,7 @@ export async function forgotPassword(req, res, next) {
 		await passwordService.requestPasswordReset(email);
 		res.status(200).json({
 			success: true,
-			message: "Nếu email tồn tại, link reset đã được gửi",
+			message: "If the email exists, a reset link has been sent",
 		});
 	} catch (e) {
 		next(e);
@@ -138,14 +106,14 @@ export async function forgotPassword(req, res, next) {
 export async function resetPassword(req, res, next) {
 	try {
 		const { token, newPassword, confirmPassword } = req.body || {};
-		if (!token) throw ApiError.badRequest("Token thiếu");
+		if (!token) throw ApiError.badRequest("Token is required");
 		if (newPassword !== confirmPassword) {
-			throw ApiError.badRequest("Xác nhận mật khẩu không khớp");
+			throw ApiError.badRequest("Password confirmation does not match");
 		}
 		await passwordService.resetPassword(token, newPassword);
 		res.status(200).json({
 			success: true,
-			message: "Đổi mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.",
+			message: "Password reset successfully. Please sign in with your new password.",
 		});
 	} catch (e) {
 		next(e);
@@ -158,7 +126,7 @@ export async function changePassword(req, res, next) {
 		if (!oldPassword) throw ApiError.badRequest("oldPassword is required");
 		if (!newPassword) throw ApiError.badRequest("newPassword is required");
 		await passwordService.changePassword(req.user.id, oldPassword, newPassword);
-		res.status(200).json({ success: true, message: "Đã đổi mật khẩu" });
+		res.status(200).json({ success: true, message: "Password changed successfully" });
 	} catch (e) {
 		next(e);
 	}

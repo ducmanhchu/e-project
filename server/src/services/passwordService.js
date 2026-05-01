@@ -11,7 +11,7 @@ const BCRYPT_SALT_ROUNDS = 10;
 
 export async function requestPasswordReset(email) {
   const normalized = email?.toString().toLowerCase().trim();
-  if (!normalized) throw ApiError.badRequest("Email thiếu");
+  if (!normalized) throw ApiError.badRequest("Email is required");
 
   const user = await User.findOne({ email: normalized });
   if (!user) return { silent: true };
@@ -33,7 +33,7 @@ export async function resetPassword(tokenStr, newPassword) {
   const { userId } = await verificationTokenService.consumeToken(tokenStr, TYPE);
 
   const user = await User.findById(userId);
-  if (!user) throw ApiError.badRequest("User không tồn tại");
+  if (!user) throw ApiError.badRequest("User not found");
 
   user.password = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
   if (!user.isEmailVerified) {
@@ -47,15 +47,15 @@ export async function changePassword(userId, oldPassword, newPassword) {
   validatePasswordStrength(newPassword);
 
   const user = await User.findById(userId);
-  if (!user) throw ApiError.notFound("User không tồn tại");
+  if (!user) throw ApiError.notFound("User not found");
   if (!user.password) {
     throw ApiError.badRequest(
-      "Account này chưa có password. Dùng /auth/forgot-password để set password",
+      "This account has no password set. Use /auth/forgot-password to set one",
     );
   }
 
   const valid = await bcrypt.compare(oldPassword, user.password);
-  if (!valid) throw ApiError.unauthorized("Mật khẩu cũ không đúng");
+  if (!valid) throw ApiError.unauthorized("Old password is incorrect");
 
   user.password = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
   await user.save();
@@ -63,11 +63,11 @@ export async function changePassword(userId, oldPassword, newPassword) {
 
 function validatePasswordStrength(password) {
   if (!password || typeof password !== "string") {
-    throw ApiError.badRequest("Password thiếu hoặc không hợp lệ");
+    throw ApiError.badRequest("Password is missing or invalid");
   }
   if (password.length < MIN_PASSWORD_LENGTH) {
     throw ApiError.badRequest(
-      `Password phải ít nhất ${MIN_PASSWORD_LENGTH} ký tự`,
+      `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
     );
   }
 }

@@ -20,7 +20,7 @@ export async function signIn(data) {
 
   if (!user.googleId && !user.isEmailVerified) {
     throw ApiError.forbidden(
-      "Email chưa verify. Vui lòng kiểm tra inbox hoặc gọi /auth/resend-verification",
+      "Email is not verified. Please check your inbox or call /auth/resend-verification",
     );
   }
 

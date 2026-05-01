@@ -30,16 +30,16 @@ export async function createToken(userId, type) {
 
 export async function consumeToken(tokenStr, type) {
   if (!tokenStr || typeof tokenStr !== "string") {
-    throw ApiError.badRequest("Token không hợp lệ");
+    throw ApiError.badRequest("Invalid token");
   }
 
   const doc = await VerificationToken.findOne({ token: tokenStr, type });
   if (!doc) {
-    throw ApiError.badRequest("Token không tồn tại hoặc đã được sử dụng");
+    throw ApiError.badRequest("Token not found or already used");
   }
   if (doc.expiresAt < new Date()) {
     await VerificationToken.deleteOne({ _id: doc._id });
-    throw ApiError.badRequest("Token đã hết hạn. Vui lòng yêu cầu gửi lại");
+    throw ApiError.badRequest("Token has expired. Please request a new one");
   }
 
   await VerificationToken.deleteOne({ _id: doc._id });

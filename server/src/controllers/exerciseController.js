@@ -13,6 +13,7 @@ export async function listLessons(req, res, next) {
     const { items, total } = await exerciseService.listLessons(
       { level, contentType, topic },
       { page: p, limit: l },
+      req.user?._id,
     );
     res.json({
       success: true,
@@ -29,22 +30,7 @@ export async function listLessons(req, res, next) {
  */
 export async function getLesson(req, res, next) {
   try {
-    const data = await exerciseService.getLesson(req.params.id);
-    res.json({ success: true, data });
-  } catch (e) {
-    next(e);
-  }
-}
-
-/**
- * GET /api/attempts/:lessonId
- */
-export async function getAttempt(req, res, next) {
-  try {
-    const data = await exerciseService.getAttempt(
-      req.user._id,
-      req.params.id,
-    );
+    const data = await exerciseService.getLesson(req.params.id, req.user._id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);

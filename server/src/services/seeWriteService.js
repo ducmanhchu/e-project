@@ -41,9 +41,9 @@ function shuffleArray(arr) {
 }
 
 /**
- * GET /writing/see-and-write — List lessons
+ * GET /writing/see-and-write — List lessons + user's attempt summary
  */
-export async function listLessons(filters, pagination) {
+export async function listLessons(filters, pagination, userId) {
   const { level, topic } = filters;
   const { page, limit } = pagination;
 
@@ -62,25 +62,60 @@ export async function listLessons(filters, pagination) {
     SeeWrite.countDocuments(query),
   ]);
 
+  const attemptMap = new Map();
+  if (userId && lessons.length > 0) {
+    const attempts = await Attempt.find({
+      userId,
+      lessonId: { $in: lessons.map((l) => l._id) },
+      lessonType: "SeeWrite",
+    })
+      .select("lessonId status completedSentences bestScore completedAt")
+      .lean();
+    for (const a of attempts) {
+      attemptMap.set(String(a.lessonId), a);
+    }
+  }
+
   return {
-    items: lessons.map((lesson) => ({
-      id: lesson._id,
-      title: lesson.title,
-      level: lesson.level,
-      topic: lesson.topic,
-      image: lesson.image,
-      createdAt: lesson.createdAt,
-    })),
+    items: lessons.map((lesson) => {
+      const a = attemptMap.get(String(lesson._id));
+      return {
+        id: lesson._id,
+        title: lesson.title,
+        level: lesson.level,
+        topic: lesson.topic,
+        image: lesson.image,
+        createdAt: lesson.createdAt,
+        status: a?.status ?? "not_started",
+        completedSentences: a?.completedSentences ?? 0,
+        bestScore: a?.bestScore ?? 0,
+        completedAt: a?.completedAt ?? null,
+      };
+    }),
     total,
   };
 }
 
 /**
- * GET /writing/see-and-write/:lessonId — Lesson detail
+ * GET /writing/see-and-write/:id — Lesson + user's attempt (merged)
  */
-export async function getLesson(lessonId) {
+export async function getLesson(lessonId, userId) {
   const lesson = await SeeWrite.findById(lessonId).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
+
+  const attempt = await findOrCreateAttempt(userId, lessonId, "SeeWrite");
+
+  const progress = (attempt.sentenceProgress || []).find((p) => p.sentenceOrder === 1);
+  const lastSubmission = progress
+    ? await getLastSubmission(attempt._id, 1)
+    : null;
+
+  let keywordQuiz = null;
+  if (attempt.keywordQuiz) {
+    const wordPoolDoc = await SeeWrite.findById(lessonId).select("wordPool").lean();
+    const meaningMap = buildMeaningMap(wordPoolDoc?.wordPool);
+    keywordQuiz = populateQuizMeanings(attempt.keywordQuiz, meaningMap);
+  }
 
   return {
     id: lesson._id,
@@ -91,42 +126,12 @@ export async function getLesson(lessonId) {
     wordPool: shuffleArray((lesson.wordPool || []).map((w) => w.word)),
     minWordCount: lesson.minWordCount || null,
     maxWordCount: lesson.maxWordCount || null,
-  };
-}
-
-/**
- * GET /writing/see-and-write/:lessonId/attempt — Upsert + return attempt
- */
-export async function getAttempt(userId, lessonId) {
-  const attempt = await findOrCreateAttempt(userId, lessonId, "SeeWrite");
-
-  const progress = attempt.sentenceProgress.find((p) => p.sentenceOrder === 1);
-  const lastSub = progress
-    ? await getLastSubmission(attempt._id, 1)
-    : null;
-
-  // Populate meanings from lesson when quiz exists
-  let keywordQuiz = null;
-  if (attempt.keywordQuiz) {
-    const lesson = await SeeWrite.findById(lessonId).select("wordPool").lean();
-    const meaningMap = buildMeaningMap(lesson?.wordPool);
-    keywordQuiz = populateQuizMeanings(attempt.keywordQuiz, meaningMap);
-  }
-
-  return {
-    id: attempt._id,
     status: attempt.status,
+    completedSentences: attempt.completedSentences,
     bestScore: attempt.bestScore,
     completedAt: attempt.completedAt || null,
     keywordQuiz,
-    sentenceAttempts: progress
-      ? [{
-          sentenceOrder: 1,
-          bestScore: progress.bestScore,
-          isCompleted: progress.isCompleted,
-          lastSubmission: lastSub,
-        }]
-      : [],
+    lastSubmission,
   };
 }
 

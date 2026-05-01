@@ -24,6 +24,24 @@ export function protectedRoute(req, res, next) {
   }
 }
 
+export function optionalAuth(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) return next();
+
+  jwt.verify(token, env.ACCESS_TOKEN_SECRET, async (err, decodedUser) => {
+    if (err) return next();
+    try {
+      const user = await User.findById(decodedUser.id).select("-password");
+      if (user) req.user = user;
+    } catch {
+      /* lenient: ignore lookup errors, proceed as guest */
+    }
+    next();
+  });
+}
+
 export function authorizeRoles(...roles) {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {

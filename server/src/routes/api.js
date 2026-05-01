@@ -7,16 +7,10 @@ import * as rewriteController from "@server/controllers/rewriteController";
 import * as examController from "@server/controllers/examController";
 import * as attemptController from "@server/controllers/attemptController";
 import * as vocabularyController from "@server/controllers/vocabularyController";
-import * as uploadController from "@server/controllers/uploadController";
 import * as slangHangController from "@server/controllers/slangHangController";
-import { mediaUpload, audioUpload } from "@server/middlewares/upload";
-import {
-  protectedRoute,
-  authorizeRoles,
-} from "@server/middlewares/authMiddleware";
-import { USER_ROLE } from "@server/const/user";
+import { audioUpload } from "@server/middlewares/upload";
+import { protectedRoute, optionalAuth } from "@server/middlewares/authMiddleware";
 const router = express.Router();
-const admin = authorizeRoles(USER_ROLE.ADMIN);
 
 // auth routes
 router.post("/auth/signup", authController.signUp);
@@ -24,41 +18,29 @@ router.post("/auth/signin", authController.signIn);
 router.post("/auth/signout", authController.signOut);
 router.post("/auth/refresh", authController.refreshToken);
 router.post("/auth/google", authController.googleSignIn);
-router.get("/auth/verify-email", authController.verifyEmail);
+router.post("/auth/verify-email", authController.verifyEmail);
 router.post("/auth/resend-verification", authController.resendVerification);
 router.post("/auth/forgot-password", authController.forgotPassword);
 router.post("/auth/reset-password", authController.resetPassword);
+
+// ── Public catalog (optional auth: guest sees defaults, logged-in sees attempt summary)
+router.get("/writing/reverse-translation", optionalAuth, exerciseController.listLessons);
+router.get("/writing/see-and-write", optionalAuth, seeWriteController.listLessons);
+router.get("/writing/rewrite", optionalAuth, rewriteController.listLessons);
+router.get("/writing/exam", optionalAuth, examController.listExams);
 
 router.use(protectedRoute);
 router.get("/me", userController.authMe);
 router.post("/auth/change-password", authController.changePassword);
 
 // ── Reverse Translation ─────────────────────────────────
-router.get("/writing/reverse-translation", exerciseController.listLessons);
 router.get("/writing/reverse-translation/:id", exerciseController.getLesson);
-router.get(
-  "/writing/reverse-translation/:id/attempt",
-  exerciseController.getAttempt,
-);
 router.post(
   "/writing/reverse-translation/:id/submit",
   exerciseController.submitAnswer,
 );
 // ── See & Write ──────────────────────────────────────────
-router.get("/writing/see-and-write", seeWriteController.listLessons);
-router.post("/writing/see-and-write", admin, seeWriteController.createLesson);
 router.get("/writing/see-and-write/:id", seeWriteController.getLesson);
-router.put(
-  "/writing/see-and-write/:id",
-  admin,
-  seeWriteController.updateLesson,
-);
-router.delete(
-  "/writing/see-and-write/:id",
-  admin,
-  seeWriteController.deleteLesson,
-);
-router.get("/writing/see-and-write/:id/attempt", seeWriteController.getAttempt);
 router.post(
   "/writing/see-and-write/:id/check-keywords",
   seeWriteController.checkKeywords,
@@ -70,21 +52,11 @@ router.post(
 router.get("/writing/see-and-write/:id/history", seeWriteController.getHistory);
 
 // ── Rewrite ──────────────────────────────────────────────
-router.get("/writing/rewrite", rewriteController.listLessons);
-router.post("/writing/rewrite", admin, rewriteController.createLesson);
 router.get("/writing/rewrite/:id", rewriteController.getLesson);
-router.put("/writing/rewrite/:id", admin, rewriteController.updateLesson);
-router.delete("/writing/rewrite/:id", admin, rewriteController.deleteLesson);
-router.get("/writing/rewrite/:id/attempt", rewriteController.getAttempt);
 router.post("/writing/rewrite/:id/submit", rewriteController.submitAnswer);
 
 // ── Exam ─────────────────────────────────────────────────
-router.get("/writing/exam", examController.listExams);
-router.post("/writing/exam", admin, examController.createExam);
 router.get("/writing/exam/:id", examController.getExam);
-router.put("/writing/exam/:id", admin, examController.updateExam);
-router.delete("/writing/exam/:id", admin, examController.deleteExam);
-router.get("/writing/exam/:id/attempt", examController.getAttempt);
 router.post("/writing/exam/:id/submit", examController.submitAnswer);
 router.get("/writing/exam/:id/history", examController.getHistory);
 
@@ -114,14 +86,6 @@ router.post(
   "/slang-hang/grade-pronunciation",
   audioUpload.single("audio"),
   slangHangController.grade,
-);
-
-// ── Upload (admin only) ─────────────────────────────────
-router.post(
-  "/upload",
-  admin,
-  mediaUpload.single("file"),
-  uploadController.uploadMedia,
 );
 
 export default router;
