@@ -1,6 +1,7 @@
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
 import User from "@server/models/user/User";
+import * as emailVerificationService from "@server/services/emailVerificationService";
 import bcrypt from "bcrypt";
 
 export async function createUser(data) {
@@ -16,6 +17,10 @@ export async function createUser(data) {
     password: hashedPassword,
     fullName: fullName.trim(),
   });
+
+  emailVerificationService.createAndSendToken(user).catch((err) =>
+    console.error("[signup] createAndSendToken failed:", err.message),
+  );
 
   return user;
 }

@@ -1,5 +1,6 @@
 import { Exam } from "@server/models/writing/Exam";
 import { Attempt } from "@server/models/attempt/Attempt";
+import { Submission } from "@server/models/attempt/Submission";
 import { ApiError } from "@server/helpers/ApiError";
 import { aiGradeExam } from "@server/services/ai/gradingProvider";
 import {
@@ -9,13 +10,13 @@ import {
   getSubmissions,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_BAND, EXAM_MIN_WORDS, bandToScore, roundBand } from "@server/const/exercise";
-import { WRITING_TYPE } from "@server/const/writting";
+import { WRITING_TYPE, WRITING_LEVEL, WRITING_TOPIC } from "@server/const/writting";
 import { createWriting } from "@server/services/writingService";
 
 /**
- * GET /writing/exam — List exams
+ * GET /writing/exam — List exams + user's attempt summary
  */
-export async function listExams(filters, pagination) {
+export async function listExams(filters, pagination, userId) {
   const { level, topic, examType } = filters;
   const { page, limit } = pagination;
 
@@ -27,7 +28,7 @@ export async function listExams(filters, pagination) {
 
   const [exams, total] = await Promise.all([
     Exam.find(query)
-      .select("title level topic examType totalSentences createdAt")
+      .select("title level topic examType createdAt")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -35,26 +36,53 @@ export async function listExams(filters, pagination) {
     Exam.countDocuments(query),
   ]);
 
+  const attemptMap = new Map();
+  if (userId && exams.length > 0) {
+    const attempts = await Attempt.find({
+      userId,
+      lessonId: { $in: exams.map((e) => e._id) },
+      lessonType: "Exam",
+    })
+      .select("lessonId status completedSentences bestScore completedAt")
+      .lean();
+    for (const a of attempts) {
+      attemptMap.set(String(a.lessonId), a);
+    }
+  }
+
   return {
-    items: exams.map((e) => ({
-      id: e._id,
-      title: e.title,
-      level: e.level,
-      topic: e.topic,
-      examType: e.examType,
-      totalSentences: e.totalSentences,
-      createdAt: e.createdAt,
-    })),
+    items: exams.map((e) => {
+      const a = attemptMap.get(String(e._id));
+      return {
+        id: e._id,
+        title: e.title,
+        level: e.level,
+        topic: e.topic,
+        examType: e.examType,
+        createdAt: e.createdAt,
+        status: a?.status ?? "not_started",
+        completedSentences: a?.completedSentences ?? 0,
+        bestScore: a?.bestScore ?? 0,
+        completedAt: a?.completedAt ?? null,
+      };
+    }),
     total,
   };
 }
 
 /**
- * GET /writing/exam/:examId — Exam detail
+ * GET /writing/exam/:id — Exam + user's attempt (merged)
  */
-export async function getExam(examId) {
+export async function getExam(examId, userId) {
   const exam = await Exam.findById(examId).lean();
   if (!exam) throw ApiError.notFound("Exam not found");
+
+  const attempt = await findOrCreateAttempt(userId, examId, "Exam");
+
+  const progress = (attempt.sentenceProgress || []).find((p) => p.sentenceOrder === 1);
+  const lastSubmission = progress
+    ? await getLastSubmission(attempt._id, 1)
+    : null;
 
   return {
     id: exam._id,
@@ -65,35 +93,11 @@ export async function getExam(examId) {
     examPrompt: exam.examPrompt,
     imageUrl: exam.imageUrl || null,
     minWordCount: EXAM_MIN_WORDS[exam.examType],
-    totalSentences: exam.totalSentences,
-  };
-}
-
-/**
- * GET /writing/exam/:examId/attempt — Upsert + return attempt
- */
-export async function getAttempt(userId, examId) {
-  const attempt = await findOrCreateAttempt(userId, examId, "Exam");
-
-  const progress = attempt.sentenceProgress.find((p) => p.sentenceOrder === 1);
-  const lastSub = progress
-    ? await getLastSubmission(attempt._id, 1)
-    : null;
-
-  return {
-    id: attempt._id,
     status: attempt.status,
     completedSentences: attempt.completedSentences,
     bestScore: attempt.bestScore,
     completedAt: attempt.completedAt || null,
-    sentenceAttempts: progress
-      ? [{
-          sentenceOrder: 1,
-          bestScore: progress.bestScore,
-          isCompleted: progress.isCompleted,
-          lastSubmission: lastSub,
-        }]
-      : [],
+    lastSubmission,
   };
 }
 
@@ -183,7 +187,6 @@ export async function listExamsAdmin({ page = 1, limit = 20 } = {}) {
       examType: e.examType,
       examPrompt: e.examPrompt,
       imageUrl: e.imageUrl || null,
-      totalSentences: e.totalSentences,
       createdAt: e.createdAt,
     })),
     total,
@@ -228,11 +231,25 @@ export async function updateExam(examId, body) {
   const allowedFields = ["title", "level", "topic", "description", "examPrompt", "imageUrl"];
   const updates = {};
   for (const field of allowedFields) {
-    if (body[field] !== undefined) updates[field] = body[field];
+    if (body[field] !== undefined) {
+      updates[field] = typeof body[field] === "string" ? body[field].trim() : body[field];
+    }
   }
 
   if (Object.keys(updates).length === 0) {
     throw ApiError.badRequest("No valid fields to update");
+  }
+
+  if (updates.title === "") throw ApiError.badRequest("title cannot be empty");
+  if (updates.examPrompt === "") throw ApiError.badRequest("examPrompt cannot be empty");
+  if (updates.level && !Object.values(WRITING_LEVEL).includes(updates.level)) {
+    throw ApiError.badRequest(`Invalid level: ${updates.level}`);
+  }
+  if (updates.topic && !Object.values(WRITING_TOPIC).includes(updates.topic)) {
+    throw ApiError.badRequest(`Invalid topic: ${updates.topic}`);
+  }
+  if (exam.examType === "ielts_task1" && "imageUrl" in updates && !updates.imageUrl) {
+    throw ApiError.badRequest("imageUrl is required for IELTS Task 1");
   }
 
   const updated = await Exam.findByIdAndUpdate(
@@ -254,11 +271,23 @@ export async function updateExam(examId, body) {
 }
 
 /**
- * DELETE /writing/exam/:id — Delete exam
+ * DELETE /writing/exam/:id — Delete exam + cascade attempts/submissions
  */
 export async function deleteExam(examId) {
-  const exam = await Exam.findById(examId);
-  if (!exam) throw ApiError.notFound("Exam not found");
-  await Exam.findByIdAndDelete(examId);
-  return { id: examId };
+  const deleted = await Exam.findByIdAndDelete(examId);
+  if (!deleted) throw ApiError.notFound("Exam not found");
+
+  const attempts = await Attempt.find({ lessonId: examId, lessonType: "Exam" })
+    .select("_id")
+    .lean();
+
+  if (attempts.length > 0) {
+    const attemptIds = attempts.map((a) => a._id);
+    await Promise.all([
+      Submission.deleteMany({ attemptId: { $in: attemptIds } }),
+      Attempt.deleteMany({ _id: { $in: attemptIds } }),
+    ]);
+  }
+
+  return { id: examId, deletedAttempts: attempts.length };
 }

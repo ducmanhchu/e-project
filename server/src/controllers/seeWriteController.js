@@ -1,21 +1,20 @@
 import * as seeWriteService from "@server/services/seeWriteService";
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
-import { USER_ROLE } from "@server/const/user";
 
 /**
- * GET /api/writing/see-and-write — admin: all, user: filtered
+ * GET /api/writing/see-and-write — Public list (optional auth, user-only shape)
  */
 export async function listLessons(req, res, next) {
   try {
     const { level, topic, page = 1, limit = 12 } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
-
-    const { items, total } = req.user.role === USER_ROLE.ADMIN
-      ? await seeWriteService.listLessonsAdmin({ page: p, limit: l })
-      : await seeWriteService.listLessons({ level, topic }, { page: p, limit: l });
-
+    const { items, total } = await seeWriteService.listLessons(
+      { level, topic },
+      { page: p, limit: l },
+      req.user?._id,
+    );
     res.json({
       success: true,
       data: items,
@@ -27,13 +26,11 @@ export async function listLessons(req, res, next) {
 }
 
 /**
- * GET /api/writing/see-and-write/:id — admin: full (no shuffle), user: limited
+ * GET /api/writing/see-and-write/:id — User detail (merged attempt)
  */
 export async function getLesson(req, res, next) {
   try {
-    const data = req.user.role === USER_ROLE.ADMIN
-      ? await seeWriteService.getLessonAdmin(req.params.id)
-      : await seeWriteService.getLesson(req.params.id);
+    const data = await seeWriteService.getLesson(req.params.id, req.user._id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -41,14 +38,30 @@ export async function getLesson(req, res, next) {
 }
 
 /**
- * GET /api/writing/see-and-write/:lessonId/attempt
+ * GET /api/admin/writing/see-and-write — [ADMIN] List full data
  */
-export async function getAttempt(req, res, next) {
+export async function adminListLessons(req, res, next) {
   try {
-    const data = await seeWriteService.getAttempt(
-      req.user._id,
-      req.params.id,
-    );
+    const { page = 1, limit = 12 } = req.query;
+    const p = Math.max(1, +page);
+    const l = Math.min(Math.max(1, +limit), 50);
+    const { items, total } = await seeWriteService.listLessonsAdmin({ page: p, limit: l });
+    res.json({
+      success: true,
+      data: items,
+      pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * GET /api/admin/writing/see-and-write/:id — [ADMIN] Full data, no shuffle
+ */
+export async function adminGetLesson(req, res, next) {
+  try {
+    const data = await seeWriteService.getLessonAdmin(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);

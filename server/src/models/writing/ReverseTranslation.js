@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
-import { CONTENT_TYPE } from "@server/const/writting";
-import { getBaseWritingFields, BASE_SCHEMA_OPTIONS } from "./baseWritingFields";
+import { CONTENT_TYPE, WRITING_LEVEL, WRITING_TOPIC } from "@server/const/writting";
 
 const sentenceSchema = new mongoose.Schema(
   {
@@ -25,7 +24,11 @@ const vocabRefSchema = new mongoose.Schema(
 
 const reverseTranslationSchema = new mongoose.Schema(
   {
-    ...getBaseWritingFields(),
+    topic: { type: String, enum: Object.values(WRITING_TOPIC) },
+    title: { type: String, required: true, trim: true },
+    description: { type: String, trim: true },
+    level: { type: String, enum: Object.values(WRITING_LEVEL) },
+    totalSentences: { type: Number, default: 0 },
     contentType: {
       type: String,
       enum: Object.values(CONTENT_TYPE),
@@ -39,9 +42,10 @@ const reverseTranslationSchema = new mongoose.Schema(
     vocabularyRefs: [vocabRefSchema],
   },
   {
-    ...BASE_SCHEMA_OPTIONS,
+    timestamps: true,
+    versionKey: false,
     toJSON: {
-      ...BASE_SCHEMA_OPTIONS.toJSON,
+      virtuals: true,
       transform(_, ret) {
         delete ret._id;
         if (ret.sentences) {

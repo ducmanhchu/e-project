@@ -45,12 +45,12 @@ serviceAccount.json
 .cursorignore
 
 # Celo ignore
-front/
 .claude/
 CLAUDE.md
 plans/
-.playwright-cli
-.playwright-mcp
 words_data.json
 .superpowers/
+.obsidian/
+tests/
 docs/
+playground/

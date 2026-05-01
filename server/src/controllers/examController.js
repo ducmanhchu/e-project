@@ -1,21 +1,20 @@
 import * as examService from "@server/services/examService";
 import { ApiError } from "@server/helpers/ApiError";
-import { validateFields } from "@server/helpers/validateFields";
-import { USER_ROLE } from "@server/const/user";
+import { validateFields, validateObjectId } from "@server/helpers/validateFields";
 
 /**
- * GET /api/writing/exam — admin: all, user: filtered
+ * GET /api/writing/exam — Public list (optional auth, user-only shape)
  */
 export async function listExams(req, res, next) {
   try {
     const { level, topic, examType, page = 1, limit = 12 } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
-
-    const { items, total } = req.user.role === USER_ROLE.ADMIN
-      ? await examService.listExamsAdmin({ page: p, limit: l })
-      : await examService.listExams({ level, topic, examType }, { page: p, limit: l });
-
+    const { items, total } = await examService.listExams(
+      { level, topic, examType },
+      { page: p, limit: l },
+      req.user?._id,
+    );
     res.json({
       success: true,
       data: items,
@@ -27,13 +26,12 @@ export async function listExams(req, res, next) {
 }
 
 /**
- * GET /api/writing/exam/:id — admin: full, user: limited
+ * GET /api/writing/exam/:id — User detail (merged attempt)
  */
 export async function getExam(req, res, next) {
   try {
-    const data = req.user.role === USER_ROLE.ADMIN
-      ? await examService.getExamAdmin(req.params.id)
-      : await examService.getExam(req.params.id);
+    validateObjectId(req.params.id);
+    const data = await examService.getExam(req.params.id, req.user._id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -41,11 +39,31 @@ export async function getExam(req, res, next) {
 }
 
 /**
- * GET /api/writing/exam/:examId/attempt
+ * GET /api/admin/writing/exam — [ADMIN] List full data
  */
-export async function getAttempt(req, res, next) {
+export async function adminListExams(req, res, next) {
   try {
-    const data = await examService.getAttempt(req.user._id, req.params.id);
+    const { page = 1, limit = 12 } = req.query;
+    const p = Math.max(1, +page);
+    const l = Math.min(Math.max(1, +limit), 50);
+    const { items, total } = await examService.listExamsAdmin({ page: p, limit: l });
+    res.json({
+      success: true,
+      data: items,
+      pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * GET /api/admin/writing/exam/:id — [ADMIN] Full data with examPrompt + imageUrl
+ */
+export async function adminGetExam(req, res, next) {
+  try {
+    validateObjectId(req.params.id);
+    const data = await examService.getExamAdmin(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -113,6 +131,7 @@ export async function createExam(req, res, next) {
  */
 export async function updateExam(req, res, next) {
   try {
+    validateObjectId(req.params.id);
     const data = await examService.updateExam(req.params.id, req.body);
     res.json({ success: true, data });
   } catch (e) {
@@ -125,6 +144,7 @@ export async function updateExam(req, res, next) {
  */
 export async function deleteExam(req, res, next) {
   try {
+    validateObjectId(req.params.id);
     const data = await examService.deleteExam(req.params.id);
     res.json({ success: true, data });
   } catch (e) {

@@ -13,6 +13,7 @@ export async function listLessons(req, res, next) {
     const { items, total } = await exerciseService.listLessons(
       { level, contentType, topic },
       { page: p, limit: l },
+      req.user?._id,
     );
     res.json({
       success: true,
@@ -29,22 +30,7 @@ export async function listLessons(req, res, next) {
  */
 export async function getLesson(req, res, next) {
   try {
-    const data = await exerciseService.getLesson(req.params.id);
-    res.json({ success: true, data });
-  } catch (e) {
-    next(e);
-  }
-}
-
-/**
- * GET /api/attempts/:lessonId
- */
-export async function getAttempt(req, res, next) {
-  try {
-    const data = await exerciseService.getAttempt(
-      req.user._id,
-      req.params.id,
-    );
+    const data = await exerciseService.getLesson(req.params.id, req.user._id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -132,6 +118,40 @@ export async function updateLesson(req, res, next) {
 export async function deleteLesson(req, res, next) {
   try {
     const data = await exerciseService.deleteLesson(req.params.id);
+    res.json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * GET /api/admin/writing/reverse-translation — Admin list
+ */
+export async function adminListLessons(req, res, next) {
+  try {
+    const { level, contentType, topic, page = 1, limit = 12 } = req.query;
+    const p = Math.max(1, +page);
+    const l = Math.min(Math.max(1, +limit), 50);
+    const { items, total } = await exerciseService.adminListLessons(
+      { level, contentType, topic },
+      { page: p, limit: l },
+    );
+    res.json({
+      success: true,
+      data: items,
+      pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * GET /api/admin/writing/reverse-translation/:id — Admin full detail
+ */
+export async function adminGetLesson(req, res, next) {
+  try {
+    const data = await exerciseService.adminGetLesson(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);

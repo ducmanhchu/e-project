@@ -7,7 +7,6 @@ import {
   submitAndUpdateProgress,
   getLastSubmissions,
   getSubmissions,
-  buildSentenceAttempts,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_THRESHOLD } from "@server/const/exercise";
 import { WRITING_TYPE } from "@server/const/writting";
@@ -15,9 +14,9 @@ import { createWriting } from "@server/services/writingService";
 import { validateFields } from "@server/helpers/validateFields";
 
 /**
- * GET /writing/rewrite — List lessons
+ * GET /writing/rewrite — List lessons + user's attempt summary
  */
-export async function listLessons(filters, pagination) {
+export async function listLessons(filters, pagination, userId) {
   const { level, topic } = filters;
   const { page, limit } = pagination;
 
@@ -36,26 +35,51 @@ export async function listLessons(filters, pagination) {
     Rewrite.countDocuments(query),
   ]);
 
-  return {
-    items: lessons.map((lesson) => ({
-      id: lesson._id,
-      title: lesson.title,
-      level: lesson.level,
-      topic: lesson.topic,
+  const attemptMap = new Map();
+  if (userId && lessons.length > 0) {
+    const attempts = await Attempt.find({
+      userId,
+      lessonId: { $in: lessons.map((l) => l._id) },
+      lessonType: "Rewrite",
+    })
+      .select("lessonId status completedSentences completedAt")
+      .lean();
+    for (const a of attempts) {
+      attemptMap.set(String(a.lessonId), a);
+    }
+  }
 
-      totalSentences: lesson.totalSentences,
-      createdAt: lesson.createdAt,
-    })),
+  return {
+    items: lessons.map((lesson) => {
+      const a = attemptMap.get(String(lesson._id));
+      return {
+        id: lesson._id,
+        title: lesson.title,
+        level: lesson.level,
+        topic: lesson.topic,
+        totalSentences: lesson.totalSentences,
+        createdAt: lesson.createdAt,
+        status: a?.status ?? "not_started",
+        completedSentences: a?.completedSentences ?? 0,
+        completedAt: a?.completedAt ?? null,
+      };
+    }),
     total,
   };
 }
 
 /**
- * GET /writing/rewrite/:lessonId — Lesson detail
+ * GET /writing/rewrite/:id — Lesson + user's attempt (merged)
  */
-export async function getLesson(lessonId) {
+export async function getLesson(lessonId, userId) {
   const lesson = await Rewrite.findById(lessonId).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
+
+  const attempt = await findOrCreateAttempt(userId, lessonId, "Rewrite");
+  const lastSubMap = await getLastSubmissions(attempt._id);
+  const progressMap = new Map(
+    (attempt.sentenceProgress || []).map((p) => [p.sentenceOrder, p]),
+  );
 
   return {
     id: lesson._id,
@@ -63,27 +87,18 @@ export async function getLesson(lessonId) {
     level: lesson.level,
     topic: lesson.topic,
     totalSentences: lesson.totalSentences,
-    sentences: (lesson.sentences || []).map((s) => ({
-      order: s.order,
-      targetSentence: s.targetSentence,
-    })),
-  };
-}
-
-/**
- * GET /writing/rewrite/:lessonId/attempt — Upsert + return attempt
- */
-export async function getAttempt(userId, lessonId) {
-  const attempt = await findOrCreateAttempt(userId, lessonId, "Rewrite");
-  const lastSubMap = await getLastSubmissions(attempt._id);
-
-  return {
-    id: attempt._id,
     status: attempt.status,
     completedSentences: attempt.completedSentences,
-    bestScore: attempt.bestScore,
     completedAt: attempt.completedAt || null,
-    sentenceAttempts: buildSentenceAttempts(attempt.sentenceProgress, lastSubMap),
+    sentences: (lesson.sentences || []).map((s) => {
+      const progress = progressMap.get(s.order);
+      return {
+        order: s.order,
+        targetSentence: s.targetSentence,
+        isCompleted: progress?.isCompleted ?? false,
+        lastSubmission: lastSubMap.get(s.order) || null,
+      };
+    }),
   };
 }
 
@@ -106,7 +121,7 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
   const score = Math.min(100, Math.max(0, Math.round(grading.score)));
 
   const attempt = await findOrCreateAttempt(userId, lessonId, "Rewrite");
-  const { submission, progress } = await submitAndUpdateProgress(attempt, {
+  const { submission } = await submitAndUpdateProgress(attempt, {
     sentenceOrder,
     userAnswer,
     score,
@@ -125,38 +140,7 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
     score,
     feedback: submission.feedback,
     gradedBy: provider,
-    bestScore: progress.bestScore,
     isCompleted: score >= COMPLETION_THRESHOLD,
-  };
-}
-
-/**
- * GET /writing/rewrite/:lessonId/history
- */
-export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}) {
-  const attempt = await Attempt.findOne({ userId, lessonId });
-  if (!attempt) throw ApiError.notFound("No attempt found for this lesson");
-
-  const { docs, total } = await getSubmissions(attempt._id, { page, limit });
-
-  const grouped = {};
-  for (const sub of docs) {
-    if (!grouped[sub.sentenceOrder]) grouped[sub.sentenceOrder] = [];
-    grouped[sub.sentenceOrder].push(sub);
-  }
-
-  return {
-    lessonId,
-    status: attempt.status,
-    completedSentences: attempt.completedSentences,
-    bestScore: attempt.bestScore,
-    sentenceAttempts: attempt.sentenceProgress.map((p) => ({
-      sentenceOrder: p.sentenceOrder,
-      bestScore: p.bestScore,
-      isCompleted: p.isCompleted,
-      submissions: (grouped[p.sentenceOrder] || []).reverse(),
-    })),
-    pagination: { page, limit, total },
   };
 }
 

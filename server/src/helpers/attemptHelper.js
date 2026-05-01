@@ -156,15 +156,3 @@ export async function getSubmissions(attemptId, { sentenceOrder, limit = 20, pag
 
   return { docs, total, page, limit };
 }
-
-/**
- * Build sentenceAttempts response from progress + lastSubmissions map.
- */
-export function buildSentenceAttempts(sentenceProgress, lastSubMap) {
-  return sentenceProgress.map((p) => ({
-    sentenceOrder: p.sentenceOrder,
-    bestScore: p.bestScore,
-    isCompleted: p.isCompleted,
-    lastSubmission: lastSubMap.get(p.sentenceOrder) || null,
-  }));
-}
