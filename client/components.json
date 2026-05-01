@@ -6,12 +6,14 @@
   "tailwind": {
     "config": "",
     "css": "src/app/index.css",
-    "baseColor": "olive",
+    "baseColor": "mist",
     "cssVariables": true,
     "prefix": ""
   },
   "iconLibrary": "lucide",
   "rtl": false,
+  "menuColor": "default",
+  "menuAccent": "bold",
   "aliases": {
     "components": "@/shared/components",
     "utils": "@/shared/lib/utils",
@@ -19,7 +21,7 @@
     "lib": "@/shared/lib",
     "hooks": "@/shared/hooks"
   },
-  "menuColor": "default-translucent",
-  "menuAccent": "subtle",
-  "registries": {}
+  "registries": {
+    "@react-bits": "https://reactbits.dev/r/{name}.json"
+  }
 }
