@@ -4,6 +4,7 @@ import * as seeWriteController from "@server/controllers/seeWriteController";
 import * as rewriteController from "@server/controllers/rewriteController";
 import * as examController from "@server/controllers/examController";
 import * as uploadController from "@server/controllers/uploadController";
+import * as vocabularyController from "@server/controllers/vocabularyController";
 import { mediaUpload } from "@server/middlewares/upload";
 import { protectedRoute, authorizeRoles } from "@server/middlewares/authMiddleware";
 import { USER_ROLE } from "@server/const/user";
@@ -66,6 +67,11 @@ adminRouter.post("/writing/exam", examController.createExam);
 adminRouter.get("/writing/exam/:id", examController.adminGetExam);
 adminRouter.put("/writing/exam/:id", examController.updateExam);
 adminRouter.delete("/writing/exam/:id", examController.deleteExam);
+
+// ── Vocabulary ────────────────────────────────────────
+adminRouter.post("/vocabulary", vocabularyController.createVocabulary);
+adminRouter.patch("/vocabulary/:id", vocabularyController.updateVocabulary);
+adminRouter.delete("/vocabulary/:id", vocabularyController.deleteVocabulary);
 
 // ── Upload ────────────────────────────────────────────
 adminRouter.post(

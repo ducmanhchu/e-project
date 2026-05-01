@@ -64,18 +64,15 @@ router.get("/writing/exam/:id/history", examController.getHistory);
 router.get("/attempts", attemptController.listAttempts);
 router.put("/attempts/:id", attemptController.updateAttempt);
 
-// ── Vocabulary ───────────────────────────────────────────
-router.post("/vocabulary", vocabularyController.addWord);
-router.get("/vocabulary", vocabularyController.listWords);
-router.get("/vocabulary/stats", vocabularyController.getStats);
-router.get(
-  "/vocabulary/review/questions",
-  vocabularyController.getReviewQuestions,
-);
-router.post("/vocabulary/review/complete", vocabularyController.recordReview);
-router.get("/vocabulary/:id", vocabularyController.getWordDetail);
-router.patch("/vocabulary/:id/status", vocabularyController.updateStatus);
-router.delete("/vocabulary/:id", vocabularyController.deleteWord);
+// ── Vocabulary (GLOBAL Vocabulary collection) ──────────
+router.get("/vocabulary", vocabularyController.listDictionary);
+router.get("/vocabulary/:id", vocabularyController.getDictionaryById);
+
+// ── My Vocabulary (PER-USER UserVocabulary list) ───────
+router.post("/me/vocabulary", vocabularyController.addWord);
+router.get("/me/vocabulary", vocabularyController.listMyVocabulary);
+router.get("/me/vocabulary/:id", vocabularyController.getMyVocabularyById);
+router.delete("/me/vocabulary/:id", vocabularyController.deleteWord);
 
 // ── Slang Hang ──────────────────────────────────────────
 router.post("/slang-hang/generate", slangHangController.generate);
