@@ -5,3 +5,8 @@ export type HeaderContentProps = {
 	isLoading: boolean;
 	onLogout: () => void;
 };
+
+export type APIResponse<T> = {
+	data: T;
+	success: boolean;
+};

@@ -5,12 +5,12 @@ import { adminRoutes } from "@admin/routes";
 import { rootAuthLoader } from "@/shared/lib/auth-loaders";
 import { FallbackScreen } from "@/shared/components/fallback-screen";
 
-import { Root } from "./root";
+import { ShellLayout } from "./shell";
 
 export const router = createBrowserRouter([
 	{
 		id: "root",
-		Component: Root,
+		Component: ShellLayout,
 		HydrateFallback: FallbackScreen,
 		loader: rootAuthLoader,
 		children: [...userRoutes, ...adminRoutes],

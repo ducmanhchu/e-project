@@ -11,11 +11,6 @@ export type User = {
 	updatedAt: string;
 };
 
-export type APIResponse<T> = {
-	data: T;
-	success: boolean;
-};
-
 export type SignInPayload = {
 	email: string;
 	password: string;
@@ -33,3 +28,13 @@ export type SignUpPayload = {
 };
 
 export type RefreshResponse = SignInResponse;
+
+export type ChangePasswordPayload = {
+	oldPassword: string;
+	newPassword: string;
+};
+
+export type ChangePasswordResponse = {
+	success: boolean;
+	message: string;
+};

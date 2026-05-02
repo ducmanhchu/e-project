@@ -3,9 +3,11 @@ import type {
 	SignInPayload,
 	SignInResponse,
 	User,
-	APIResponse,
 	SignUpPayload,
-} from "@/shared/types/auth";
+	ChangePasswordPayload,
+	ChangePasswordResponse,
+} from "@shared/types/auth";
+import type { APIResponse } from "@shared/types/utils";
 
 export const signIn = async (
 	payload: SignInPayload,
@@ -34,4 +36,14 @@ export const signOut = async (): Promise<void> => {
 export const fetchMe = async (): Promise<User> => {
 	const { data } = await axiosPrivate.get<APIResponse<User>>("/me");
 	return data.data;
+};
+
+export const changePassword = async (
+	payload: ChangePasswordPayload,
+): Promise<ChangePasswordResponse> => {
+	const { data } = await axiosPrivate.post<ChangePasswordResponse>(
+		"/auth/change-password",
+		payload,
+	);
+	return data;
 };
