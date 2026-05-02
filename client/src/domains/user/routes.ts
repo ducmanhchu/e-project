@@ -5,6 +5,10 @@ import { Home } from "@user/features/home/pages";
 
 import { Login } from "@user/features/auth/pages/login";
 import { Register } from "@user/features/auth/pages/register";
+import { ChangePassword } from "@user/features/auth/pages/change-password";
+import { VerifyEmail } from "@user/features/auth/pages/verify-email";
+import { ForgotPassword } from "@user/features/auth/pages/forgot-password";
+import { ResetPassword } from "@user/features/auth/pages/reset-password";
 
 import { WritingLayout } from "@user/features/writing/layout/writing-layout";
 import { WritingMethod } from "@user/features/writing/pages";
@@ -22,6 +26,8 @@ import { ConversationExercise } from "@user/features/speaking/methods/conversati
 
 import { Vocabulary } from "@user/features/vocabulary/pages";
 
+import { requireAuthLoader } from "@shared/lib/auth-loaders";
+
 export const userRoutes: RouteObject[] = [
 	{
 		path: "/",
@@ -30,6 +36,11 @@ export const userRoutes: RouteObject[] = [
 			{
 				index: true,
 				Component: Home,
+			},
+			{
+				path: "change-password",
+				Component: ChangePassword,
+				loader: requireAuthLoader,
 			},
 			{
 				path: "writing",
@@ -92,5 +103,17 @@ export const userRoutes: RouteObject[] = [
 	{
 		path: "/register",
 		Component: Register,
+	},
+	{
+		path: "/verify-email",
+		Component: VerifyEmail,
+	},
+	{
+		path: "/forgot-password",
+		Component: ForgotPassword,
+	},
+	{
+		path: "/reset-password",
+		Component: ResetPassword,
 	},
 ];

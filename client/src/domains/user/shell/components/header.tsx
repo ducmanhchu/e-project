@@ -2,11 +2,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	LogoutCircle01Icon,
 	Menu01Icon,
-	Settings03Icon,
+	ResetPasswordIcon,
 	User03Icon,
 } from "@hugeicons/core-free-icons";
 import { useLayoutEffect, useRef, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router";
+import { Link, NavLink, useLocation, useRevalidator } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
@@ -52,6 +52,7 @@ const NAV_ITEMS = [
 
 export function Header() {
 	const queryClient = useQueryClient();
+	const revalidator = useRevalidator();
 	const { scrollY } = useScroll();
 	const [isHeaderHidden, setIsHeaderHidden] = useState(false);
 
@@ -63,6 +64,7 @@ export function Header() {
 		onSuccess: () => {
 			clearAuth();
 			queryClient.clear();
+			revalidator.revalidate();
 		},
 	});
 
@@ -130,12 +132,29 @@ function DesktopNav() {
 	const [pillStyle, setPillStyle] = useState({ left: 0, width: 0 });
 	const [isPillReady, setIsPillReady] = useState(false);
 
+	const activeTo =
+		NAV_ITEMS.find((item) =>
+			item.end
+				? location.pathname === item.to
+				: location.pathname === item.to ||
+					location.pathname.startsWith(`${item.to}/`),
+		)?.to ?? null;
+
 	useLayoutEffect(() => {
 		const updatePill = () => {
+			if (!activeTo) {
+				activeLinkRef.current = null;
+				setIsPillReady(false);
+				return;
+			}
+
 			const nav = navRef.current;
 			const activeLink = activeLinkRef.current;
 
-			if (!nav || !activeLink) return;
+			if (!nav || !activeLink) {
+				setIsPillReady(false);
+				return;
+			}
 
 			const navRect = nav.getBoundingClientRect();
 			const activeRect = activeLink.getBoundingClientRect();
@@ -160,7 +179,7 @@ function DesktopNav() {
 			resizeObserver.disconnect();
 			window.removeEventListener("resize", updatePill);
 		};
-	}, [location.pathname]);
+	}, [activeTo, location.pathname]);
 
 	return (
 		<nav
@@ -184,10 +203,7 @@ function DesktopNav() {
 				className="pointer-events-none absolute top-1 bottom-1 left-0 rounded-full bg-foreground"
 			/>
 			{NAV_ITEMS.map((item) => {
-				const isActive = item.end
-					? location.pathname === item.to
-					: location.pathname === item.to ||
-						location.pathname.startsWith(`${item.to}/`);
+				const isActive = item.to === activeTo;
 
 				return (
 					<NavLink
@@ -287,9 +303,11 @@ function UserAction({ me, isLoading, onLogout }: HeaderContentProps) {
 						<HugeiconsIcon icon={User03Icon} />
 						Trang cá nhân
 					</DropdownMenuItem>
-					<DropdownMenuItem>
-						<HugeiconsIcon icon={Settings03Icon} />
-						Cài đặt
+					<DropdownMenuItem asChild>
+						<Link to={me.googleId ? "/forgot-password" : "/change-password"}>
+							<HugeiconsIcon icon={ResetPasswordIcon} />
+							{me.googleId ? "Thiết lập mật khẩu" : "Đổi mật khẩu"}
+						</Link>
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />

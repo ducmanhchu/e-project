@@ -9,11 +9,7 @@ export type User = {
 	isEmailVerified: boolean;
 	createdAt: string;
 	updatedAt: string;
-};
-
-export type APIResponse<T> = {
-	data: T;
-	success: boolean;
+	googleId?: string;
 };
 
 export type SignInPayload = {
@@ -33,3 +29,38 @@ export type SignUpPayload = {
 };
 
 export type RefreshResponse = SignInResponse;
+
+export type ChangePasswordPayload = {
+	oldPassword: string;
+	newPassword: string;
+};
+
+export type ChangePasswordResponse = {
+	success: boolean;
+	message: string;
+};
+
+export type VerifyEmailPayload = { token: string };
+export type VerifyEmailResponse = { success: boolean; message: string };
+
+export type ResendVerificationPayload = { email: string };
+export type ResendVerificationResponse = { success: boolean; message: string };
+
+export type ForgotPasswordPayload = { email: string };
+export type ForgotPasswordResponse = { success: boolean; message: string };
+
+export type ResetPasswordPayload = {
+	token: string;
+	newPassword: string;
+	confirmPassword: string;
+};
+export type ResetPasswordResponse = { success: boolean; message: string };
+
+export type GoogleLoginPayload = {
+	idToken: string;
+};
+export type GoogleLoginResponse = {
+	success: boolean;
+	accessToken: string;
+	isNewUser: boolean;
+};
