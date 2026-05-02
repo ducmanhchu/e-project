@@ -23,7 +23,7 @@ const RegisterSchema = z
 	.object({
 		fullName: z.string().trim().min(2, "Họ và tên phải có ít nhất 2 ký tự"),
 		email: z.email("Email không hợp lệ"),
-		password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+		password: z.string().min(8, "Mật khẩu phải có ít nhất 8 ký tự"),
 		confirmPassword: z.string().min(1, "Vui lòng nhập lại mật khẩu"),
 	})
 	.refine((data) => data.password === data.confirmPassword, {
@@ -51,8 +51,11 @@ export function RegisterForm({
 
 	const register = useMutation({
 		mutationFn: signUp,
-		onSuccess: () => {
-			navigate("/login", { replace: true });
+		onSuccess: (_data, variables) => {
+			const email = variables?.email ? encodeURIComponent(variables.email) : "";
+			navigate(`/verify-email${email ? `?email=${email}` : ""}`, {
+				replace: true,
+			});
 		},
 		onError: (error) => {
 			let message = "Có lỗi xảy ra, vui lòng thử lại";
@@ -137,7 +140,7 @@ export function RegisterForm({
 							<Field data-invalid={fieldState.invalid}>
 								<FieldLabel htmlFor={field.name}>Mật khẩu</FieldLabel>
 								<FieldDescription>
-									Mật khẩu phải có ít nhất 6 ký tự
+									Mật khẩu phải có ít nhất 8 ký tự
 								</FieldDescription>
 								<Input
 									{...field}

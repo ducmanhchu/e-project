@@ -6,6 +6,10 @@ import type {
 	SignUpPayload,
 	ChangePasswordPayload,
 	ChangePasswordResponse,
+	VerifyEmailPayload,
+	VerifyEmailResponse,
+	ResendVerificationPayload,
+	ResendVerificationResponse,
 } from "@shared/types/auth";
 import type { APIResponse } from "@shared/types/utils";
 
@@ -24,6 +28,26 @@ export const signUp = async (
 ): Promise<APIResponse<User>> => {
 	const { data } = await axiosPublic.post<APIResponse<User>>(
 		"/auth/signup",
+		payload,
+	);
+	return data;
+};
+
+export const verifyEmail = async (
+	payload: VerifyEmailPayload,
+): Promise<VerifyEmailResponse> => {
+	const { data } = await axiosPublic.post<VerifyEmailResponse>(
+		"/auth/verify-email",
+		payload,
+	);
+	return data;
+};
+
+export const resendVerification = async (
+	payload: ResendVerificationPayload,
+): Promise<ResendVerificationResponse> => {
+	const { data } = await axiosPublic.post<ResendVerificationResponse>(
+		"/auth/resend-verification",
 		payload,
 	);
 	return data;

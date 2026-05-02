@@ -50,10 +50,19 @@ export function LoginForm({
 			navigate("/", { replace: true });
 		},
 		onError: (error) => {
-			const message =
-				isAxiosError(error) && error.response?.status === 401
-					? "Email hoặc mật khẩu không đúng"
-					: "Có lỗi xảy ra, vui lòng thử lại";
+			let message = "Có lỗi xảy ra, vui lòng thử lại";
+			if (isAxiosError(error)) {
+				const { status, data } = error.response || {};
+				if (status === 401) {
+					message = "Email hoặc mật khẩu không đúng";
+				} else if (
+					status === 403 &&
+					data?.error ===
+						"Email is not verified. Please check your inbox or call /auth/resend-verification"
+				) {
+					message = "Email chưa được xác thực - Hãy kiểm tra hộp thư của bạn.";
+				}
+			}
 			form.setError("root", { message });
 		},
 	});

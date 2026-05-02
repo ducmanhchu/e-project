@@ -6,6 +6,7 @@ import { Home } from "@user/features/home/pages";
 import { Login } from "@user/features/auth/pages/login";
 import { Register } from "@user/features/auth/pages/register";
 import { ChangePassword } from "@user/features/auth/pages/change-password";
+import { VerifyEmail } from "@user/features/auth/pages/verify-email";
 
 import { WritingLayout } from "@user/features/writing/layout/writing-layout";
 import { WritingMethod } from "@user/features/writing/pages";
@@ -100,5 +101,9 @@ export const userRoutes: RouteObject[] = [
 	{
 		path: "/register",
 		Component: Register,
+	},
+	{
+		path: "/verify-email",
+		Component: VerifyEmail,
 	},
 ];

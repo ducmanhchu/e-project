@@ -38,3 +38,9 @@ export type ChangePasswordResponse = {
 	success: boolean;
 	message: string;
 };
+
+export type VerifyEmailPayload = { token: string };
+export type VerifyEmailResponse = { success: boolean; message: string };
+
+export type ResendVerificationPayload = { email: string };
+export type ResendVerificationResponse = { success: boolean; message: string };
