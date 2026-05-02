@@ -44,3 +44,13 @@ export type VerifyEmailResponse = { success: boolean; message: string };
 
 export type ResendVerificationPayload = { email: string };
 export type ResendVerificationResponse = { success: boolean; message: string };
+
+export type ForgotPasswordPayload = { email: string };
+export type ForgotPasswordResponse = { success: boolean; message: string };
+
+export type ResetPasswordPayload = {
+	token: string;
+	newPassword: string;
+	confirmPassword: string;
+};
+export type ResetPasswordResponse = { success: boolean; message: string };

@@ -10,6 +10,10 @@ import type {
 	VerifyEmailResponse,
 	ResendVerificationPayload,
 	ResendVerificationResponse,
+	ForgotPasswordPayload,
+	ForgotPasswordResponse,
+	ResetPasswordPayload,
+	ResetPasswordResponse,
 } from "@shared/types/auth";
 import type { APIResponse } from "@shared/types/utils";
 
@@ -48,6 +52,26 @@ export const resendVerification = async (
 ): Promise<ResendVerificationResponse> => {
 	const { data } = await axiosPublic.post<ResendVerificationResponse>(
 		"/auth/resend-verification",
+		payload,
+	);
+	return data;
+};
+
+export const forgotPassword = async (
+	payload: ForgotPasswordPayload,
+): Promise<ForgotPasswordResponse> => {
+	const { data } = await axiosPublic.post<ForgotPasswordResponse>(
+		"/auth/forgot-password",
+		payload,
+	);
+	return data;
+};
+
+export const resetPassword = async (
+	payload: ResetPasswordPayload,
+): Promise<ResetPasswordResponse> => {
+	const { data } = await axiosPublic.post<ResetPasswordResponse>(
+		"/auth/reset-password",
 		payload,
 	);
 	return data;
