@@ -59,9 +59,11 @@ export function ForgotPasswordForm({
 			<form onSubmit={onSubmit} noValidate>
 				<FieldGroup>
 					<div className="flex flex-col items-center gap-2 text-center">
-						<h1 className="font-heading text-xl font-medium">Quên mật khẩu</h1>
+						<h1 className="font-heading text-xl font-medium">
+							Thiết lập mật khẩu
+						</h1>
 						<FieldDescription>
-							Nhập email đã đăng ký để nhận liên kết đặt lại mật khẩu.
+							Nhập email đã đăng ký để nhận liên kết để thiết lập mật khẩu.
 						</FieldDescription>
 					</div>
 

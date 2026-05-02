@@ -9,6 +9,7 @@ export type User = {
 	isEmailVerified: boolean;
 	createdAt: string;
 	updatedAt: string;
+	googleId?: string;
 };
 
 export type SignInPayload = {

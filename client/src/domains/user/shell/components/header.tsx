@@ -304,9 +304,9 @@ function UserAction({ me, isLoading, onLogout }: HeaderContentProps) {
 						Trang cá nhân
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
-						<Link to="/change-password">
+						<Link to={me.googleId ? "/forgot-password" : "/change-password"}>
 							<HugeiconsIcon icon={ResetPasswordIcon} />
-							Đổi mật khẩu
+							{me.googleId ? "Thiết lập mật khẩu" : "Đổi mật khẩu"}
 						</Link>
 					</DropdownMenuItem>
 				</DropdownMenuGroup>

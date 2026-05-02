@@ -128,7 +128,7 @@ export function VerifyEmail() {
 
 	return (
 		<div className="flex flex-col min-h-svh items-center justify-center px-6 md:px-0">
-			<div className="w-full max-w-sm">
+			<div className="w-full max-w-md">
 				<FieldGroup>
 					{!verifiedOk && !verifiedFail && !isVerifying && (
 						<div className="flex flex-col items-center gap-2 text-center">
@@ -140,7 +140,7 @@ export function VerifyEmail() {
 									<span>Chúng tôi đang xác thực tài khoản của bạn</span>
 								) : (
 									<span className="text-center">
-										Vui lòng kiểm tra hộp thư của bạn.
+										Liên kết đã được gửi tới hộp thư của bạn.
 									</span>
 								)}
 							</FieldDescription>
@@ -175,7 +175,7 @@ export function VerifyEmail() {
 
 					{verifiedFail && (
 						<Field>
-							<FieldError className="text-center">
+							<FieldError className="text-center text-xl font-medium">
 								{verifyErrorMessage}
 							</FieldError>
 						</Field>
@@ -222,11 +222,9 @@ export function VerifyEmail() {
 								)}
 							</Field>
 
-							<Field>
-								<p className="text-center text-sm text-muted-foreground">
-									Đã xác thực rồi? <Link to="/login">Đăng nhập</Link>
-								</p>
-							</Field>
+							<FieldDescription className="text-center">
+								Đã xác thực rồi? <Link to="/login">Đăng nhập</Link>
+							</FieldDescription>
 						</>
 					)}
 				</FieldGroup>
