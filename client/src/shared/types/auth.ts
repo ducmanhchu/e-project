@@ -54,3 +54,12 @@ export type ResetPasswordPayload = {
 	confirmPassword: string;
 };
 export type ResetPasswordResponse = { success: boolean; message: string };
+
+export type GoogleLoginPayload = {
+	idToken: string;
+};
+export type GoogleLoginResponse = {
+	success: boolean;
+	accessToken: string;
+	isNewUser: boolean;
+};

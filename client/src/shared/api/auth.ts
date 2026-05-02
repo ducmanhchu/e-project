@@ -14,6 +14,8 @@ import type {
 	ForgotPasswordResponse,
 	ResetPasswordPayload,
 	ResetPasswordResponse,
+	GoogleLoginPayload,
+	GoogleLoginResponse,
 } from "@shared/types/auth";
 import type { APIResponse } from "@shared/types/utils";
 
@@ -91,6 +93,16 @@ export const changePassword = async (
 ): Promise<ChangePasswordResponse> => {
 	const { data } = await axiosPrivate.post<ChangePasswordResponse>(
 		"/auth/change-password",
+		payload,
+	);
+	return data;
+};
+
+export const googleLogin = async (
+	payload: GoogleLoginPayload,
+): Promise<GoogleLoginResponse> => {
+	const { data } = await axiosPrivate.post<GoogleLoginResponse>(
+		"/auth/google",
 		payload,
 	);
 	return data;
