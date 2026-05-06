@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { WRITING_TOPIC } from "@server/const/writting";
-import { SLANG_HANG_LIMITS } from "@server/const/slangHang";
+import { SLANG_HANG_LIMITS, SLANG_HANG_MODE } from "@server/const/slangHang";
 
 const slangSchema = new mongoose.Schema(
   {
@@ -56,6 +56,12 @@ const dialogueSchema = new mongoose.Schema(
       enum: Object.values(WRITING_TOPIC),
       required: true,
     },
+    mode: {
+      type: String,
+      enum: Object.values(SLANG_HANG_MODE),
+      default: SLANG_HANG_MODE.SINGLE_ROLE,
+      required: true,
+    },
     scenario: { type: String, required: true, trim: true },
     speakers: {
       type: [speakerSchema],
@@ -68,12 +74,18 @@ const dialogueSchema = new mongoose.Schema(
     },
     messages: {
       type: [messageSchema],
-      validate: {
-        validator: (arr) =>
-          arr.length >= SLANG_HANG_LIMITS.MIN_MESSAGES &&
-          arr.length <= SLANG_HANG_LIMITS.MAX_MESSAGES,
-        message: `messages must be between ${SLANG_HANG_LIMITS.MIN_MESSAGES} and ${SLANG_HANG_LIMITS.MAX_MESSAGES}`,
-      },
+      validate: [
+        {
+          validator: (arr) =>
+            arr.length >= SLANG_HANG_LIMITS.MIN_MESSAGES &&
+            arr.length <= SLANG_HANG_LIMITS.MAX_MESSAGES,
+          message: `messages must be between ${SLANG_HANG_LIMITS.MIN_MESSAGES} and ${SLANG_HANG_LIMITS.MAX_MESSAGES}`,
+        },
+        {
+          validator: (arr) => arr.length === 0 || arr[0].speakerKey === "A",
+          message: "first message must be from speaker A",
+        },
+      ],
     },
   },
   {

@@ -5,14 +5,11 @@ export const SLANG_HANG_LIMITS = {
   MAX_SLANG_PER_MESSAGE: 3,
   MIN_SPEAKERS: 2,
   MAX_SPEAKERS: 2,
-  MAX_AUDIO_BYTES: 5 * 1024 * 1024, // 5MB
-  ALLOWED_AUDIO_MIME: [
-    "audio/webm",
-    "audio/ogg",
-    "audio/wav",
-    "audio/mp4",
-    "audio/mpeg",
-  ],
+};
+
+export const SLANG_HANG_MODE = {
+  SINGLE_ROLE: "single_role", // A = TTS opener, B = learner records
+  BOTH_ROLES: "both_roles", // learner records both A and B
 };
 
 export const SLANG_HANG_RETRY = {

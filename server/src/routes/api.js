@@ -8,7 +8,6 @@ import * as examController from "@server/controllers/examController";
 import * as attemptController from "@server/controllers/attemptController";
 import * as vocabularyController from "@server/controllers/vocabularyController";
 import * as slangHangController from "@server/controllers/slangHangController";
-import { audioUpload } from "@server/middlewares/upload";
 import { protectedRoute, optionalAuth } from "@server/middlewares/authMiddleware";
 const router = express.Router();
 
@@ -79,10 +78,10 @@ router.post("/slang-hang/generate", slangHangController.generate);
 router.get("/slang-hang/dialogues", slangHangController.list);
 router.get("/slang-hang/dialogues/:id", slangHangController.getOne);
 router.delete("/slang-hang/dialogues/:id", slangHangController.remove);
+router.get("/slang-hang/azure-token", slangHangController.azureToken);
 router.post(
-  "/slang-hang/grade-pronunciation",
-  audioUpload.single("audio"),
-  slangHangController.grade,
+  "/slang-hang/dialogue-attempts",
+  slangHangController.recordUtterance,
 );
 
 export default router;
