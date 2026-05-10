@@ -49,3 +49,11 @@ export const EXAM_TYPE = {
   IELTS_TASK_2: "ielts_task2",
   TOEIC: "toeic",
 };
+
+export const SORTABLE_LESSON_FIELDS = new Set(["createdAt", "level"]);
+
+export const LEVEL_RANK_BRANCHES = [
+  { case: { $eq: ["$level", "beginner"] }, then: 1 },
+  { case: { $eq: ["$level", "intermediate"] }, then: 2 },
+  { case: { $eq: ["$level", "advanced"] }, then: 3 },
+];

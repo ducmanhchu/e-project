@@ -1,7 +1,7 @@
 import express from "express";
 import * as authController from "@server/controllers/authController";
 import * as userController from "@server/controllers/userController";
-import * as exerciseController from "@server/controllers/exerciseController";
+import * as reverseTranslationController from "@server/controllers/reverseTranslationController";
 import * as seeWriteController from "@server/controllers/seeWriteController";
 import * as rewriteController from "@server/controllers/rewriteController";
 import * as examController from "@server/controllers/examController";
@@ -23,7 +23,7 @@ router.post("/auth/forgot-password", authController.forgotPassword);
 router.post("/auth/reset-password", authController.resetPassword);
 
 // ── Public catalog (optional auth: guest sees defaults, logged-in sees attempt summary)
-router.get("/writing/reverse-translation", optionalAuth, exerciseController.listLessons);
+router.get("/writing/reverse-translation", optionalAuth, reverseTranslationController.listLessons);
 router.get("/writing/see-and-write", optionalAuth, seeWriteController.listLessons);
 router.get("/writing/rewrite", optionalAuth, rewriteController.listLessons);
 router.get("/writing/exam", optionalAuth, examController.listExams);
@@ -33,10 +33,10 @@ router.get("/me", userController.authMe);
 router.post("/auth/change-password", authController.changePassword);
 
 // ── Reverse Translation ─────────────────────────────────
-router.get("/writing/reverse-translation/:id", exerciseController.getLesson);
+router.get("/writing/reverse-translation/:id", reverseTranslationController.getLesson);
 router.post(
   "/writing/reverse-translation/:id/submit",
-  exerciseController.submitAnswer,
+  reverseTranslationController.submitAnswer,
 );
 // ── See & Write ──────────────────────────────────────────
 router.get("/writing/see-and-write/:id", seeWriteController.getLesson);

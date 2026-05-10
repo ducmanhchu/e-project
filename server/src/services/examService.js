@@ -12,27 +12,51 @@ import {
 import { COMPLETION_BAND, EXAM_MIN_WORDS, bandToScore, roundBand } from "@server/const/exercise";
 import { WRITING_TYPE, WRITING_LEVEL, WRITING_TOPIC } from "@server/const/writting";
 import { createWriting } from "@server/services/writingService";
+import {
+  resolveSort,
+  buildLessonsListPromise,
+  buildTitleSearch,
+} from "@server/helpers/writing/listLessonsQuery";
+
+const EXAM_LIST_PROJECTION = {
+  title: 1,
+  level: 1,
+  topic: 1,
+  examType: 1,
+  createdAt: 1,
+};
 
 /**
  * GET /writing/exam — List exams + user's attempt summary
  */
 export async function listExams(filters, pagination, userId) {
-  const { level, topic, examType } = filters;
+  const { level, topic, examType, search } = filters;
   const { page, limit } = pagination;
+  const { sortBy, order } = resolveSort(filters);
 
+  const titleFilter = buildTitleSearch(search);
   const query = {
-    ...(level && { level }),
-    ...(topic && { topic }),
-    ...(examType && { examType }),
+    ...(level?.length && {
+      level: level.length === 1 ? level[0] : { $in: level },
+    }),
+    ...(topic?.length && {
+      topic: topic.length === 1 ? topic[0] : { $in: topic },
+    }),
+    ...(examType?.length && {
+      examType: examType.length === 1 ? examType[0] : { $in: examType },
+    }),
+    ...(titleFilter && { title: titleFilter }),
   };
 
   const [exams, total] = await Promise.all([
-    Exam.find(query)
-      .select("title level topic examType createdAt")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
+    buildLessonsListPromise(Exam, {
+      query,
+      projection: EXAM_LIST_PROJECTION,
+      sortBy,
+      order,
+      page,
+      limit,
+    }),
     Exam.countDocuments(query),
   ]);
 
@@ -166,16 +190,47 @@ export async function getHistory(userId, examId, { page = 1, limit = 20 } = {}) 
 }
 
 /**
- * GET /writing/exam — Admin list (all exams)
+ * GET /writing/exam — Admin list (with filter + sort)
  */
-export async function listExamsAdmin({ page = 1, limit = 20 } = {}) {
+export async function adminListExams(filters = {}, pagination = {}) {
+  const { level, topic, examType, search } = filters;
+  const { page = 1, limit = 20 } = pagination;
+  const { sortBy, order } = resolveSort(filters);
+
+  const titleFilter = buildTitleSearch(search);
+  const query = {
+    ...(level?.length && {
+      level: level.length === 1 ? level[0] : { $in: level },
+    }),
+    ...(topic?.length && {
+      topic: topic.length === 1 ? topic[0] : { $in: topic },
+    }),
+    ...(examType?.length && {
+      examType: examType.length === 1 ? examType[0] : { $in: examType },
+    }),
+    ...(titleFilter && { title: titleFilter }),
+  };
+
+  const adminProjection = {
+    title: 1,
+    level: 1,
+    topic: 1,
+    examType: 1,
+    examPrompt: 1,
+    imageUrl: 1,
+    createdAt: 1,
+  };
+
   const [exams, total] = await Promise.all([
-    Exam.find()
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
-    Exam.countDocuments(),
+    buildLessonsListPromise(Exam, {
+      query,
+      projection: adminProjection,
+      sortBy,
+      order,
+      page,
+      limit,
+    }),
+    Exam.countDocuments(query),
   ]);
 
   return {
@@ -196,7 +251,7 @@ export async function listExamsAdmin({ page = 1, limit = 20 } = {}) {
 /**
  * GET /writing/exam/:id — Admin detail
  */
-export async function getExamAdmin(examId) {
+export async function adminGetExam(examId) {
   const exam = await Exam.findById(examId).lean();
   if (!exam) throw ApiError.notFound("Exam not found");
 

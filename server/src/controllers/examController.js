@@ -1,17 +1,34 @@
 import * as examService from "@server/services/examService";
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields, validateObjectId } from "@server/helpers/validateFields";
+import { parseQueryList } from "@server/helpers/writing/listLessonsQuery";
 
 /**
  * GET /api/writing/exam — Public list (optional auth, user-only shape)
  */
 export async function listExams(req, res, next) {
   try {
-    const { level, topic, examType, page = 1, limit = 12 } = req.query;
+    const {
+      level,
+      topic,
+      examType,
+      search,
+      sortBy,
+      order,
+      page = 1,
+      limit = 12,
+    } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
     const { items, total } = await examService.listExams(
-      { level, topic, examType },
+      {
+        level: parseQueryList(level),
+        topic: parseQueryList(topic),
+        examType: parseQueryList(examType),
+        search,
+        sortBy,
+        order,
+      },
       { page: p, limit: l },
       req.user?._id,
     );
@@ -43,10 +60,29 @@ export async function getExam(req, res, next) {
  */
 export async function adminListExams(req, res, next) {
   try {
-    const { page = 1, limit = 12 } = req.query;
+    const {
+      level,
+      topic,
+      examType,
+      search,
+      sortBy,
+      order,
+      page = 1,
+      limit = 12,
+    } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
-    const { items, total } = await examService.listExamsAdmin({ page: p, limit: l });
+    const { items, total } = await examService.adminListExams(
+      {
+        level: parseQueryList(level),
+        topic: parseQueryList(topic),
+        examType: parseQueryList(examType),
+        search,
+        sortBy,
+        order,
+      },
+      { page: p, limit: l },
+    );
     res.json({
       success: true,
       data: items,
@@ -63,7 +99,7 @@ export async function adminListExams(req, res, next) {
 export async function adminGetExam(req, res, next) {
   try {
     validateObjectId(req.params.id);
-    const data = await examService.getExamAdmin(req.params.id);
+    const data = await examService.adminGetExam(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
