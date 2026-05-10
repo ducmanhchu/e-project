@@ -81,7 +81,7 @@ router.delete("/slang-hang/dialogues/:id", slangHangController.remove);
 router.get("/slang-hang/azure-token", slangHangController.azureToken);
 router.post(
   "/slang-hang/dialogue-attempts",
-  slangHangController.recordUtterance,
+  slangHangController.recordMessageAttempt,
 );
 
 export default router;

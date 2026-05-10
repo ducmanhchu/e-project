@@ -91,27 +91,26 @@ export async function azureToken(req, res, next) {
 /**
  * POST /api/slang-hang/dialogue-attempts
  *
- * Records one utterance (user's reading of one message) into the user's
- * DialogueAttempt for this dialogue. Upserts: creates attempt if first
- * utterance, replaces utterance with same messageOrder (latest semantics).
+ * Records one message attempt (user's reading of one message) into the user's
+ * DialogueAttempt for this dialogue. Upserts: creates the parent attempt on
+ * first call, replaces the entry with the same messageOrder (latest semantics).
  */
-export async function recordUtterance(req, res, next) {
+export async function recordMessageAttempt(req, res, next) {
   try {
     validateFields(req.body, [
       "dialogueId",
       "messageOrder",
       "targetText",
-      "scores",
+      "feedback",
     ]);
     validateObjectId(req.body.dialogueId, "dialogueId");
 
-    const data = await slangHangService.recordUtterance({
+    const data = await slangHangService.recordMessageAttempt({
       userId: req.user._id,
       dialogueId: req.body.dialogueId,
       messageOrder: req.body.messageOrder,
       targetText: req.body.targetText,
-      scores: req.body.scores,
-      words: req.body.words,
+      feedback: req.body.feedback,
     });
     res.status(201).json({ success: true, data });
   } catch (e) {

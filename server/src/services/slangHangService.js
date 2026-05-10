@@ -104,7 +104,7 @@ export async function listDialogues({ userId, page = 1, limit = 12 }) {
   const l = Math.min(Math.max(1, Number(limit)), 50);
   const skip = (p - 1) * l;
 
-  const [items, total] = await Promise.all([
+  const [dialogues, total] = await Promise.all([
     Dialogue.find({ userId })
       .select("topic scenario createdAt messages.order")
       .sort({ createdAt: -1 })
@@ -114,8 +114,22 @@ export async function listDialogues({ userId, page = 1, limit = 12 }) {
     Dialogue.countDocuments({ userId }),
   ]);
 
+  const attempts = await DialogueAttempt.find({
+    userId,
+    dialogueId: { $in: dialogues.map((d) => d._id) },
+  })
+    .select("dialogueId status")
+    .lean();
+
+  const statusByDialogueId = new Map(
+    attempts.map((a) => [String(a.dialogueId), a.status]),
+  );
+
   return {
-    items: items.map(toListItem),
+    items: dialogues.map((d) => ({
+      ...toListItem(d),
+      status: statusByDialogueId.get(String(d._id)) ?? "not_started",
+    })),
     total,
     page: p,
     limit: l,
@@ -133,7 +147,7 @@ export async function getDialogue({ userId, id }) {
   }
   return {
     ...mapDialogueToResponse(doc),
-    attempt: attempt ? mapAttemptToResponse(attempt) : null,
+    ...flattenAttempt(attempt),
   };
 }
 
@@ -146,107 +160,66 @@ export async function getAzureSpeechToken() {
   return speechAuthProvider.getSpeechToken();
 }
 
-const REQUIRED_SCORE_FIELDS = [
-  "accuracy",
-  "fluency",
-  "completeness",
-  "pronunciation",
-];
-
-function isScore(v) {
-  return typeof v === "number" && v >= 0 && v <= 100;
-}
-
-function validateScores(scores) {
-  if (!scores || typeof scores !== "object") {
-    throw ApiError.badRequest("scores object required");
+function flattenAttempt(attempt) {
+  if (!attempt) {
+    return {
+      status: "not_started",
+      messageAttempts: [],
+      completedAt: null,
+    };
   }
-  for (const f of REQUIRED_SCORE_FIELDS) {
-    if (!isScore(scores[f])) {
-      throw ApiError.badRequest(`scores.${f} must be a number 0-100`);
-    }
-  }
-  if (scores.prosody !== undefined && !isScore(scores.prosody)) {
-    throw ApiError.badRequest("scores.prosody must be a number 0-100");
-  }
-}
-
-function sanitizeSubScoreList(arr, key) {
-  if (!Array.isArray(arr)) return undefined;
-  const cleaned = arr
-    .filter((s) => s && typeof s[key] === "string")
-    .map((s) => ({
-      [key]: s[key],
-      accuracyScore: isScore(s.accuracyScore) ? s.accuracyScore : undefined,
-    }));
-  return cleaned.length ? cleaned : undefined;
-}
-
-function sanitizeWords(words) {
-  if (!Array.isArray(words)) return [];
-  return words
-    .filter((w) => w && typeof w.word === "string")
-    .map((w) => ({
-      word: w.word,
-      accuracyScore: isScore(w.accuracyScore) ? w.accuracyScore : undefined,
-      errorType: typeof w.errorType === "string" ? w.errorType : undefined,
-      offset: typeof w.offset === "number" && w.offset >= 0 ? w.offset : undefined,
-      duration:
-        typeof w.duration === "number" && w.duration >= 0
-          ? w.duration
-          : undefined,
-      syllables: sanitizeSubScoreList(w.syllables, "syllable"),
-      phonemes: sanitizeSubScoreList(w.phonemes, "phoneme"),
-    }));
-}
-
-function buildScores(scores) {
   return {
-    accuracy: scores.accuracy,
-    fluency: scores.fluency,
-    completeness: scores.completeness,
-    pronunciation: scores.pronunciation,
-    prosody: isScore(scores.prosody) ? scores.prosody : undefined,
+    status: attempt.status,
+    messageAttempts: attempt.messageAttempts,
+    completedAt: attempt.completedAt ?? null,
   };
 }
 
-const SCORE_FIELDS_ALL = [...REQUIRED_SCORE_FIELDS, "prosody"];
-
-function computeOverallScores(utterances) {
-  if (!utterances.length) return undefined;
-  const result = {};
-  for (const f of SCORE_FIELDS_ALL) {
-    const vals = utterances
-      .map((u) => u.scores?.[f])
-      .filter((v) => typeof v === "number");
-    if (vals.length) {
-      result[f] = vals.reduce((a, b) => a + b, 0) / vals.length;
+async function buildAndSaveAttempt({
+  userId,
+  dialogueId,
+  newAttempt,
+  totalLearnerMessages,
+}) {
+  let attempt = await DialogueAttempt.findOne({ userId, dialogueId });
+  if (!attempt) {
+    attempt = new DialogueAttempt({
+      userId,
+      dialogueId,
+      messageAttempts: [newAttempt],
+    });
+  } else {
+    const idx = attempt.messageAttempts.findIndex(
+      (m) => m.messageOrder === newAttempt.messageOrder,
+    );
+    if (idx >= 0) {
+      attempt.messageAttempts.set(idx, newAttempt);
+    } else {
+      attempt.messageAttempts.push(newAttempt);
     }
   }
-  return result;
+
+  attempt.completedMessages = attempt.messageAttempts.length;
+  if (attempt.completedMessages >= totalLearnerMessages) {
+    attempt.status = "completed";
+    attempt.completedAt = attempt.completedAt ?? new Date();
+  } else {
+    attempt.status = "in_progress";
+    attempt.completedAt = undefined;
+  }
+
+  await attempt.save();
+  return attempt;
 }
 
-function mapAttemptToResponse(doc) {
-  return {
-    id: String(doc._id),
-    dialogueId: String(doc.dialogueId),
-    status: doc.status,
-    completedMessages: doc.completedMessages,
-    overallScores: doc.overallScores,
-    utterances: doc.utterances,
-    completedAt: doc.completedAt ?? null,
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
-  };
-}
+const MAX_SAVE_RETRIES = 3;
 
-export async function recordUtterance({
+export async function recordMessageAttempt({
   userId,
   dialogueId,
   messageOrder,
   targetText,
-  scores,
-  words = [],
+  feedback,
 }) {
   if (!dialogueId) throw ApiError.badRequest("dialogueId required");
   if (typeof messageOrder !== "number" || messageOrder < 0) {
@@ -255,7 +228,6 @@ export async function recordUtterance({
   if (typeof targetText !== "string" || targetText.trim() === "") {
     throw ApiError.badRequest("targetText required");
   }
-  validateScores(scores);
 
   const dlg = await Dialogue.findById(dialogueId)
     .select("userId mode messages.order messages.speakerKey")
@@ -282,42 +254,27 @@ export async function recordUtterance({
       ? dlg.messages.filter((m) => m.speakerKey === "B").length
       : totalMessages;
 
-  const newUtterance = {
+  const newAttempt = {
     messageOrder,
     targetText: targetText.trim(),
-    scores: buildScores(scores),
-    words: sanitizeWords(words),
+    feedback,
     attemptedAt: new Date(),
   };
 
-  let attempt = await DialogueAttempt.findOne({ userId, dialogueId });
-  if (!attempt) {
-    attempt = new DialogueAttempt({
-      userId,
-      dialogueId,
-      utterances: [newUtterance],
-    });
-  } else {
-    const idx = attempt.utterances.findIndex(
-      (u) => u.messageOrder === messageOrder,
-    );
-    if (idx >= 0) {
-      attempt.utterances.set(idx, newUtterance);
-    } else {
-      attempt.utterances.push(newUtterance);
+  for (let i = 0; i < MAX_SAVE_RETRIES; i++) {
+    try {
+      const saved = await buildAndSaveAttempt({
+        userId,
+        dialogueId,
+        newAttempt,
+        totalLearnerMessages,
+      });
+      return flattenAttempt(saved);
+    } catch (err) {
+      const isVersionConflict =
+        err?.name === "VersionError" || err?.code === 11000;
+      if (isVersionConflict && i < MAX_SAVE_RETRIES - 1) continue;
+      throw err;
     }
   }
-
-  attempt.completedMessages = attempt.utterances.length;
-  attempt.overallScores = computeOverallScores(attempt.utterances);
-  if (attempt.completedMessages >= totalLearnerMessages) {
-    attempt.status = "completed";
-    attempt.completedAt = attempt.completedAt ?? new Date();
-  } else {
-    attempt.status = "in_progress";
-    attempt.completedAt = undefined;
-  }
-
-  await attempt.save();
-  return mapAttemptToResponse(attempt);
 }
