@@ -1,6 +1,59 @@
 import { Attempt } from "@server/models/attempt/Attempt";
 import { Submission } from "@server/models/attempt/Submission";
 
+const ATTEMPT_STATUSES = new Set(["in_progress", "completed"]);
+
+/**
+ * Build a Mongo query fragment that filters Writing lessons by user attempt status.
+ *
+ * Returns one of:
+ *   - null  → no filter (caller spreads as no-op)
+ *   - { _id: { $in: [] } }       → force empty result
+ *   - { _id: { $in:  [...] } }    → only lessons with attempts in matched statuses
+ *   - { _id: { $nin: [...] } }    → lessons NOT attempted by user (= "not_started")
+ *   - { $or: [{...}, {...}] }    → mixed (matched attempts ∪ not_started)
+ *
+ * Guest mode (no userId): all lessons are implicitly "not_started", so
+ *   - statuses includes "not_started" → null (return all)
+ *   - otherwise → empty result
+ */
+export async function buildStatusFilter({ userId, lessonType, statuses }) {
+  if (!Array.isArray(statuses) || statuses.length === 0) return null;
+
+  const matchedAttemptStatuses = statuses.filter((s) =>
+    ATTEMPT_STATUSES.has(s),
+  );
+  const includesNotStarted = statuses.includes("not_started");
+
+  if (matchedAttemptStatuses.length === 0 && !includesNotStarted) {
+    return null;
+  }
+
+  if (!userId) {
+    return includesNotStarted ? null : { _id: { $in: [] } };
+  }
+
+  const attempts = await Attempt.find({ userId, lessonType })
+    .select("lessonId status")
+    .lean();
+  const allIds = attempts.map((a) => a.lessonId);
+  const matchedIds = matchedAttemptStatuses.length
+    ? attempts
+        .filter((a) => matchedAttemptStatuses.includes(a.status))
+        .map((a) => a.lessonId)
+    : [];
+
+  if (matchedAttemptStatuses.length > 0 && !includesNotStarted) {
+    return { _id: { $in: matchedIds } };
+  }
+  if (matchedAttemptStatuses.length === 0 && includesNotStarted) {
+    return allIds.length ? { _id: { $nin: allIds } } : null;
+  }
+  return {
+    $or: [{ _id: { $in: matchedIds } }, { _id: { $nin: allIds } }],
+  };
+}
+
 /**
  * Find or create an attempt for a user + lesson.
  */

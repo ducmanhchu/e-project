@@ -8,7 +8,7 @@ import { parseQueryList } from "@server/helpers/writing/listLessonsQuery";
  */
 export async function listLessons(req, res, next) {
   try {
-    const { level, topic, search, sortBy, order, page = 1, limit = 12 } = req.query;
+    const { level, topic, search, status, sortBy, order, page = 1, limit = 12 } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
     const { items, total } = await rewriteService.listLessons(
@@ -16,6 +16,7 @@ export async function listLessons(req, res, next) {
         level: parseQueryList(level),
         topic: parseQueryList(topic),
         search,
+        status: parseQueryList(status),
         sortBy,
         order,
       },

@@ -8,6 +8,7 @@ import {
   submitAndUpdateProgress,
   getLastSubmission,
   getSubmissions,
+  buildStatusFilter,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_THRESHOLD } from "@server/const/exercise";
 import { WRITING_TYPE } from "@server/const/writting";
@@ -57,11 +58,16 @@ function shuffleArray(arr) {
  * GET /writing/see-and-write — List lessons + user's attempt summary
  */
 export async function listLessons(filters, pagination, userId) {
-  const { level, topic, search } = filters;
+  const { level, topic, search, status } = filters;
   const { page, limit } = pagination;
   const { sortBy, order } = resolveSort(filters);
 
   const titleFilter = buildTitleSearch(search);
+  const statusFilter = await buildStatusFilter({
+    userId,
+    lessonType: "SeeWrite",
+    statuses: status,
+  });
   const query = {
     ...(level?.length && {
       level: level.length === 1 ? level[0] : { $in: level },
@@ -70,6 +76,7 @@ export async function listLessons(filters, pagination, userId) {
       topic: topic.length === 1 ? topic[0] : { $in: topic },
     }),
     ...(titleFilter && { title: titleFilter }),
+    ...(statusFilter || {}),
   };
 
   const [lessons, total] = await Promise.all([

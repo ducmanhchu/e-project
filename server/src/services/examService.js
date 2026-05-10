@@ -8,6 +8,7 @@ import {
   submitAndUpdateProgress,
   getLastSubmission,
   getSubmissions,
+  buildStatusFilter,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_BAND, EXAM_MIN_WORDS, bandToScore, roundBand } from "@server/const/exercise";
 import { WRITING_TYPE, WRITING_LEVEL, WRITING_TOPIC } from "@server/const/writting";
@@ -30,11 +31,16 @@ const EXAM_LIST_PROJECTION = {
  * GET /writing/exam — List exams + user's attempt summary
  */
 export async function listExams(filters, pagination, userId) {
-  const { level, topic, examType, search } = filters;
+  const { level, topic, examType, search, status } = filters;
   const { page, limit } = pagination;
   const { sortBy, order } = resolveSort(filters);
 
   const titleFilter = buildTitleSearch(search);
+  const statusFilter = await buildStatusFilter({
+    userId,
+    lessonType: "Exam",
+    statuses: status,
+  });
   const query = {
     ...(level?.length && {
       level: level.length === 1 ? level[0] : { $in: level },
@@ -46,6 +52,7 @@ export async function listExams(filters, pagination, userId) {
       examType: examType.length === 1 ? examType[0] : { $in: examType },
     }),
     ...(titleFilter && { title: titleFilter }),
+    ...(statusFilter || {}),
   };
 
   const [exams, total] = await Promise.all([
