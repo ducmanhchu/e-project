@@ -1,12 +1,21 @@
 import { ApiError } from "@server/helpers/ApiError";
 import { Dialogue } from "@server/models/slangHang/Dialogue";
+import { DialogueAttempt } from "@server/models/slangHang/DialogueAttempt";
 import { WRITING_TOPIC } from "@server/const/writting";
-import { SLANG_HANG_LIMITS } from "@server/const/slangHang";
+import { SLANG_HANG_LIMITS, SLANG_HANG_MODE } from "@server/const/slangHang";
 import * as slangHangProvider from "@server/services/ai/slangHangProvider";
+import * as speechAuthProvider from "@server/services/azure/speechAuthProvider";
 
 function validateTopic(topic) {
   if (!Object.values(WRITING_TOPIC).includes(topic)) {
     throw ApiError.badRequest("Invalid topic");
+  }
+}
+
+function validateMode(mode) {
+  if (mode === undefined) return;
+  if (!Object.values(SLANG_HANG_MODE).includes(mode)) {
+    throw ApiError.badRequest("Invalid mode");
   }
 }
 
@@ -35,6 +44,13 @@ function sanitizeMessages(ai) {
       slang: Array.isArray(m.slang) ? m.slang : [],
     }));
 
+  if (messages[0].speakerKey !== "A") {
+    throw new ApiError(
+      502,
+      "Invalid AI response: dialogue must start with speaker A",
+    );
+  }
+
   return {
     scenario: typeof ai.scenario === "string" ? ai.scenario.trim() : "",
     speakers: ai.speakers.map((s) => ({
@@ -51,6 +67,7 @@ function mapDialogueToResponse(doc) {
   return {
     id: json.id ?? String(json._id),
     topic: json.topic,
+    mode: json.mode ?? SLANG_HANG_MODE.SINGLE_ROLE,
     scenario: json.scenario,
     speakers: json.speakers,
     messages: json.messages,
@@ -58,11 +75,17 @@ function mapDialogueToResponse(doc) {
   };
 }
 
-export async function generateDialogue({ userId, topic }) {
+export async function generateDialogue({ userId, topic, mode }) {
   validateTopic(topic);
+  validateMode(mode);
   const ai = await slangHangProvider.generateDialogue({ topic });
   const sanitized = sanitizeMessages(ai);
-  const doc = await Dialogue.create({ userId, topic, ...sanitized });
+  const doc = await Dialogue.create({
+    userId,
+    topic,
+    mode: mode || SLANG_HANG_MODE.SINGLE_ROLE,
+    ...sanitized,
+  });
   return mapDialogueToResponse(doc);
 }
 
@@ -81,7 +104,7 @@ export async function listDialogues({ userId, page = 1, limit = 12 }) {
   const l = Math.min(Math.max(1, Number(limit)), 50);
   const skip = (p - 1) * l;
 
-  const [items, total] = await Promise.all([
+  const [dialogues, total] = await Promise.all([
     Dialogue.find({ userId })
       .select("topic scenario createdAt messages.order")
       .sort({ createdAt: -1 })
@@ -91,8 +114,22 @@ export async function listDialogues({ userId, page = 1, limit = 12 }) {
     Dialogue.countDocuments({ userId }),
   ]);
 
+  const attempts = await DialogueAttempt.find({
+    userId,
+    dialogueId: { $in: dialogues.map((d) => d._id) },
+  })
+    .select("dialogueId status")
+    .lean();
+
+  const statusByDialogueId = new Map(
+    attempts.map((a) => [String(a.dialogueId), a.status]),
+  );
+
   return {
-    items: items.map(toListItem),
+    items: dialogues.map((d) => ({
+      ...toListItem(d),
+      status: statusByDialogueId.get(String(d._id)) ?? "not_started",
+    })),
     total,
     page: p,
     limit: l,
@@ -100,12 +137,18 @@ export async function listDialogues({ userId, page = 1, limit = 12 }) {
 }
 
 export async function getDialogue({ userId, id }) {
-  const doc = await Dialogue.findById(id).lean();
+  const [doc, attempt] = await Promise.all([
+    Dialogue.findById(id).lean(),
+    DialogueAttempt.findOne({ userId, dialogueId: id }).lean(),
+  ]);
   if (!doc) throw ApiError.notFound("Dialogue not found");
   if (String(doc.userId) !== String(userId)) {
     throw ApiError.forbidden("Forbidden");
   }
-  return mapDialogueToResponse(doc);
+  return {
+    ...mapDialogueToResponse(doc),
+    ...flattenAttempt(attempt),
+  };
 }
 
 export async function deleteDialogue({ userId, id }) {
@@ -113,35 +156,125 @@ export async function deleteDialogue({ userId, id }) {
   if (!result) throw ApiError.notFound("Dialogue not found");
 }
 
-function validateAudio(buffer, mimeType) {
-  if (!buffer || buffer.length === 0) {
-    throw ApiError.badRequest("Audio file required");
-  }
-  if (buffer.length > SLANG_HANG_LIMITS.MAX_AUDIO_BYTES) {
-    throw ApiError.badRequest(
-      `Audio file too large (max ${SLANG_HANG_LIMITS.MAX_AUDIO_BYTES} bytes)`,
-    );
-  }
-  if (!SLANG_HANG_LIMITS.ALLOWED_AUDIO_MIME.includes(mimeType)) {
-    throw ApiError.badRequest("Unsupported audio format");
-  }
+export async function getAzureSpeechToken() {
+  return speechAuthProvider.getSpeechToken();
 }
 
-export async function gradePronunciation({
-  audioBuffer,
-  mimeType,
-  targetText,
-  slangContext = "",
-}) {
-  if (typeof targetText !== "string" || targetText.trim() === "") {
-    throw ApiError.badRequest("Target text required");
+function flattenAttempt(attempt) {
+  if (!attempt) {
+    return {
+      status: "not_started",
+      messageAttempts: [],
+      completedAt: null,
+    };
   }
-  validateAudio(audioBuffer, mimeType);
+  return {
+    status: attempt.status,
+    messageAttempts: attempt.messageAttempts,
+    completedAt: attempt.completedAt ?? null,
+  };
+}
 
-  return slangHangProvider.gradePronunciation({
-    audioBuffer,
-    mimeType,
-    targetText,
-    slangContext,
-  });
+async function buildAndSaveAttempt({
+  userId,
+  dialogueId,
+  newAttempt,
+  totalLearnerMessages,
+}) {
+  let attempt = await DialogueAttempt.findOne({ userId, dialogueId });
+  if (!attempt) {
+    attempt = new DialogueAttempt({
+      userId,
+      dialogueId,
+      messageAttempts: [newAttempt],
+    });
+  } else {
+    const idx = attempt.messageAttempts.findIndex(
+      (m) => m.messageOrder === newAttempt.messageOrder,
+    );
+    if (idx >= 0) {
+      attempt.messageAttempts.set(idx, newAttempt);
+    } else {
+      attempt.messageAttempts.push(newAttempt);
+    }
+  }
+
+  attempt.completedMessages = attempt.messageAttempts.length;
+  if (attempt.completedMessages >= totalLearnerMessages) {
+    attempt.status = "completed";
+    attempt.completedAt = attempt.completedAt ?? new Date();
+  } else {
+    attempt.status = "in_progress";
+    attempt.completedAt = undefined;
+  }
+
+  await attempt.save();
+  return attempt;
+}
+
+const MAX_SAVE_RETRIES = 3;
+
+export async function recordMessageAttempt({
+  userId,
+  dialogueId,
+  messageOrder,
+  targetText,
+  feedback,
+}) {
+  if (!dialogueId) throw ApiError.badRequest("dialogueId required");
+  if (typeof messageOrder !== "number" || messageOrder < 0) {
+    throw ApiError.badRequest("messageOrder must be a non-negative number");
+  }
+  if (typeof targetText !== "string" || targetText.trim() === "") {
+    throw ApiError.badRequest("targetText required");
+  }
+
+  const dlg = await Dialogue.findById(dialogueId)
+    .select("userId mode messages.order messages.speakerKey")
+    .lean();
+  if (!dlg) throw ApiError.notFound("Dialogue not found");
+  if (String(dlg.userId) !== String(userId)) {
+    throw ApiError.forbidden("Forbidden");
+  }
+  const totalMessages = Array.isArray(dlg.messages) ? dlg.messages.length : 0;
+  if (messageOrder >= totalMessages) {
+    throw ApiError.badRequest("messageOrder out of range");
+  }
+
+  const mode = dlg.mode || SLANG_HANG_MODE.SINGLE_ROLE;
+  const targetMsg = dlg.messages[messageOrder];
+  if (mode === SLANG_HANG_MODE.SINGLE_ROLE && targetMsg?.speakerKey !== "B") {
+    throw ApiError.badRequest(
+      "In single_role mode only speaker B's messages can be recorded (A is played by TTS)",
+    );
+  }
+
+  const totalLearnerMessages =
+    mode === SLANG_HANG_MODE.SINGLE_ROLE
+      ? dlg.messages.filter((m) => m.speakerKey === "B").length
+      : totalMessages;
+
+  const newAttempt = {
+    messageOrder,
+    targetText: targetText.trim(),
+    feedback,
+    attemptedAt: new Date(),
+  };
+
+  for (let i = 0; i < MAX_SAVE_RETRIES; i++) {
+    try {
+      const saved = await buildAndSaveAttempt({
+        userId,
+        dialogueId,
+        newAttempt,
+        totalLearnerMessages,
+      });
+      return flattenAttempt(saved);
+    } catch (err) {
+      const isVersionConflict =
+        err?.name === "VersionError" || err?.code === 11000;
+      if (isVersionConflict && i < MAX_SAVE_RETRIES - 1) continue;
+      throw err;
+    }
+  }
 }

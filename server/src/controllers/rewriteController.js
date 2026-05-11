@@ -1,17 +1,25 @@
 import * as rewriteService from "@server/services/rewriteService";
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
+import { parseQueryList } from "@server/helpers/writing/listLessonsQuery";
 
 /**
  * GET /api/writing/rewrite — Public list (optional auth, user-only shape)
  */
 export async function listLessons(req, res, next) {
   try {
-    const { level, topic, page = 1, limit = 12 } = req.query;
+    const { level, topic, search, status, sortBy, order, page = 1, limit = 12 } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
     const { items, total } = await rewriteService.listLessons(
-      { level, topic },
+      {
+        level: parseQueryList(level),
+        topic: parseQueryList(topic),
+        search,
+        status: parseQueryList(status),
+        sortBy,
+        order,
+      },
       { page: p, limit: l },
       req.user?._id,
     );
@@ -42,10 +50,19 @@ export async function getLesson(req, res, next) {
  */
 export async function adminListLessons(req, res, next) {
   try {
-    const { page = 1, limit = 12 } = req.query;
+    const { level, topic, search, sortBy, order, page = 1, limit = 12 } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
-    const { items, total } = await rewriteService.listLessonsAdmin({ page: p, limit: l });
+    const { items, total } = await rewriteService.adminListLessons(
+      {
+        level: parseQueryList(level),
+        topic: parseQueryList(topic),
+        search,
+        sortBy,
+        order,
+      },
+      { page: p, limit: l },
+    );
     res.json({
       success: true,
       data: items,
@@ -61,7 +78,7 @@ export async function adminListLessons(req, res, next) {
  */
 export async function adminGetLesson(req, res, next) {
   try {
-    const data = await rewriteService.getLessonAdmin(req.params.id);
+    const data = await rewriteService.adminGetLesson(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);

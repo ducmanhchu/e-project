@@ -7,31 +7,60 @@ import {
   submitAndUpdateProgress,
   getLastSubmissions,
   getSubmissions,
+  buildStatusFilter,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_THRESHOLD } from "@server/const/exercise";
 import { WRITING_TYPE } from "@server/const/writting";
 import { createWriting } from "@server/services/writingService";
 import { validateFields } from "@server/helpers/validateFields";
+import {
+  resolveSort,
+  buildLessonsListPromise,
+  buildTitleSearch,
+} from "@server/helpers/writing/listLessonsQuery";
+
+const RW_LIST_PROJECTION = {
+  title: 1,
+  level: 1,
+  topic: 1,
+  totalSentences: 1,
+  createdAt: 1,
+};
 
 /**
  * GET /writing/rewrite — List lessons + user's attempt summary
  */
 export async function listLessons(filters, pagination, userId) {
-  const { level, topic } = filters;
+  const { level, topic, search, status } = filters;
   const { page, limit } = pagination;
+  const { sortBy, order } = resolveSort(filters);
 
+  const titleFilter = buildTitleSearch(search);
+  const statusFilter = await buildStatusFilter({
+    userId,
+    lessonType: "Rewrite",
+    statuses: status,
+  });
   const query = {
-    ...(level && { level }),
-    ...(topic && { topic }),
+    ...(level?.length && {
+      level: level.length === 1 ? level[0] : { $in: level },
+    }),
+    ...(topic?.length && {
+      topic: topic.length === 1 ? topic[0] : { $in: topic },
+    }),
+    ...(titleFilter && { title: titleFilter }),
+    ...(statusFilter || {}),
   };
 
   const [lessons, total] = await Promise.all([
-    Rewrite.find(query)
-      .select("title level topic totalSentences createdAt")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
+    buildLessonsListPromise(Rewrite, {
+      query,
+      projection: RW_LIST_PROJECTION,
+      sortBy,
+      order,
+      page,
+      limit,
+    }),
     Rewrite.countDocuments(query),
   ]);
 
@@ -145,16 +174,43 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
 }
 
 /**
- * GET /writing/rewrite — Admin list (all lessons, full data)
+ * GET /writing/rewrite — Admin list (with filter + sort, full data)
  */
-export async function listLessonsAdmin({ page = 1, limit = 20 } = {}) {
+export async function adminListLessons(filters = {}, pagination = {}) {
+  const { level, topic, search } = filters;
+  const { page = 1, limit = 20 } = pagination;
+  const { sortBy, order } = resolveSort(filters);
+
+  const titleFilter = buildTitleSearch(search);
+  const query = {
+    ...(level?.length && {
+      level: level.length === 1 ? level[0] : { $in: level },
+    }),
+    ...(topic?.length && {
+      topic: topic.length === 1 ? topic[0] : { $in: topic },
+    }),
+    ...(titleFilter && { title: titleFilter }),
+  };
+
+  const adminProjection = {
+    title: 1,
+    level: 1,
+    topic: 1,
+    totalSentences: 1,
+    sentences: 1,
+    createdAt: 1,
+  };
+
   const [lessons, total] = await Promise.all([
-    Rewrite.find()
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
-    Rewrite.countDocuments(),
+    buildLessonsListPromise(Rewrite, {
+      query,
+      projection: adminProjection,
+      sortBy,
+      order,
+      page,
+      limit,
+    }),
+    Rewrite.countDocuments(query),
   ]);
 
   return {
@@ -174,7 +230,7 @@ export async function listLessonsAdmin({ page = 1, limit = 20 } = {}) {
 /**
  * GET /writing/rewrite/:id — Admin detail (full data)
  */
-export async function getLessonAdmin(lessonId) {
+export async function adminGetLesson(lessonId) {
   const lesson = await Rewrite.findById(lessonId).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 

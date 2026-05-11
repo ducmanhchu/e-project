@@ -23,4 +23,7 @@ export const env = {
   EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || "English Platform",
   APP_URL: process.env.APP_URL || "http://localhost:5000",
   FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:5173",
+
+  AZURE_SPEECH_KEY: process.env.AZURE_SPEECH_KEY,
+  AZURE_SPEECH_REGION: process.env.AZURE_SPEECH_REGION,
 };

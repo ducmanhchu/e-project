@@ -1,24 +1,48 @@
-import * as exerciseService from "@server/services/exerciseService";
+import * as reverseTranslationService from "@server/services/reverseTranslationService";
 import * as writingService from "@server/services/writingService";
 import { ApiError } from "@server/helpers/ApiError";
+import { parseQueryList } from "@server/helpers/writing/listLessonsQuery";
 
 /**
  * GET /api/writing/reverse-translation
  */
 export async function listLessons(req, res, next) {
   try {
-    const { level, contentType, topic, page = 1, limit = 12 } = req.query;
+    const {
+      level,
+      contentType,
+      topic,
+      search,
+      status,
+      sortBy,
+      order,
+      page = 1,
+      limit = 12,
+    } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
-    const { items, total } = await exerciseService.listLessons(
-      { level, contentType, topic },
+    const { items, total } = await reverseTranslationService.listLessons(
+      {
+        level: parseQueryList(level),
+        contentType,
+        topic: parseQueryList(topic),
+        search,
+        status: parseQueryList(status),
+        sortBy,
+        order,
+      },
       { page: p, limit: l },
       req.user?._id,
     );
     res.json({
       success: true,
       data: items,
-      pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
+      pagination: {
+        page: p,
+        limit: l,
+        total,
+        totalPages: Math.ceil(total / l),
+      },
     });
   } catch (e) {
     next(e);
@@ -30,7 +54,7 @@ export async function listLessons(req, res, next) {
  */
 export async function getLesson(req, res, next) {
   try {
-    const data = await exerciseService.getLesson(req.params.id, req.user._id);
+    const data = await reverseTranslationService.getLesson(req.params.id, req.user._id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -48,7 +72,7 @@ export async function submitAnswer(req, res, next) {
       throw ApiError.badRequest("sentenceOrder and userAnswer are required");
     }
 
-    const data = await exerciseService.submitAnswer(
+    const data = await reverseTranslationService.submitAnswer(
       req.user._id,
       req.params.id,
       +sentenceOrder,
@@ -59,7 +83,6 @@ export async function submitAnswer(req, res, next) {
     next(e);
   }
 }
-
 
 /**
  * POST /api/writing/reverse-translation/preview — [ADMIN]
@@ -90,10 +113,7 @@ export async function createLesson(req, res, next) {
  */
 export async function saveDictionary(req, res, next) {
   try {
-    const data = await writingService.saveDictionary(
-      req.params.id,
-      req.body,
-    );
+    const data = await writingService.saveDictionary(req.params.id, req.body);
     res.status(201).json({ success: true, data });
   } catch (e) {
     next(e);
@@ -105,7 +125,7 @@ export async function saveDictionary(req, res, next) {
  */
 export async function updateLesson(req, res, next) {
   try {
-    const data = await exerciseService.updateLesson(req.params.id, req.body);
+    const data = await reverseTranslationService.updateLesson(req.params.id, req.body);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -117,7 +137,7 @@ export async function updateLesson(req, res, next) {
  */
 export async function deleteLesson(req, res, next) {
   try {
-    const data = await exerciseService.deleteLesson(req.params.id);
+    const data = await reverseTranslationService.deleteLesson(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
@@ -129,17 +149,38 @@ export async function deleteLesson(req, res, next) {
  */
 export async function adminListLessons(req, res, next) {
   try {
-    const { level, contentType, topic, page = 1, limit = 12 } = req.query;
+    const {
+      level,
+      contentType,
+      topic,
+      search,
+      sortBy,
+      order,
+      page = 1,
+      limit = 12,
+    } = req.query;
     const p = Math.max(1, +page);
     const l = Math.min(Math.max(1, +limit), 50);
-    const { items, total } = await exerciseService.adminListLessons(
-      { level, contentType, topic },
+    const { items, total } = await reverseTranslationService.adminListLessons(
+      {
+        level: parseQueryList(level),
+        contentType,
+        topic: parseQueryList(topic),
+        search,
+        sortBy,
+        order,
+      },
       { page: p, limit: l },
     );
     res.json({
       success: true,
       data: items,
-      pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
+      pagination: {
+        page: p,
+        limit: l,
+        total,
+        totalPages: Math.ceil(total / l),
+      },
     });
   } catch (e) {
     next(e);
@@ -151,10 +192,9 @@ export async function adminListLessons(req, res, next) {
  */
 export async function adminGetLesson(req, res, next) {
   try {
-    const data = await exerciseService.adminGetLesson(req.params.id);
+    const data = await reverseTranslationService.adminGetLesson(req.params.id);
     res.json({ success: true, data });
   } catch (e) {
     next(e);
   }
 }
-

@@ -7,29 +7,59 @@ import {
   submitAndUpdateProgress,
   getLastSubmissions,
   getSubmissions,
+  buildStatusFilter,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_THRESHOLD } from "@server/const/exercise";
+import {
+  resolveSort,
+  buildLessonsListPromise,
+  buildTitleSearch,
+} from "@server/helpers/writing/listLessonsQuery";
+
+const RT_LIST_PROJECTION = {
+  title: 1,
+  level: 1,
+  topic: 1,
+  contentType: 1,
+  totalSentences: 1,
+  createdAt: 1,
+};
 
 /**
  * GET /writing/reverse-translation — List published lessons + user's attempt summary
  */
 export async function listLessons(filters, pagination, userId) {
-  const { level, contentType, topic } = filters;
+  const { level, contentType, topic, search, status } = filters;
   const { page, limit } = pagination;
+  const { sortBy, order } = resolveSort(filters);
 
+  const titleFilter = buildTitleSearch(search);
+  const statusFilter = await buildStatusFilter({
+    userId,
+    lessonType: "ReverseTranslation",
+    statuses: status,
+  });
   const query = {
-    ...(level && { level }),
+    ...(level?.length && {
+      level: level.length === 1 ? level[0] : { $in: level },
+    }),
     ...(contentType && { contentType }),
-    ...(topic && { topic }),
+    ...(topic?.length && {
+      topic: topic.length === 1 ? topic[0] : { $in: topic },
+    }),
+    ...(titleFilter && { title: titleFilter }),
+    ...(statusFilter || {}),
   };
 
   const [lessons, total] = await Promise.all([
-    ReverseTranslation.find(query)
-      .select("title level topic contentType totalSentences createdAt")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
+    buildLessonsListPromise(ReverseTranslation, {
+      query,
+      projection: RT_LIST_PROJECTION,
+      sortBy,
+      order,
+      page,
+      limit,
+    }),
     ReverseTranslation.countDocuments(query),
   ]);
 
@@ -215,10 +245,14 @@ export async function deleteLesson(lessonId) {
 }
 
 /**
- * Admin: list lessons (identical to listLessons for now; isolated for future divergence)
+ * Admin: list lessons (identical to listLessons for now; isolated for future divergence).
+ * Strips `status` because that filter is per-user — admin has no userId so it would
+ * silently fall into guest mode and return empty for in_progress/completed.
  */
-export async function adminListLessons(filters, pagination) {
-  return listLessons(filters, pagination);
+export async function adminListLessons(filters = {}, pagination) {
+  const adminFilters = { ...filters };
+  delete adminFilters.status;
+  return listLessons(adminFilters, pagination);
 }
 
 /**

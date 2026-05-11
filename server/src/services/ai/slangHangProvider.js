@@ -47,6 +47,8 @@ const GENERATE_SYSTEM = `You are a native English speaker and screenwriter who c
 
 Rules:
 - Generate ${SLANG_HANG_LIMITS.MIN_MESSAGES}-${SLANG_HANG_LIMITS.MAX_MESSAGES} messages alternating between exactly 2 speakers (A and B).
+- Speaker A MUST send the first message (order 0); the conversation always starts with A.
+- Speaker A is the conversation opener (TTS-played in the app). Speaker B responds — make B's lines natural, pronounceable responses that flow from A's setup.
 - Speakers are distinct people with names (e.g., Mike, Sarah, Diego, Aisha).
 - Each message ≤ ${SLANG_HANG_LIMITS.MAX_MESSAGE_LENGTH} chars, sounds spoken (not written).
 - Include 4-8 slang/colloquial expressions total, distributed naturally across messages (≤ ${SLANG_HANG_LIMITS.MAX_SLANG_PER_MESSAGE} per message). Mix common slang with mildly regional/generational variants. NEVER invent slang that isn't actually used.
@@ -104,95 +106,6 @@ const GENERATE_SCHEMA = {
   },
   propertyOrdering: ["scenario", "speakers", "messages"],
 };
-
-const GRADE_SCHEMA = {
-  type: Type.OBJECT,
-  properties: {
-    score: { type: Type.INTEGER },
-    accuracyComment: { type: Type.STRING },
-    fluencyComment: { type: Type.STRING },
-    slangComment: { type: Type.STRING },
-    problemWords: { type: Type.ARRAY, items: { type: Type.STRING } },
-    suggestion: { type: Type.STRING },
-  },
-  propertyOrdering: [
-    "score",
-    "accuracyComment",
-    "fluencyComment",
-    "slangComment",
-    "problemWords",
-    "suggestion",
-  ],
-};
-
-const GRADE_PROMPT = ({ targetText, slangContext }) => `You are an English pronunciation coach evaluating a learner reading a single line of dialogue containing slang/colloquial expressions.
-
-Target line (what they should have said):
-"${targetText}"
-
-Slang in this line: ${slangContext || "none"}
-
-Listen to the audio and evaluate:
-1. Accuracy — were the words recognizable and pronounced correctly?
-2. Fluency — natural pace, no awkward pauses?
-3. Slang nuance — did they pronounce slang naturally (right stress/intonation)?
-
-Return JSON with:
-- score: 0-100 (0 = unintelligible; 100 = native-like)
-- accuracyComment: 1 sentence about word accuracy (English)
-- fluencyComment: 1 sentence about pace/intonation (English)
-- slangComment: 1 sentence about slang delivery, or "N/A" if no slang (English)
-- problemWords: list of words mispronounced or unclear (may be empty)
-- suggestion: 1 actionable tip in Vietnamese
-
-Be encouraging but honest.`;
-
-export async function gradePronunciation({
-  audioBuffer,
-  mimeType,
-  targetText,
-  slangContext = "",
-}) {
-  console.log(
-    `[slang-hang] grade request: targetTextLen=${targetText.length}, audioBytes=${audioBuffer.length}, mime=${mimeType}`,
-  );
-  const startedAt = Date.now();
-
-  return withRetry(async () => {
-    const response = await genai.models.generateContent({
-      model: MODEL,
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              inlineData: {
-                mimeType,
-                data: audioBuffer.toString("base64"),
-              },
-            },
-            { text: GRADE_PROMPT({ targetText, slangContext }) },
-          ],
-        },
-      ],
-      config: {
-        responseMimeType: "application/json",
-        responseJsonSchema: GRADE_SCHEMA,
-      },
-    });
-
-    let parsed;
-    try {
-      parsed = JSON.parse(response.text);
-    } catch {
-      throw new ApiError(502, "Invalid AI response: JSON parse failed");
-    }
-    console.log(
-      `[slang-hang] grade ok: score=${parsed?.score}, latency=${Date.now() - startedAt}ms`,
-    );
-    return parsed;
-  }, "gradePronunciation");
-}
 
 export async function generateDialogue({ topic }) {
   console.log(`[slang-hang] generate request: topic=${topic}`);

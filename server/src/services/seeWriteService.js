@@ -8,10 +8,24 @@ import {
   submitAndUpdateProgress,
   getLastSubmission,
   getSubmissions,
+  buildStatusFilter,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_THRESHOLD } from "@server/const/exercise";
 import { WRITING_TYPE } from "@server/const/writting";
 import { createWriting } from "@server/services/writingService";
+import {
+  resolveSort,
+  buildLessonsListPromise,
+  buildTitleSearch,
+} from "@server/helpers/writing/listLessonsQuery";
+
+const SW_LIST_PROJECTION = {
+  title: 1,
+  level: 1,
+  topic: 1,
+  image: 1,
+  createdAt: 1,
+};
 
 function buildMeaningMap(wordPool) {
   const map = {};
@@ -44,21 +58,36 @@ function shuffleArray(arr) {
  * GET /writing/see-and-write — List lessons + user's attempt summary
  */
 export async function listLessons(filters, pagination, userId) {
-  const { level, topic } = filters;
+  const { level, topic, search, status } = filters;
   const { page, limit } = pagination;
+  const { sortBy, order } = resolveSort(filters);
 
+  const titleFilter = buildTitleSearch(search);
+  const statusFilter = await buildStatusFilter({
+    userId,
+    lessonType: "SeeWrite",
+    statuses: status,
+  });
   const query = {
-    ...(level && { level }),
-    ...(topic && { topic }),
+    ...(level?.length && {
+      level: level.length === 1 ? level[0] : { $in: level },
+    }),
+    ...(topic?.length && {
+      topic: topic.length === 1 ? topic[0] : { $in: topic },
+    }),
+    ...(titleFilter && { title: titleFilter }),
+    ...(statusFilter || {}),
   };
 
   const [lessons, total] = await Promise.all([
-    SeeWrite.find(query)
-      .select("title level topic image createdAt")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
+    buildLessonsListPromise(SeeWrite, {
+      query,
+      projection: SW_LIST_PROJECTION,
+      sortBy,
+      order,
+      page,
+      limit,
+    }),
     SeeWrite.countDocuments(query),
   ]);
 
@@ -258,16 +287,45 @@ export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}
 }
 
 /**
- * GET /writing/see-and-write — Admin list (all lessons)
+ * GET /writing/see-and-write — Admin list (with filter + sort like user list, full data)
  */
-export async function listLessonsAdmin({ page = 1, limit = 20 } = {}) {
+export async function adminListLessons(filters = {}, pagination = {}) {
+  const { level, topic, search } = filters;
+  const { page = 1, limit = 20 } = pagination;
+  const { sortBy, order } = resolveSort(filters);
+
+  const titleFilter = buildTitleSearch(search);
+  const query = {
+    ...(level?.length && {
+      level: level.length === 1 ? level[0] : { $in: level },
+    }),
+    ...(topic?.length && {
+      topic: topic.length === 1 ? topic[0] : { $in: topic },
+    }),
+    ...(titleFilter && { title: titleFilter }),
+  };
+
+  const adminProjection = {
+    title: 1,
+    level: 1,
+    topic: 1,
+    image: 1,
+    wordPool: 1,
+    minWordCount: 1,
+    maxWordCount: 1,
+    createdAt: 1,
+  };
+
   const [lessons, total] = await Promise.all([
-    SeeWrite.find()
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
-    SeeWrite.countDocuments(),
+    buildLessonsListPromise(SeeWrite, {
+      query,
+      projection: adminProjection,
+      sortBy,
+      order,
+      page,
+      limit,
+    }),
+    SeeWrite.countDocuments(query),
   ]);
 
   return {
@@ -289,7 +347,7 @@ export async function listLessonsAdmin({ page = 1, limit = 20 } = {}) {
 /**
  * GET /writing/see-and-write/:id — Admin detail (no shuffle)
  */
-export async function getLessonAdmin(lessonId) {
+export async function adminGetLesson(lessonId) {
   const lesson = await SeeWrite.findById(lessonId).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 

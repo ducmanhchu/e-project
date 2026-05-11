@@ -1,5 +1,5 @@
 import express from "express";
-import * as exerciseController from "@server/controllers/exerciseController";
+import * as reverseTranslationController from "@server/controllers/reverseTranslationController";
 import * as seeWriteController from "@server/controllers/seeWriteController";
 import * as rewriteController from "@server/controllers/rewriteController";
 import * as examController from "@server/controllers/examController";
@@ -17,31 +17,31 @@ adminRouter.use(authorizeRoles(USER_ROLE.ADMIN));
 // ── Reverse Translation ───────────────────────────────
 adminRouter.get(
   "/writing/reverse-translation",
-  exerciseController.adminListLessons,
+  reverseTranslationController.adminListLessons,
 );
 adminRouter.post(
   "/writing/reverse-translation",
-  exerciseController.createLesson,
+  reverseTranslationController.createLesson,
 );
 adminRouter.post(
   "/writing/reverse-translation/preview",
-  exerciseController.previewWriting,
+  reverseTranslationController.previewWriting,
 );
 adminRouter.get(
   "/writing/reverse-translation/:id",
-  exerciseController.adminGetLesson,
+  reverseTranslationController.adminGetLesson,
 );
 adminRouter.put(
   "/writing/reverse-translation/:id",
-  exerciseController.updateLesson,
+  reverseTranslationController.updateLesson,
 );
 adminRouter.delete(
   "/writing/reverse-translation/:id",
-  exerciseController.deleteLesson,
+  reverseTranslationController.deleteLesson,
 );
 adminRouter.post(
   "/writing/reverse-translation/:id/dictionary",
-  exerciseController.saveDictionary,
+  reverseTranslationController.saveDictionary,
 );
 
 // ── See & Write ───────────────────────────────────────
