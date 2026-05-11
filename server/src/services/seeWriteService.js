@@ -1,8 +1,9 @@
 import { SeeWrite } from "@server/models/writing/SeeWrite";
 import { Attempt } from "@server/models/attempt/Attempt";
+import { Vocabulary } from "@server/models/vocabulary/Vocabulary";
 import { ApiError } from "@server/helpers/ApiError";
 import { aiGradeSeeWrite } from "@server/services/ai/gradingProvider";
-import { aiTranslateKeywords } from "@server/services/ai/keywordProvider";
+import { ensureEnriched } from "@server/services/vocabularyService";
 import {
   findOrCreateAttempt,
   submitAndUpdateProgress,
@@ -19,6 +20,8 @@ import {
   buildTitleSearch,
 } from "@server/helpers/writing/listLessonsQuery";
 
+const LESSON_TYPE = "SeeWrite";
+
 const SW_LIST_PROJECTION = {
   title: 1,
   level: 1,
@@ -27,23 +30,33 @@ const SW_LIST_PROJECTION = {
   createdAt: 1,
 };
 
-function buildMeaningMap(wordPool) {
-  const map = {};
-  for (const w of wordPool || []) {
-    map[w.word.toLowerCase()] = w.meaning;
-  }
-  return map;
-}
+const SW_ADMIN_PROJECTION = {
+  title: 1,
+  level: 1,
+  topic: 1,
+  image: 1,
+  wordPool: 1,
+  minWordCount: 1,
+  maxWordCount: 1,
+  createdAt: 1,
+};
 
-function populateQuizMeanings(quiz, meaningMap) {
-  const withMeaning = (words) => (words || []).map((w) => ({ word: w, meaning: meaningMap[w.toLowerCase()] || "" }));
-  return {
-    score: quiz.score,
-    correct: withMeaning(quiz.correct),
-    missed: withMeaning(quiz.missed),
-    wrong: withMeaning(quiz.wrong),
-  };
-}
+const SW_POPULATE_WORDPOOL = {
+  path: "wordPool.id",
+  select: "word ipa partOfSpeech definitions audio",
+};
+
+const UPDATABLE_FIELDS = [
+  "title",
+  "level",
+  "topic",
+  "description",
+  "image",
+  "minWordCount",
+  "maxWordCount",
+];
+
+// ──────────────── Helpers ────────────────
 
 function shuffleArray(arr) {
   const a = [...arr];
@@ -54,21 +67,50 @@ function shuffleArray(arr) {
   return a;
 }
 
-/**
- * GET /writing/see-and-write — List lessons + user's attempt summary
- */
-export async function listLessons(filters, pagination, userId) {
-  const { level, topic, search, status } = filters;
-  const { page, limit } = pagination;
-  const { sortBy, order } = resolveSort(filters);
+function formatVocab(vocab) {
+  if (!vocab) return null;
+  return {
+    id: vocab._id,
+    word: vocab.word,
+    ipa: vocab.ipa || null,
+    partOfSpeech: vocab.partOfSpeech || null,
+    meaning: vocab.definitions?.[0]?.viDef || "",
+    audio: vocab.audio || null,
+  };
+}
 
+/** Format wordPool entry for admin view (full vocab + isRequired). */
+function formatAdminPoolEntry(entry) {
+  return { ...formatVocab(entry.id), isRequired: entry.isRequired };
+}
+
+function buildMeaningMap(populatedWordPool) {
+  const map = {};
+  for (const w of populatedWordPool || []) {
+    const v = w.id;
+    if (v?.word) map[v.word.toLowerCase()] = v.definitions?.[0]?.viDef || "";
+  }
+  return map;
+}
+
+function populateQuizMeanings(quiz, meaningMap) {
+  const withMeaning = (words) =>
+    (words || []).map((w) => ({
+      word: w,
+      meaning: meaningMap[w.toLowerCase()] || "",
+    }));
+  return {
+    score: quiz.score,
+    correct: withMeaning(quiz.correct),
+    missed: withMeaning(quiz.missed),
+    wrong: withMeaning(quiz.wrong),
+  };
+}
+
+/** Build common $match query for both user and admin list endpoints. */
+function buildLessonQuery({ level, topic, search }) {
   const titleFilter = buildTitleSearch(search);
-  const statusFilter = await buildStatusFilter({
-    userId,
-    lessonType: "SeeWrite",
-    statuses: status,
-  });
-  const query = {
+  return {
     ...(level?.length && {
       level: level.length === 1 ? level[0] : { $in: level },
     }),
@@ -76,8 +118,61 @@ export async function listLessons(filters, pagination, userId) {
       topic: topic.length === 1 ? topic[0] : { $in: topic },
     }),
     ...(titleFilter && { title: titleFilter }),
-    ...(statusFilter || {}),
   };
+}
+
+/**
+ * Upsert each word into Vocabulary, return [{id, isRequired}] for SeeWrite.wordPool.
+ * Triggers ensureEnriched background for newly inserted words.
+ * Dedupes within and across required/distractor (required wins on overlap).
+ */
+async function resolveWordPool(requiredWords = [], distractorWords = []) {
+  const normalize = (w) => String(w || "").trim().toLowerCase();
+  const requiredSet = new Set(requiredWords.map(normalize).filter(Boolean));
+  const distractorSet = new Set(
+    distractorWords.map(normalize).filter(Boolean),
+  );
+  for (const w of requiredSet) distractorSet.delete(w);
+
+  const entries = [
+    ...[...requiredSet].map((word) => ({ word, isRequired: true })),
+    ...[...distractorSet].map((word) => ({ word, isRequired: false })),
+  ];
+  if (entries.length === 0) return [];
+
+  return Promise.all(
+    entries.map(async ({ word, isRequired }) => {
+      const vocab = await Vocabulary.findOneAndUpdate(
+        { word },
+        { $setOnInsert: { word, definitions: [] } },
+        { upsert: true, new: true },
+      );
+      if (!vocab.definitions?.length) {
+        ensureEnriched(vocab).catch((err) =>
+          console.error(`[enrich] Failed for "${vocab.word}":`, err.message),
+        );
+      }
+      return { id: vocab._id, isRequired };
+    }),
+  );
+}
+
+// ──────────────── User endpoints ────────────────
+
+/**
+ * GET /writing/see-and-write — List lessons + user's attempt summary
+ */
+export async function listLessons(filters, pagination, userId) {
+  const { status } = filters;
+  const { page, limit } = pagination;
+  const { sortBy, order } = resolveSort(filters);
+
+  const statusFilter = await buildStatusFilter({
+    userId,
+    lessonType: LESSON_TYPE,
+    statuses: status,
+  });
+  const query = { ...buildLessonQuery(filters), ...(statusFilter || {}) };
 
   const [lessons, total] = await Promise.all([
     buildLessonsListPromise(SeeWrite, {
@@ -96,13 +191,11 @@ export async function listLessons(filters, pagination, userId) {
     const attempts = await Attempt.find({
       userId,
       lessonId: { $in: lessons.map((l) => l._id) },
-      lessonType: "SeeWrite",
+      lessonType: LESSON_TYPE,
     })
       .select("lessonId status completedSentences bestScore completedAt")
       .lean();
-    for (const a of attempts) {
-      attemptMap.set(String(a.lessonId), a);
-    }
+    for (const a of attempts) attemptMap.set(String(a.lessonId), a);
   }
 
   return {
@@ -126,25 +219,35 @@ export async function listLessons(filters, pagination, userId) {
 }
 
 /**
- * GET /writing/see-and-write/:id — Lesson + user's attempt (merged)
+ * GET /writing/see-and-write/:id — Lesson + user's attempt (read-only)
  */
 export async function getLesson(lessonId, userId) {
-  const lesson = await SeeWrite.findById(lessonId).lean();
+  const lesson = await SeeWrite.findById(lessonId)
+    .populate(SW_POPULATE_WORDPOOL)
+    .lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  const attempt = await findOrCreateAttempt(userId, lessonId, "SeeWrite");
+  const attempt = await Attempt.findOne({
+    userId,
+    lessonId,
+    lessonType: LESSON_TYPE,
+  }).lean();
 
-  const progress = (attempt.sentenceProgress || []).find((p) => p.sentenceOrder === 1);
+  const progress = attempt?.sentenceProgress?.find((p) => p.sentenceOrder === 1);
   const lastSubmission = progress
     ? await getLastSubmission(attempt._id, 1)
     : null;
 
-  let keywordQuiz = null;
-  if (attempt.keywordQuiz) {
-    const wordPoolDoc = await SeeWrite.findById(lessonId).select("wordPool").lean();
-    const meaningMap = buildMeaningMap(wordPoolDoc?.wordPool);
-    keywordQuiz = populateQuizMeanings(attempt.keywordQuiz, meaningMap);
-  }
+  const keywordQuiz = attempt?.keywordQuiz
+    ? populateQuizMeanings(attempt.keywordQuiz, buildMeaningMap(lesson.wordPool))
+    : null;
+
+  // Reveal full vocab data only after user completes the quiz
+  const wordPool = (lesson.wordPool || [])
+    .filter((w) => w.id?.word)
+    .map((w) =>
+      keywordQuiz ? formatVocab(w.id) : { id: w.id._id, word: w.id.word },
+    );
 
   return {
     id: lesson._id,
@@ -152,13 +255,13 @@ export async function getLesson(lessonId, userId) {
     level: lesson.level,
     topic: lesson.topic,
     image: lesson.image,
-    wordPool: shuffleArray((lesson.wordPool || []).map((w) => w.word)),
+    wordPool: shuffleArray(wordPool),
     minWordCount: lesson.minWordCount || null,
     maxWordCount: lesson.maxWordCount || null,
-    status: attempt.status,
-    completedSentences: attempt.completedSentences,
-    bestScore: attempt.bestScore,
-    completedAt: attempt.completedAt || null,
+    status: attempt?.status ?? "not_started",
+    completedSentences: attempt?.completedSentences ?? 0,
+    bestScore: attempt?.bestScore ?? 0,
+    completedAt: attempt?.completedAt ?? null,
     keywordQuiz,
     lastSubmission,
   };
@@ -166,83 +269,98 @@ export async function getLesson(lessonId, userId) {
 
 /**
  * POST /writing/see-and-write/:lessonId/check-keywords
+ * selectedKeywordIds: array of Vocabulary ObjectIds (string)
  */
-export async function checkKeywords(userId, lessonId, selectedKeywords) {
-  if (!Array.isArray(selectedKeywords) || selectedKeywords.length === 0) {
-    throw ApiError.badRequest("selectedKeywords must be a non-empty array");
+export async function checkKeywords(userId, lessonId, selectedKeywordIds) {
+  if (!Array.isArray(selectedKeywordIds) || selectedKeywordIds.length === 0) {
+    throw ApiError.badRequest("selectedKeywordIds must be a non-empty array");
   }
 
-  const lesson = await SeeWrite.findById(lessonId).lean();
+  const lesson = await SeeWrite.findById(lessonId)
+    .populate(SW_POPULATE_WORDPOOL)
+    .lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  const required = (lesson.wordPool || []).filter((w) => w.isRequired);
-  const correctSet = new Set(required.map((w) => w.word.toLowerCase()));
-  const selectedSet = new Set(selectedKeywords.map((w) => w.toLowerCase()));
-
-  const results = { correct: [], missed: [], wrong: [] };
-
-  for (const w of required) {
-    if (selectedSet.has(w.word.toLowerCase())) {
-      results.correct.push(w.word);
-    } else {
-      results.missed.push(w.word);
-    }
+  // Index wordPool by Vocabulary id for O(1) lookup
+  const poolById = new Map();
+  const requiredIds = new Set();
+  for (const w of lesson.wordPool || []) {
+    if (!w.id?._id || !w.id?.word) continue;
+    const id = String(w.id._id);
+    poolById.set(id, { word: w.id.word, isRequired: w.isRequired });
+    if (w.isRequired) requiredIds.add(id);
   }
 
-  for (const word of selectedKeywords) {
-    if (!correctSet.has(word.toLowerCase())) {
-      results.wrong.push(word);
-    }
+  const selectedIds = new Set(selectedKeywordIds.map(String));
+  const results = { correct: [], missed: [], wrong: [] };
+
+  for (const id of requiredIds) {
+    const entry = poolById.get(id);
+    if (selectedIds.has(id)) results.correct.push(entry.word);
+    else results.missed.push(entry.word);
+  }
+  for (const id of selectedIds) {
+    if (requiredIds.has(id)) continue;
+    const entry = poolById.get(id);
+    if (entry) results.wrong.push(entry.word);
   }
 
   const quizScore = Math.round(
-    (results.correct.length / (required.length || 1)) * 100,
+    (results.correct.length / (requiredIds.size || 1)) * 100,
   );
 
-  // Save quiz result
-  const attempt = await findOrCreateAttempt(userId, lessonId, "SeeWrite");
-  attempt.keywordQuiz = {
-    correct: results.correct,
-    missed: results.missed,
-    wrong: results.wrong,
-    score: quizScore,
-  };
+  const attempt = await findOrCreateAttempt(userId, lessonId, LESSON_TYPE);
+  attempt.keywordQuiz = { ...results, score: quizScore };
+  if (attempt.status === "not_started") attempt.status = "in_progress";
   attempt.markModified("keywordQuiz");
   await attempt.save();
 
-  const meaningMap = buildMeaningMap(lesson.wordPool);
-  return populateQuizMeanings(attempt.keywordQuiz, meaningMap);
+  return populateQuizMeanings(
+    attempt.keywordQuiz,
+    buildMeaningMap(lesson.wordPool),
+  );
 }
 
 /**
  * POST /writing/see-and-write/:lessonId/submit — Grade answer
  */
 export async function submitAnswer(userId, lessonId, userAnswer) {
-  const lesson = await SeeWrite.findById(lessonId).lean();
+  const lesson = await SeeWrite.findById(lessonId)
+    .populate(SW_POPULATE_WORDPOOL)
+    .lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  // Enforce quiz if lesson has required words
-  const hasKeywords = (lesson.wordPool || []).some((w) => w.isRequired);
-  const attempt = await findOrCreateAttempt(userId, lessonId, "SeeWrite");
+  const requiredWords = (lesson.wordPool || [])
+    .filter((w) => w.isRequired && w.id?.word)
+    .map((w) => w.id.word);
+  const attempt = await findOrCreateAttempt(userId, lessonId, LESSON_TYPE);
 
-  if (hasKeywords && !attempt.keywordQuiz) {
+  if (requiredWords.length > 0 && !attempt.keywordQuiz) {
     throw ApiError.badRequest("Keyword quiz is required before submitting");
   }
 
-  // Validate word count
   const wordCount = userAnswer.trim().split(/\s+/).filter(Boolean).length;
   const minWc = lesson.minWordCount || 0;
   if (minWc > 0 && wordCount < minWc) {
-    throw ApiError.badRequest(`Word count ${wordCount} is below minimum ${minWc}`);
+    throw ApiError.badRequest(
+      `Word count ${wordCount} is below minimum ${minWc}`,
+    );
   }
+
+  // Grading prompt expects flat {word, isRequired} shape
+  const lessonForGrading = {
+    ...lesson,
+    wordPool: requiredWords.map((word) => ({ word, isRequired: true })),
+  };
 
   const { result: grading, provider } = await aiGradeSeeWrite(
     userAnswer,
-    lesson,
+    lessonForGrading,
     lesson.level,
   );
 
   const score = Math.min(100, Math.max(0, Math.round(grading.score)));
+  const isCompleted = score >= COMPLETION_THRESHOLD;
 
   const { submission, progress } = await submitAndUpdateProgress(attempt, {
     sentenceOrder: 1,
@@ -255,7 +373,7 @@ export async function submitAnswer(userId, lessonId, userAnswer) {
       criteria: grading.criteria || [],
       corrections: grading.corrections || [],
     },
-    isCompleted: score >= COMPLETION_THRESHOLD,
+    isCompleted,
     totalSentences: 1,
   });
 
@@ -264,18 +382,26 @@ export async function submitAnswer(userId, lessonId, userAnswer) {
     feedback: submission.feedback,
     gradedBy: provider,
     bestScore: progress.bestScore,
-    isCompleted: score >= COMPLETION_THRESHOLD,
+    isCompleted,
   };
 }
 
 /**
  * GET /writing/see-and-write/:lessonId/history
  */
-export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}) {
+export async function getHistory(
+  userId,
+  lessonId,
+  { page = 1, limit = 20 } = {},
+) {
   const attempt = await Attempt.findOne({ userId, lessonId });
   if (!attempt) throw ApiError.notFound("No attempt found for this lesson");
 
-  const { docs, total } = await getSubmissions(attempt._id, { sentenceOrder: 1, page, limit });
+  const { docs, total } = await getSubmissions(attempt._id, {
+    sentenceOrder: 1,
+    page,
+    limit,
+  });
 
   return {
     lessonId,
@@ -286,40 +412,20 @@ export async function getHistory(userId, lessonId, { page = 1, limit = 20 } = {}
   };
 }
 
+// ──────────────── Admin endpoints ────────────────
+
 /**
- * GET /writing/see-and-write — Admin list (with filter + sort like user list, full data)
+ * GET /admin/writing/see-and-write — Admin list (full data)
  */
 export async function adminListLessons(filters = {}, pagination = {}) {
-  const { level, topic, search } = filters;
   const { page = 1, limit = 20 } = pagination;
   const { sortBy, order } = resolveSort(filters);
-
-  const titleFilter = buildTitleSearch(search);
-  const query = {
-    ...(level?.length && {
-      level: level.length === 1 ? level[0] : { $in: level },
-    }),
-    ...(topic?.length && {
-      topic: topic.length === 1 ? topic[0] : { $in: topic },
-    }),
-    ...(titleFilter && { title: titleFilter }),
-  };
-
-  const adminProjection = {
-    title: 1,
-    level: 1,
-    topic: 1,
-    image: 1,
-    wordPool: 1,
-    minWordCount: 1,
-    maxWordCount: 1,
-    createdAt: 1,
-  };
+  const query = buildLessonQuery(filters);
 
   const [lessons, total] = await Promise.all([
     buildLessonsListPromise(SeeWrite, {
       query,
-      projection: adminProjection,
+      projection: SW_ADMIN_PROJECTION,
       sortBy,
       order,
       page,
@@ -328,6 +434,9 @@ export async function adminListLessons(filters = {}, pagination = {}) {
     SeeWrite.countDocuments(query),
   ]);
 
+  // Aggregate path bypasses populate — run it manually for consistency
+  await SeeWrite.populate(lessons, SW_POPULATE_WORDPOOL);
+
   return {
     items: lessons.map((l) => ({
       id: l._id,
@@ -335,7 +444,7 @@ export async function adminListLessons(filters = {}, pagination = {}) {
       level: l.level,
       topic: l.topic,
       image: l.image,
-      wordPool: l.wordPool || [],
+      wordPool: (l.wordPool || []).map(formatAdminPoolEntry),
       minWordCount: l.minWordCount,
       maxWordCount: l.maxWordCount,
       createdAt: l.createdAt,
@@ -345,10 +454,12 @@ export async function adminListLessons(filters = {}, pagination = {}) {
 }
 
 /**
- * GET /writing/see-and-write/:id — Admin detail (no shuffle)
+ * GET /admin/writing/see-and-write/:id — Admin detail (no shuffle)
  */
 export async function adminGetLesson(lessonId) {
-  const lesson = await SeeWrite.findById(lessonId).lean();
+  const lesson = await SeeWrite.findById(lessonId)
+    .populate(SW_POPULATE_WORDPOOL)
+    .lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
   return {
@@ -358,7 +469,7 @@ export async function adminGetLesson(lessonId) {
     topic: lesson.topic,
     description: lesson.description,
     image: lesson.image,
-    wordPool: lesson.wordPool || [],
+    wordPool: (lesson.wordPool || []).map(formatAdminPoolEntry),
     minWordCount: lesson.minWordCount,
     maxWordCount: lesson.maxWordCount,
     createdAt: lesson.createdAt,
@@ -367,48 +478,35 @@ export async function adminGetLesson(lessonId) {
 }
 
 /**
- * POST /writing/see-and-write — Create lesson
+ * POST /admin/writing/see-and-write — Create lesson
  */
 export async function createLesson(body) {
-  const lesson = await createWriting({ ...body, type: WRITING_TYPE.SEE_AND_WRITE });
-  // AI translate wordPool in background
-  translateWordPool(lesson._id).catch((err) =>
-    console.error(`[translate] Failed for SW "${lesson._id}":`, err.message),
+  const wordPool = await resolveWordPool(
+    body.requiredWords,
+    body.distractorWords,
   );
-  return {
-    id: lesson._id,
-    title: lesson.title,
-  };
+  const lesson = await createWriting({
+    ...body,
+    type: WRITING_TYPE.SEE_AND_WRITE,
+    wordPool,
+  });
+  return { id: lesson._id, title: lesson.title };
 }
 
 /**
- * PUT /writing/see-and-write/:id — Update lesson
+ * PUT /admin/writing/see-and-write/:id — Update lesson
  */
 export async function updateLesson(lessonId, body) {
-  const lesson = await SeeWrite.findById(lessonId);
-  if (!lesson) throw ApiError.notFound("Lesson not found");
-
-  const allowedFields = [
-    "title", "level", "topic", "description",
-    "image", "minWordCount", "maxWordCount",
-  ];
-
   const updates = {};
-  for (const field of allowedFields) {
+  for (const field of UPDATABLE_FIELDS) {
     if (body[field] !== undefined) updates[field] = body[field];
   }
-
-  let needsTranslate = false;
   if (body.requiredWords !== undefined || body.distractorWords !== undefined) {
-    const requiredWords = body.requiredWords || [];
-    const distractorWords = body.distractorWords || [];
-    updates.wordPool = [
-      ...requiredWords.map((w) => ({ word: w, meaning: "", isRequired: true })),
-      ...distractorWords.map((w) => ({ word: w, meaning: "", isRequired: false })),
-    ];
-    needsTranslate = true;
+    updates.wordPool = await resolveWordPool(
+      body.requiredWords,
+      body.distractorWords,
+    );
   }
-
   if (Object.keys(updates).length === 0) {
     throw ApiError.badRequest("No valid fields to update");
   }
@@ -417,13 +515,10 @@ export async function updateLesson(lessonId, body) {
     lessonId,
     { $set: updates },
     { new: true, runValidators: true },
-  ).lean();
-
-  if (needsTranslate) {
-    translateWordPool(lessonId).catch((err) =>
-      console.error(`[translate] Failed for SW "${lessonId}":`, err.message),
-    );
-  }
+  )
+    .populate(SW_POPULATE_WORDPOOL)
+    .lean();
+  if (!updated) throw ApiError.notFound("Lesson not found");
 
   return {
     id: updated._id,
@@ -432,7 +527,7 @@ export async function updateLesson(lessonId, body) {
     topic: updated.topic,
     description: updated.description,
     image: updated.image,
-    wordPool: updated.wordPool || [],
+    wordPool: (updated.wordPool || []).map(formatAdminPoolEntry),
     minWordCount: updated.minWordCount,
     maxWordCount: updated.maxWordCount,
     updatedAt: updated.updatedAt,
@@ -440,31 +535,10 @@ export async function updateLesson(lessonId, body) {
 }
 
 /**
- * DELETE /writing/see-and-write/:id — Delete lesson
+ * DELETE /admin/writing/see-and-write/:id
  */
 export async function deleteLesson(lessonId) {
-  const lesson = await SeeWrite.findById(lessonId);
-  if (!lesson) throw ApiError.notFound("Lesson not found");
-  await SeeWrite.findByIdAndDelete(lessonId);
+  const deleted = await SeeWrite.findByIdAndDelete(lessonId);
+  if (!deleted) throw ApiError.notFound("Lesson not found");
   return { id: lessonId };
-}
-
-async function translateWordPool(lessonId) {
-  const lesson = await SeeWrite.findById(lessonId);
-  if (!lesson || !lesson.wordPool?.length) return;
-
-  const words = lesson.wordPool.map((w) => w.word);
-  const { result } = await aiTranslateKeywords(words);
-  const meaningMap = {};
-  for (const item of result.translations) {
-    meaningMap[item.word.toLowerCase()] = item.viMeaning;
-  }
-
-  lesson.wordPool = lesson.wordPool.map((w) => ({
-    word: w.word,
-    meaning: meaningMap[w.word.toLowerCase()] || "",
-    isRequired: w.isRequired,
-  }));
-  lesson.markModified("wordPool");
-  await lesson.save();
 }

@@ -108,9 +108,13 @@ export async function getExam(examId, userId) {
   const exam = await Exam.findById(examId).lean();
   if (!exam) throw ApiError.notFound("Exam not found");
 
-  const attempt = await findOrCreateAttempt(userId, examId, "Exam");
+  const attempt = await Attempt.findOne({
+    userId,
+    lessonId: examId,
+    lessonType: "Exam",
+  }).lean();
 
-  const progress = (attempt.sentenceProgress || []).find((p) => p.sentenceOrder === 1);
+  const progress = attempt?.sentenceProgress?.find((p) => p.sentenceOrder === 1);
   const lastSubmission = progress
     ? await getLastSubmission(attempt._id, 1)
     : null;
@@ -124,10 +128,10 @@ export async function getExam(examId, userId) {
     examPrompt: exam.examPrompt,
     imageUrl: exam.imageUrl || null,
     minWordCount: EXAM_MIN_WORDS[exam.examType],
-    status: attempt.status,
-    completedSentences: attempt.completedSentences,
-    bestScore: attempt.bestScore,
-    completedAt: attempt.completedAt || null,
+    status: attempt?.status ?? "not_started",
+    completedSentences: attempt?.completedSentences ?? 0,
+    bestScore: attempt?.bestScore ?? 0,
+    completedAt: attempt?.completedAt ?? null,
     lastSubmission,
   };
 }

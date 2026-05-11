@@ -90,14 +90,14 @@ export async function adminGetLesson(req, res, next) {
  */
 export async function checkKeywords(req, res, next) {
   try {
-    const { selectedKeywords } = req.body;
-    if (!Array.isArray(selectedKeywords)) {
-      throw ApiError.badRequest("selectedKeywords must be an array");
+    const { selectedKeywordIds } = req.body;
+    if (!Array.isArray(selectedKeywordIds)) {
+      throw ApiError.badRequest("selectedKeywordIds must be an array");
     }
     const data = await seeWriteService.checkKeywords(
       req.user._id,
       req.params.id,
-      selectedKeywords,
+      selectedKeywordIds,
     );
     res.json({ success: true, data });
   } catch (e) {
