@@ -2,7 +2,6 @@ import { Link } from "react-router";
 
 import {
 	Card,
-	CardContent,
 	CardFooter,
 	CardHeader,
 	CardTitle,
@@ -16,7 +15,7 @@ import { ExerciseLevelBadge } from "@/domains/user/components/exercise-level-bad
 
 export function ReverseTranslateCard({ card }: { card: RTItem }) {
 	return (
-		<Card>
+		<Card className="flex flex-col justify-between">
 			<CardHeader>
 				<ExerciseLevelBadge level={card.level} />
 				<CardTitle className="line-clamp-2">{card.title}</CardTitle>
@@ -24,7 +23,6 @@ export function ReverseTranslateCard({ card }: { card: RTItem }) {
 					{translateTopic(card.topic)}
 				</CardDescription>
 			</CardHeader>
-			<CardContent></CardContent>
 			<CardFooter>
 				<Button
 					size="sm"

@@ -1,3 +1,6 @@
+import { Link } from "react-router";
+
+import type { SAWListItem } from "@shared/types/see-and-write";
 import {
 	Card,
 	CardHeader,
@@ -6,15 +9,13 @@ import {
 	CardFooter,
 } from "@shared/components/ui/card";
 import { ExerciseLevelBadge } from "@user/components/exercise-level-badge";
-
-import type { SAWListItem } from "@shared/types/see-and-write";
-import { translateStatus, translateTopic } from "@shared/lib/utils";
 import { Button } from "@shared/components/ui/button";
-import { Link } from "react-router";
+
+import { translateStatus, translateTopic } from "@shared/lib/utils";
 
 export function SeeAndWriteCard({ card }: { card: SAWListItem }) {
 	return (
-		<Card>
+		<Card className="flex flex-col justify-between">
 			<CardHeader>
 				<img
 					src={card.image}

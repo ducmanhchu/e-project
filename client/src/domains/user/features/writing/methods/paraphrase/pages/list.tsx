@@ -118,7 +118,7 @@ export function ParaphraseList() {
 
 	return (
 		<div className="grid grid-cols-1 gap-10 lg:gap-0 lg:grid-cols-3">
-			<div className="flex w-full max-w-3xs flex-col gap-4">
+			<div className="flex w-full max-w-xs flex-col gap-4">
 				<h2 className="font-heading text-base text-foreground">Bộ lọc</h2>
 				<Separator />
 				<div className="flex flex-col gap-6">

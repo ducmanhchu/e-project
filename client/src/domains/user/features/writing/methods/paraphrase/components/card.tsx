@@ -14,7 +14,7 @@ import { Button } from "@shared/components/ui/button";
 
 export function ParaphraseCard({ card }: { card: ParaphraseListItem }) {
 	return (
-		<Card>
+		<Card className="flex flex-col justify-between">
 			<CardHeader>
 				<ExerciseLevelBadge level={card.level} />
 				<CardTitle className="line-clamp-2">{card.title}</CardTitle>
