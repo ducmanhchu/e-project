@@ -1,44 +1,18 @@
-export type ExerciseLevel = "beginner" | "intermediate" | "advanced";
+import type {
+	ExerciseLevel,
+	WritingExerciseTopic,
+	WritingContentType,
+	ExerciseStatus,
+	APIResponse,
+} from "./utils";
+import type { Word } from "./vocab";
 
-export type ExerciseTopic =
-	| "personal_communication"
-	| "everyday_life"
-	| "transportation_travel"
-	| "school_education"
-	| "work_business"
-	| "public_services"
-	| "health_medicine"
-	| "shopping_money"
-	| "food_drink"
-	| "entertainment_leisure"
-	| "nature_environment"
-	| "science_technology"
-	| "culture_society"
-	| "government_politics"
-	| "history_geography"
-	| "sports_fitness"
-	| "arts_literature"
-	| "religion_spirituality"
-	| "law_justice"
-	| "philosophy_ethics";
-
-export type ContentType =
-	| "email"
-	| "diary"
-	| "essay"
-	| "article"
-	| "story"
-	| "report"
-	| "general";
-
-export type ExerciseStatus = "not_started" | "in_progress" | "completed";
-
-export type ReverseTranslateItem = {
+export type RTItem = {
 	id: string;
 	title: string;
 	level: ExerciseLevel;
-	topic: ExerciseTopic;
-	contentType: ContentType;
+	topic: WritingExerciseTopic;
+	contentType: WritingContentType;
 	totalSentences: number;
 	createdAt: string;
 	status: ExerciseStatus;
@@ -46,10 +20,29 @@ export type ReverseTranslateItem = {
 	completedAt: string | null;
 };
 
+export type UserLastSubmission = {
+	userAnswer: string;
+	score: number;
+	gradeBy: string;
+	feedback: {
+		suggestion: string;
+		improvements: string[];
+		comment: string;
+	};
+	createdAt: string;
+};
+
+export type ReverseTranslateListResponse = {
+	success: boolean;
+	data: RTItem[];
+	pagination: PaginationInfo;
+};
+
 export type ReverseTranslateQueryParams = {
 	level?: string;
 	contentType?: string;
 	topic?: string;
+	status?: string;
 	page?: number;
 	limit?: number;
 };
@@ -61,8 +54,67 @@ export type PaginationInfo = {
 	totalPages: number;
 };
 
-export type ReverseTranslateListResponse = {
-	success: boolean;
-	data: ReverseTranslateItem[];
-	pagination: PaginationInfo;
+export type RTExercise = Omit<RTItem, "createdAt"> & {
+	vietnameseParagraph: string;
+	vocabularyRefs: {
+		id: string;
+		sentenceIndex: number;
+	}[];
+	sentences: {
+		order: number;
+		vietnameseText: string;
+		isCompleted: boolean;
+		lastSubmission: UserLastSubmission | null;
+	}[];
+};
+
+export type RTExerciseResponse = APIResponse<RTExercise>;
+
+export type RTExerciseSubmitPayload = {
+	sentenceOrder: number;
+	userAnswer: string;
+};
+
+export type RTExerciseSubmitData = Omit<
+	UserLastSubmission,
+	"userAnswer" | "createdAt"
+> & {
+	isCompleted: boolean;
+};
+
+export type RTExerciseSubmitResponse = APIResponse<RTExerciseSubmitData>;
+
+export type CurrentFeedback = Omit<
+	UserLastSubmission,
+	"createdAt" | "gradeBy"
+> & {
+	idx: number;
+};
+
+export type ViewingFeedback = {
+	idx: number;
+	userAnswer: string;
+	score: number;
+	feedback: {
+		suggestion: string;
+		improvements: string[];
+		comment: string;
+	};
+};
+
+export type FeedbackPanelProps = {
+	progress: { completed: number; total: number };
+	viewingFeedback: ViewingFeedback | null;
+	vocabList: Word[];
+	isVocabListLoading: boolean;
+	isSubmitting: boolean;
+	hasVocabulary: boolean;
+};
+
+export type SentenceParagraphProps = {
+	sentences: RTExercise["sentences"];
+	currentSentenceIdx: number | null;
+	viewingSentenceIdx: number | null;
+	onSentenceClick: (order: number) => void;
+	isLoading?: boolean;
 };

@@ -1,10 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
-import type {
-	ReverseTranslateQueryParams,
-	ExerciseStatus,
-} from "@shared/types/reverse-translate";
+import type { ReverseTranslateQueryParams } from "@shared/types/reverse-translate";
 import { Separator } from "@shared/components/ui/separator";
 import { Skeleton } from "@shared/components/ui/skeleton";
 import { FilterSection } from "@user/features/writing/components/filter-section";
@@ -90,6 +87,9 @@ function buildQueryParams(
 		limit: ITEMS_PER_PAGE,
 	};
 
+	const statuses = extractFilterValues(selected, "status");
+	if (statuses.length > 0) params.status = statuses.join(",");
+
 	const levels = extractFilterValues(selected, "level");
 	if (levels.length > 0) params.level = levels.join(",");
 
@@ -147,16 +147,7 @@ export function ReverseTranslateList() {
 		placeholderData: keepPreviousData,
 	});
 
-	const statusFilters = useMemo(
-		() => extractFilterValues(selected, "status") as ExerciseStatus[],
-		[selected],
-	);
-
-	const filteredItems = useMemo(() => {
-		const items = data?.data ?? [];
-		if (statusFilters.length === 0) return items;
-		return items.filter((item) => statusFilters.includes(item.status));
-	}, [data, statusFilters]);
+	const items = data?.data ?? [];
 
 	const pagination = data?.pagination;
 	const pageNumbers = useMemo(
@@ -168,10 +159,7 @@ export function ReverseTranslateList() {
 		(compositeId: string, checked: boolean) => {
 			setSelected((prev) => ({ ...prev, [compositeId]: checked }));
 
-			const sectionId = compositeId.split(":")[0];
-			if (sectionId !== "status") {
-				setPage(1);
-			}
+			setPage(1);
 		},
 		[],
 	);
@@ -214,13 +202,13 @@ export function ReverseTranslateList() {
 					<p className="text-center text-muted-foreground">
 						Có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại sau.
 					</p>
-				) : filteredItems.length === 0 ? (
+				) : items.length === 0 ? (
 					<p className="text-center text-muted-foreground">
 						Không tìm thấy bài tập nào phù hợp.
 					</p>
 				) : (
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-						{filteredItems.map((card) => (
+						{items.map((card) => (
 							<ReverseTranslateCard key={card.id} card={card} />
 						))}
 					</div>

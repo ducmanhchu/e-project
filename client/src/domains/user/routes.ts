@@ -52,24 +52,15 @@ export const userRoutes: RouteObject[] = [
 					},
 					{
 						path: "reverse-translate",
-						children: [
-							{ index: true, Component: ReverseTranslateList },
-							{ path: ":id", Component: ReverseTranslateExercise },
-						],
+						Component: ReverseTranslateList,
 					},
 					{
 						path: "see-and-write",
-						children: [
-							{ index: true, Component: SeeAndWriteList },
-							{ path: ":id", Component: SeeAndWriteExercise },
-						],
+						Component: SeeAndWriteList,
 					},
 					{
 						path: "paraphrase",
-						children: [
-							{ index: true, Component: ParaphraseList },
-							{ path: ":id", Component: ParaphraseExercise },
-						],
+						Component: ParaphraseList,
 					},
 				],
 			},
@@ -83,10 +74,7 @@ export const userRoutes: RouteObject[] = [
 					},
 					{
 						path: "conversation",
-						children: [
-							{ index: true, Component: ConversationList },
-							{ path: ":id", Component: ConversationExercise },
-						],
+						Component: ConversationList,
 					},
 				],
 			},
@@ -95,6 +83,26 @@ export const userRoutes: RouteObject[] = [
 				Component: Vocabulary,
 			},
 		],
+	},
+	{
+		path: "/writing/reverse-translate/:id",
+		Component: ReverseTranslateExercise,
+		loader: requireAuthLoader,
+	},
+	{
+		path: "/writing/see-and-write/:id",
+		Component: SeeAndWriteExercise,
+		loader: requireAuthLoader,
+	},
+	{
+		path: "/writing/paraphrase/:id",
+		Component: ParaphraseExercise,
+		loader: requireAuthLoader,
+	},
+	{
+		path: "/speaking/conversation/:id",
+		Component: ConversationExercise,
+		loader: requireAuthLoader,
 	},
 	{
 		path: "/login",
