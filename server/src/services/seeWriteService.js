@@ -243,11 +243,11 @@ export async function getLesson(lessonId, userId) {
     : null;
 
   // Reveal full vocab data only after user completes the quiz
-  const wordPool = (lesson.wordPool || [])
-    .filter((w) => w.id?.word)
-    .map((w) =>
-      keywordQuiz ? formatVocab(w.id) : { id: w.id._id, word: w.id.word },
-    );
+  const validPool = (lesson.wordPool || []).filter((w) => w.id?.word);
+  const requiredKeywordCount = validPool.filter((w) => w.isRequired).length;
+  const wordPool = validPool.map((w) =>
+    keywordQuiz ? formatVocab(w.id) : { id: w.id._id, word: w.id.word },
+  );
 
   return {
     id: lesson._id,
@@ -256,6 +256,7 @@ export async function getLesson(lessonId, userId) {
     topic: lesson.topic,
     image: lesson.image,
     wordPool: shuffleArray(wordPool),
+    requiredKeywordCount,
     minWordCount: lesson.minWordCount || null,
     maxWordCount: lesson.maxWordCount || null,
     status: attempt?.status ?? "not_started",

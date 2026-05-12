@@ -46,7 +46,8 @@ const LESSONS = [
     topic: "personal_communication",
     level: "intermediate",
     title: "Conversations and Social Interactions",
-    description: "Paraphrase sentences about social interactions and meaningful conversations.",
+    description:
+      "Paraphrase sentences about social interactions and meaningful conversations.",
     sentences: [
       "Although we hadn't seen each other for years, we picked up the conversation as if no time had passed.",
       "She mentioned that she was considering moving to a new city for her career.",
@@ -66,7 +67,8 @@ const LESSONS = [
     topic: "personal_communication",
     level: "advanced",
     title: "Nuances of Interpersonal Communication",
-    description: "Rephrase complex sentences about communication, empathy, and interpersonal dynamics.",
+    description:
+      "Rephrase complex sentences about communication, empathy, and interpersonal dynamics.",
     sentences: [
       "The capacity to convey empathy without resorting to platitudes is a hallmark of emotional maturity.",
       "Misinterpretations frequently arise when cultural context is overlooked in cross-border correspondence.",
@@ -172,7 +174,8 @@ const LESSONS = [
     topic: "transportation_travel",
     level: "intermediate",
     title: "Travel Plans and Public Transport",
-    description: "Paraphrase sentences about journeys, traffic, and travel logistics.",
+    description:
+      "Paraphrase sentences about journeys, traffic, and travel logistics.",
     sentences: [
       "Booking your tickets several weeks in advance usually results in significant savings.",
       "Heavy traffic during rush hour can easily double the length of your commute.",
@@ -192,7 +195,8 @@ const LESSONS = [
     topic: "transportation_travel",
     level: "advanced",
     title: "Tourism and Modern Mobility",
-    description: "Rephrase complex sentences about transport infrastructure and travel culture.",
+    description:
+      "Rephrase complex sentences about transport infrastructure and travel culture.",
     sentences: [
       "The proliferation of low-cost carriers has democratised international travel for an entire generation.",
       "Sustainable tourism initiatives seek to balance economic benefits with environmental preservation.",
@@ -235,7 +239,8 @@ const LESSONS = [
     topic: "school_education",
     level: "intermediate",
     title: "Studying and Academic Life",
-    description: "Paraphrase sentences about studying, exams, and university life.",
+    description:
+      "Paraphrase sentences about studying, exams, and university life.",
     sentences: [
       "Preparing for exams becomes far less stressful when you start reviewing material earlier in the term.",
       "Group projects often teach students as much about teamwork as they do about the subject matter.",
@@ -255,7 +260,8 @@ const LESSONS = [
     topic: "school_education",
     level: "advanced",
     title: "Education Systems and Pedagogy",
-    description: "Rephrase complex sentences about education theory and practice.",
+    description:
+      "Rephrase complex sentences about education theory and practice.",
     sentences: [
       "Critical thinking should be cultivated from an early age rather than treated as an advanced elective.",
       "Standardised testing, though widely used, fails to capture the full breadth of a student's abilities.",
@@ -298,7 +304,8 @@ const LESSONS = [
     topic: "work_business",
     level: "intermediate",
     title: "Workplace and Productivity",
-    description: "Paraphrase sentences about office culture, deadlines, and teamwork.",
+    description:
+      "Paraphrase sentences about office culture, deadlines, and teamwork.",
     sentences: [
       "Working remotely has changed how teams collaborate across different time zones.",
       "A well-prepared presentation can significantly increase your chances of being promoted.",
@@ -318,7 +325,8 @@ const LESSONS = [
     topic: "work_business",
     level: "advanced",
     title: "Corporate Strategy and Leadership",
-    description: "Rephrase nuanced sentences about business, leadership, and innovation.",
+    description:
+      "Rephrase nuanced sentences about business, leadership, and innovation.",
     sentences: [
       "Visionary leadership is distinguished less by charisma than by the capacity to align teams around a shared purpose.",
       "Companies that fail to adapt to disruptive technologies frequently find themselves rendered obsolete within a decade.",
@@ -361,7 +369,8 @@ const LESSONS = [
     topic: "public_services",
     level: "intermediate",
     title: "Civic Life and Bureaucracy",
-    description: "Paraphrase sentences about interacting with government and city services.",
+    description:
+      "Paraphrase sentences about interacting with government and city services.",
     sentences: [
       "Applying for a passport usually involves filling in several forms and waiting in line.",
       "Many cities have introduced online portals to make basic services more accessible.",
@@ -381,7 +390,8 @@ const LESSONS = [
     topic: "public_services",
     level: "advanced",
     title: "Public Administration and Civic Engagement",
-    description: "Rephrase complex sentences about governance, regulation, and civic participation.",
+    description:
+      "Rephrase complex sentences about governance, regulation, and civic participation.",
     sentences: [
       "Bureaucratic inefficiency, while routinely lampooned, often masks a deeper problem of underfunded institutions.",
       "Digital transformation initiatives in public administration have yielded uneven results across regions.",
@@ -406,7 +416,8 @@ const LESSONS = [
     topic: "health_medicine",
     level: "beginner",
     title: "Health and the Doctor",
-    description: "Rewrite simple sentences about feeling sick and visiting the doctor.",
+    description:
+      "Rewrite simple sentences about feeling sick and visiting the doctor.",
     sentences: [
       "I have a headache and I need to rest.",
       "She drinks a lot of water every day.",
@@ -424,7 +435,8 @@ const LESSONS = [
     topic: "health_medicine",
     level: "intermediate",
     title: "Healthcare and Wellness",
-    description: "Paraphrase sentences about clinics, prevention, and healthy habits.",
+    description:
+      "Paraphrase sentences about clinics, prevention, and healthy habits.",
     sentences: [
       "Regular exercise can significantly reduce the risk of chronic illnesses later in life.",
       "Patients are often advised to seek a second opinion before agreeing to surgery.",
@@ -444,7 +456,8 @@ const LESSONS = [
     topic: "health_medicine",
     level: "advanced",
     title: "Medical Research and Public Health",
-    description: "Rephrase nuanced sentences about medicine, biotechnology, and healthcare policy.",
+    description:
+      "Rephrase nuanced sentences about medicine, biotechnology, and healthcare policy.",
     sentences: [
       "Personalised medicine, though still in its infancy, promises to tailor treatments to individual genetic profiles.",
       "Vaccination programmes have averted countless deaths, yet vaccine hesitancy continues to undermine public health.",
@@ -487,7 +500,8 @@ const LESSONS = [
     topic: "shopping_money",
     level: "intermediate",
     title: "Consumer Behavior and Budgeting",
-    description: "Paraphrase sentences about shopping habits, sales, and personal finance.",
+    description:
+      "Paraphrase sentences about shopping habits, sales, and personal finance.",
     sentences: [
       "Many shoppers wait for end-of-season sales before purchasing high-priced items.",
       "Sticking to a monthly budget is easier when you track every small expense.",
@@ -507,7 +521,8 @@ const LESSONS = [
     topic: "shopping_money",
     level: "advanced",
     title: "Economics of Consumption and Finance",
-    description: "Rephrase complex sentences about consumer culture and personal finance.",
+    description:
+      "Rephrase complex sentences about consumer culture and personal finance.",
     sentences: [
       "Compound interest, often described as the eighth wonder of the world, can either accelerate wealth or amplify debt.",
       "The shift toward cashless transactions has restructured both consumer behaviour and merchant economics.",
@@ -550,7 +565,8 @@ const LESSONS = [
     topic: "food_drink",
     level: "intermediate",
     title: "Cooking and Dining Out",
-    description: "Paraphrase sentences about cooking, restaurants, and dietary choices.",
+    description:
+      "Paraphrase sentences about cooking, restaurants, and dietary choices.",
     sentences: [
       "Eating a balanced diet is one of the simplest ways to maintain good health.",
       "Many restaurants now offer plant-based options to accommodate changing customer preferences.",
@@ -570,7 +586,8 @@ const LESSONS = [
     topic: "food_drink",
     level: "advanced",
     title: "Gastronomy and Food Culture",
-    description: "Rephrase nuanced sentences about cuisine, sustainability, and food systems.",
+    description:
+      "Rephrase nuanced sentences about cuisine, sustainability, and food systems.",
     sentences: [
       "Locally-sourced ingredients lend authenticity to traditional dishes that mass production rarely matches.",
       "Industrial agriculture, while highly productive, has imposed substantial costs on biodiversity.",
@@ -595,7 +612,8 @@ const LESSONS = [
     topic: "entertainment_leisure",
     level: "beginner",
     title: "Fun and Free Time",
-    description: "Rewrite simple sentences about hobbies and leisure activities.",
+    description:
+      "Rewrite simple sentences about hobbies and leisure activities.",
     sentences: [
       "I like to play football on weekends.",
       "She watches movies with her sister every Saturday.",
@@ -613,7 +631,8 @@ const LESSONS = [
     topic: "entertainment_leisure",
     level: "intermediate",
     title: "Hobbies, Movies, and Music",
-    description: "Paraphrase sentences about hobbies, films, and the entertainment industry.",
+    description:
+      "Paraphrase sentences about hobbies, films, and the entertainment industry.",
     sentences: [
       "Streaming services have completely changed the way people watch movies and television.",
       "Many young people now spend more time gaming than watching traditional television.",
@@ -633,7 +652,8 @@ const LESSONS = [
     topic: "entertainment_leisure",
     level: "advanced",
     title: "Media, Pop Culture, and the Arts",
-    description: "Rephrase complex sentences about entertainment, audiences, and cultural production.",
+    description:
+      "Rephrase complex sentences about entertainment, audiences, and cultural production.",
     sentences: [
       "The algorithmic curation of content has subtly reshaped what audiences are exposed to.",
       "Blockbuster cinema, while commercially dominant, often crowds out narratives that demand more nuanced engagement.",
@@ -676,7 +696,8 @@ const LESSONS = [
     topic: "nature_environment",
     level: "intermediate",
     title: "Environment and Sustainability",
-    description: "Paraphrase sentences about environmental issues and conservation.",
+    description:
+      "Paraphrase sentences about environmental issues and conservation.",
     sentences: [
       "Recycling is one of the easiest ways for individuals to help the environment.",
       "Many countries have introduced policies to reduce single-use plastics.",
@@ -696,7 +717,8 @@ const LESSONS = [
     topic: "nature_environment",
     level: "advanced",
     title: "Climate Change and Ecological Stewardship",
-    description: "Rephrase complex sentences about climate science and conservation policy.",
+    description:
+      "Rephrase complex sentences about climate science and conservation policy.",
     sentences: [
       "Anthropogenic emissions have accelerated atmospheric warming at a rate unprecedented in geological records.",
       "Conservation strategies that exclude local communities often fail to deliver sustainable outcomes.",
@@ -739,7 +761,8 @@ const LESSONS = [
     topic: "science_technology",
     level: "intermediate",
     title: "Tech Innovations and Internet",
-    description: "Paraphrase sentences about modern technology and the internet.",
+    description:
+      "Paraphrase sentences about modern technology and the internet.",
     sentences: [
       "Artificial intelligence is already being used to automate many routine tasks.",
       "The Internet of Things connects everyday devices like fridges and watches to the web.",
@@ -759,7 +782,8 @@ const LESSONS = [
     topic: "science_technology",
     level: "advanced",
     title: "Frontier Science and Emerging Technologies",
-    description: "Rephrase nuanced sentences about cutting-edge research and technology policy.",
+    description:
+      "Rephrase nuanced sentences about cutting-edge research and technology policy.",
     sentences: [
       "Quantum computing threatens to render existing cryptographic standards obsolete within a generation.",
       "The ethical implications of generative AI demand frameworks that current legislation is ill-equipped to provide.",
@@ -802,7 +826,8 @@ const LESSONS = [
     topic: "culture_society",
     level: "intermediate",
     title: "Society and Cultural Identity",
-    description: "Paraphrase sentences about cultural diversity and societal change.",
+    description:
+      "Paraphrase sentences about cultural diversity and societal change.",
     sentences: [
       "Globalisation has made it easier than ever to experience different cultures firsthand.",
       "Many young people now blend traditional values with modern lifestyles.",
@@ -822,7 +847,8 @@ const LESSONS = [
     topic: "culture_society",
     level: "advanced",
     title: "Multiculturalism and Social Change",
-    description: "Rephrase complex sentences about identity, integration, and cultural exchange.",
+    description:
+      "Rephrase complex sentences about identity, integration, and cultural exchange.",
     sentences: [
       "Multicultural societies grapple continuously with the tension between assimilation and preservation of distinct identities.",
       "The commodification of cultural practices risks stripping them of their original significance.",
@@ -865,7 +891,8 @@ const LESSONS = [
     topic: "government_politics",
     level: "intermediate",
     title: "Politics and Public Policy",
-    description: "Paraphrase sentences about political processes and civic life.",
+    description:
+      "Paraphrase sentences about political processes and civic life.",
     sentences: [
       "Voter turnout tends to be higher in elections that are perceived as truly competitive.",
       "Policymakers must often balance short-term political pressures against long-term national interests.",
@@ -885,7 +912,8 @@ const LESSONS = [
     topic: "government_politics",
     level: "advanced",
     title: "Governance and Political Discourse",
-    description: "Rephrase nuanced sentences about democracy, institutions, and policy.",
+    description:
+      "Rephrase nuanced sentences about democracy, institutions, and policy.",
     sentences: [
       "The erosion of trust in democratic institutions is among the most consequential developments of recent decades.",
       "Populist rhetoric thrives in environments where citizens perceive elites as fundamentally unresponsive.",
@@ -928,7 +956,8 @@ const LESSONS = [
     topic: "history_geography",
     level: "intermediate",
     title: "World History and Geography",
-    description: "Paraphrase sentences about historical events and geographic features.",
+    description:
+      "Paraphrase sentences about historical events and geographic features.",
     sentences: [
       "The Silk Road connected ancient civilisations across Asia, Africa, and Europe.",
       "Mountain ranges often act as natural borders between countries.",
@@ -948,7 +977,8 @@ const LESSONS = [
     topic: "history_geography",
     level: "advanced",
     title: "Historiography and Civilizations",
-    description: "Rephrase complex sentences about historical analysis and geography.",
+    description:
+      "Rephrase complex sentences about historical analysis and geography.",
     sentences: [
       "Historiography is shaped as much by the prejudices of its writers as by the events it purports to chronicle.",
       "The collapse of empires rarely follows a single cause; it is typically the convergence of multiple stresses.",
@@ -991,7 +1021,8 @@ const LESSONS = [
     topic: "sports_fitness",
     level: "intermediate",
     title: "Fitness and Athletic Performance",
-    description: "Paraphrase sentences about training, sports, and personal fitness.",
+    description:
+      "Paraphrase sentences about training, sports, and personal fitness.",
     sentences: [
       "Strength training is just as important as cardio for overall fitness.",
       "Professional athletes follow strict diets to maintain their performance levels.",
@@ -1011,7 +1042,8 @@ const LESSONS = [
     topic: "sports_fitness",
     level: "advanced",
     title: "Sports Science and Elite Performance",
-    description: "Rephrase nuanced sentences about athletic performance and sports culture.",
+    description:
+      "Rephrase nuanced sentences about athletic performance and sports culture.",
     sentences: [
       "Marginal gains in elite athletics often hinge on imperceptible refinements to technique and recovery.",
       "The commercialisation of professional sport has reshaped both fan engagement and athlete compensation.",
@@ -1054,7 +1086,8 @@ const LESSONS = [
     topic: "arts_literature",
     level: "intermediate",
     title: "Literature and the Visual Arts",
-    description: "Paraphrase sentences about reading, painting, and creative expression.",
+    description:
+      "Paraphrase sentences about reading, painting, and creative expression.",
     sentences: [
       "Reading novels can broaden your perspective by exposing you to different ways of thinking.",
       "Many famous painters were not appreciated until long after their deaths.",
@@ -1074,7 +1107,8 @@ const LESSONS = [
     topic: "arts_literature",
     level: "advanced",
     title: "Aesthetics and Literary Theory",
-    description: "Rephrase complex sentences about art criticism and literary analysis.",
+    description:
+      "Rephrase complex sentences about art criticism and literary analysis.",
     sentences: [
       "Literary modernism eschewed linear narrative in favour of fragmented forms that mirror the dislocations of modern consciousness.",
       "The valuation of contemporary art is shaped as much by institutional gatekeepers as by aesthetic merit.",
@@ -1117,7 +1151,8 @@ const LESSONS = [
     topic: "religion_spirituality",
     level: "intermediate",
     title: "Faith and Spiritual Practice",
-    description: "Paraphrase sentences about religion, meditation, and spirituality.",
+    description:
+      "Paraphrase sentences about religion, meditation, and spirituality.",
     sentences: [
       "Meditation is increasingly recommended by doctors as a tool for managing anxiety.",
       "Religious holidays often bring families together more than ordinary weekends.",
@@ -1137,7 +1172,8 @@ const LESSONS = [
     topic: "religion_spirituality",
     level: "advanced",
     title: "Theology and Religious Pluralism",
-    description: "Rephrase complex sentences about religion, ethics, and pluralism.",
+    description:
+      "Rephrase complex sentences about religion, ethics, and pluralism.",
     sentences: [
       "Religious pluralism demands not merely tolerance but a genuine willingness to engage with unfamiliar worldviews.",
       "Secularisation has not so much eliminated belief as redistributed it across new forms of identity.",
@@ -1180,7 +1216,8 @@ const LESSONS = [
     topic: "law_justice",
     level: "intermediate",
     title: "Law and Justice in Daily Life",
-    description: "Paraphrase sentences about everyday legal matters and justice.",
+    description:
+      "Paraphrase sentences about everyday legal matters and justice.",
     sentences: [
       "Hiring a lawyer is often necessary when dealing with complex legal disputes.",
       "Many countries have introduced stricter penalties for drunk driving in recent years.",
@@ -1200,7 +1237,8 @@ const LESSONS = [
     topic: "law_justice",
     level: "advanced",
     title: "Jurisprudence and the Rule of Law",
-    description: "Rephrase nuanced sentences about legal philosophy and judicial systems.",
+    description:
+      "Rephrase nuanced sentences about legal philosophy and judicial systems.",
     sentences: [
       "The rule of law presupposes that no individual, however powerful, stands above its provisions.",
       "Judicial activism, while occasionally necessary, risks blurring the boundaries between adjudication and legislation.",
@@ -1243,7 +1281,8 @@ const LESSONS = [
     topic: "philosophy_ethics",
     level: "intermediate",
     title: "Ethics and Moral Choices",
-    description: "Paraphrase sentences about ethical dilemmas and personal values.",
+    description:
+      "Paraphrase sentences about ethical dilemmas and personal values.",
     sentences: [
       "Telling a small lie to protect someone's feelings raises difficult moral questions.",
       "Some philosophers argue that the consequences of an action matter more than the intentions behind it.",
@@ -1263,7 +1302,8 @@ const LESSONS = [
     topic: "philosophy_ethics",
     level: "advanced",
     title: "Moral Philosophy and Existential Inquiry",
-    description: "Rephrase complex sentences about ethics, meaning, and human existence.",
+    description:
+      "Rephrase complex sentences about ethics, meaning, and human existence.",
     sentences: [
       "Consequentialist ethics evaluate actions by their outcomes, often at the cost of overlooking the intrinsic morality of means.",
       "Existentialism insists that meaning is not discovered but actively constructed through deliberate choice.",
