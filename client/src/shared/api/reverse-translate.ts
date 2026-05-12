@@ -1,4 +1,4 @@
-import { axiosPrivate } from "./axios-client";
+import { axiosPrivate } from "@shared/api/axios-client";
 import type {
 	ReverseTranslateListResponse,
 	ReverseTranslateQueryParams,

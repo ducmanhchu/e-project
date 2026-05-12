@@ -17,56 +17,9 @@ import {
 } from "@shared/components/ui/pagination";
 import { fetchReverseTranslateList } from "@shared/api/reverse-translate";
 import { useFetchMe } from "@shared/hooks/use-fetch-me";
+import { baseFilterSections, statusFilterSection } from "@shared/lib/utils";
 
 const ITEMS_PER_PAGE = 12;
-
-const baseFilterSections = [
-	{
-		id: "level",
-		label: "Cấp độ",
-		options: [
-			{ id: "beginner", label: "Cơ bản" },
-			{ id: "intermediate", label: "Trung cấp" },
-			{ id: "advanced", label: "Nâng cao" },
-		],
-	},
-	{
-		id: "topic",
-		label: "Chủ đề",
-		options: [
-			{ id: "personal_communication", label: "Giao tiếp hàng ngày" },
-			{ id: "everyday_life", label: "Sinh hoạt hàng ngày" },
-			{ id: "transportation_travel", label: "Di chuyển và du lịch" },
-			{ id: "school_education", label: "Học tập và giáo dục" },
-			{ id: "work_business", label: "Công việc và kinh doanh" },
-			{ id: "public_services", label: "Dịch vụ công cộng" },
-			{ id: "health_medicine", label: "Sức khỏe và y tế" },
-			{ id: "shopping_money", label: "Mua sắm và tài chính" },
-			{ id: "food_drink", label: "Ẩm thực" },
-			{ id: "entertainment_leisure", label: "Giải trí và nghỉ dưỡng" },
-			{ id: "nature_environment", label: "Tự nhiên và môi trường" },
-			{ id: "science_technology", label: "Khoa học và công nghệ" },
-			{ id: "culture_society", label: "Văn hóa và xã hội" },
-			{ id: "government_politics", label: "Chính trị và quốc tế" },
-			{ id: "history_geography", label: "Lịch sử và địa lý" },
-			{ id: "sports_fitness", label: "Thể thao" },
-			{ id: "arts_literature", label: "Nghệ thuật và văn học" },
-			{ id: "religion_spirituality", label: "Tôn giáo và tinh thần" },
-			{ id: "law_justice", label: "Pháp luật và hôn nhân" },
-			{ id: "philosophy_ethics", label: "Triết học và đạo đức" },
-		],
-	},
-] as const;
-
-const statusFilterSection = {
-	id: "status",
-	label: "Trạng thái",
-	options: [
-		{ id: "not_started", label: "Chưa bắt đầu" },
-		{ id: "in_progress", label: "Đang thực hiện" },
-		{ id: "completed", label: "Hoàn thành" },
-	],
-} as const;
 
 function extractFilterValues(
 	selected: Record<string, boolean>,
