@@ -25,7 +25,7 @@ app.use("/api", apiRouter);
 app.use(errorHandler);
 
 CONNECT_DB().then(() => {
-  app.listen(PORT, HOST, () => {
-    console.log(`Server is running at http://${HOST}:${PORT}`);
-  });
+	app.listen(PORT, HOST, () => {
+		console.log(`Server is running at http://${HOST}:${PORT}`);
+	});
 });

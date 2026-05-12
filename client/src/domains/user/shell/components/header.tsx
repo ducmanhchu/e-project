@@ -273,7 +273,7 @@ function UserAction({ me, isLoading, onLogout }: HeaderContentProps) {
 		return (
 			<Button
 				variant="outline"
-				className="border border-primary transition-transform duration-300 hover:scale-105"
+				className="border border-primary hover:bg-primary hover:text-primary-foreground transition-colors duration-300"
 				asChild
 			>
 				<Link to="/login">
