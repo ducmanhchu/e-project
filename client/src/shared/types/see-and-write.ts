@@ -5,6 +5,8 @@ import type {
 	APIResponse,
 } from "@shared/types/utils";
 
+export type SAWStep = "select" | "writing" | "viewing";
+
 export type SAWExercise = {
 	id: string;
 	title: string;
@@ -14,7 +16,12 @@ export type SAWExercise = {
 	wordPool: {
 		id: string;
 		word: string;
+		ipa?: string;
+		partOfSpeech?: string;
+		meaning?: string;
+		audio?: string;
 	}[];
+	requiredKeywordCount: number;
 	minWordCount: number;
 	maxWordCount: number;
 	status: ExerciseStatus;
@@ -39,7 +46,7 @@ export type SAWExercise = {
 	lastSubmission: null | {
 		userAnswer: string;
 		score: number;
-		gradeBy: string;
+		gradedBy: string;
 		feedback: {
 			summary: string;
 			enhancedVersion: string;
@@ -57,6 +64,14 @@ export type SAWExercise = {
 		};
 		createdAt: string;
 	};
+};
+
+export type KeywordStatus = "correct" | "wrong" | "missed";
+
+export type SAWKeyword = {
+	id: string;
+	word: string;
+	meaning?: string;
 };
 
 export type SAWListItem = {
@@ -81,3 +96,49 @@ export type SAWListQueryParams = {
 };
 
 export type SAWListResponse = APIResponse<SAWListItem[]>;
+
+export type KeywordSubmitPayload = {
+	selectedKeywordIds: string[];
+};
+
+export type KeywordSubmitResponse = APIResponse<{
+	score: number;
+	correct: {
+		word: string;
+		meaning: string;
+	}[];
+	missed: {
+		word: string;
+		meaning: string;
+	}[];
+	wrong: {
+		word: string;
+		meaning: string;
+	}[];
+}>;
+
+export type ParagraphSubmitPayload = {
+	userAnswer: string;
+};
+
+export type ParagraphSubmitResponse = APIResponse<{
+	score: number;
+	gradedBy: string;
+	feedback: {
+		summary: string;
+		enhancedVersion: string;
+		criteria: {
+			name: string;
+			score: number;
+			maxScore: number;
+			comment: string;
+		}[];
+		corrections: {
+			original: string;
+			suggestion: string;
+			explanation: string;
+		}[];
+	};
+	bestScore: number;
+	isCompleted: boolean;
+}>;

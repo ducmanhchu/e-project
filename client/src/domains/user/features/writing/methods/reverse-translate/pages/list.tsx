@@ -111,7 +111,6 @@ export function ReverseTranslateList() {
 	const onCheckedChange = useCallback(
 		(compositeId: string, checked: boolean) => {
 			setSelected((prev) => ({ ...prev, [compositeId]: checked }));
-
 			setPage(1);
 		},
 		[],

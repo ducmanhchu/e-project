@@ -49,6 +49,17 @@ const vietnameseContentTypes: Record<WritingContentType, string> = {
 	general: "Tổng hợp",
 } as const;
 
+const vietnameseWritingCriteria: { [key: string]: string } = {
+	task_achievement: "Từ khóa sử dụng",
+	coherence_cohesion: "Mức độ liên kết",
+	lexical_resource: "Vốn từ vựng",
+	grammatical_range_accuracy: "Ngữ pháp",
+} as const;
+
+export function translateWritingCriteria(criteria: string): string {
+	return vietnameseWritingCriteria[criteria] || criteria;
+}
+
 export function translateTopic(topic: WritingExerciseTopic) {
 	return vietnameseTopics[topic];
 }
