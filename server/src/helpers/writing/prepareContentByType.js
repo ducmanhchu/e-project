@@ -48,12 +48,7 @@ function prepareReverseTranslation(body) {
 function prepareDescribe(body) {
   validateFields(body, ["image"]);
 
-  const requiredWords = body.requiredWords || [];
-  const distractorWords = body.distractorWords || [];
-  const wordPool = [
-    ...requiredWords.map((w) => ({ word: w, meaning: "", isRequired: true })),
-    ...distractorWords.map((w) => ({ word: w, meaning: "", isRequired: false })),
-  ];
+  const wordPool = Array.isArray(body.wordPool) ? body.wordPool : [];
 
   return {
     fields: {

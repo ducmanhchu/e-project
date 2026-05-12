@@ -36,7 +36,11 @@ export async function buildStatusFilter({ userId, lessonType, statuses }) {
   const attempts = await Attempt.find({ userId, lessonType })
     .select("lessonId status")
     .lean();
-  const allIds = attempts.map((a) => a.lessonId);
+  // Attempts with status="not_started" (e.g., after retry/reset) are
+  // semantically equivalent to no attempt — exclude from "started" set.
+  const startedIds = attempts
+    .filter((a) => a.status !== "not_started")
+    .map((a) => a.lessonId);
   const matchedIds = matchedAttemptStatuses.length
     ? attempts
         .filter((a) => matchedAttemptStatuses.includes(a.status))
@@ -47,10 +51,10 @@ export async function buildStatusFilter({ userId, lessonType, statuses }) {
     return { _id: { $in: matchedIds } };
   }
   if (matchedAttemptStatuses.length === 0 && includesNotStarted) {
-    return allIds.length ? { _id: { $nin: allIds } } : null;
+    return startedIds.length ? { _id: { $nin: startedIds } } : null;
   }
   return {
-    $or: [{ _id: { $in: matchedIds } }, { _id: { $nin: allIds } }],
+    $or: [{ _id: { $in: matchedIds } }, { _id: { $nin: startedIds } }],
   };
 }
 
@@ -134,7 +138,7 @@ export async function submitAndUpdateProgress(attempt, {
  * Reset attempt for retry — clear progress, keep history.
  */
 export async function resetAttempt(attempt) {
-  attempt.status = "in_progress";
+  attempt.status = "not_started";
   attempt.completedSentences = 0;
   attempt.bestScore = 0;
   attempt.completedAt = null;

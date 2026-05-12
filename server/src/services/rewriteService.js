@@ -104,10 +104,16 @@ export async function getLesson(lessonId, userId) {
   const lesson = await Rewrite.findById(lessonId).lean();
   if (!lesson) throw ApiError.notFound("Lesson not found");
 
-  const attempt = await findOrCreateAttempt(userId, lessonId, "Rewrite");
-  const lastSubMap = await getLastSubmissions(attempt._id);
+  const attempt = await Attempt.findOne({
+    userId,
+    lessonId,
+    lessonType: "Rewrite",
+  }).lean();
+  const lastSubMap = attempt
+    ? await getLastSubmissions(attempt._id)
+    : new Map();
   const progressMap = new Map(
-    (attempt.sentenceProgress || []).map((p) => [p.sentenceOrder, p]),
+    (attempt?.sentenceProgress || []).map((p) => [p.sentenceOrder, p]),
   );
 
   return {
@@ -116,9 +122,9 @@ export async function getLesson(lessonId, userId) {
     level: lesson.level,
     topic: lesson.topic,
     totalSentences: lesson.totalSentences,
-    status: attempt.status,
-    completedSentences: attempt.completedSentences,
-    completedAt: attempt.completedAt || null,
+    status: attempt?.status ?? "not_started",
+    completedSentences: attempt?.completedSentences ?? 0,
+    completedAt: attempt?.completedAt ?? null,
     sentences: (lesson.sentences || []).map((s) => {
       const progress = progressMap.get(s.order);
       return {

@@ -8,7 +8,10 @@ import * as examController from "@server/controllers/examController";
 import * as attemptController from "@server/controllers/attemptController";
 import * as vocabularyController from "@server/controllers/vocabularyController";
 import * as slangHangController from "@server/controllers/slangHangController";
-import { protectedRoute, optionalAuth } from "@server/middlewares/authMiddleware";
+import {
+  protectedRoute,
+  optionalAuth,
+} from "@server/middlewares/authMiddleware";
 const router = express.Router();
 
 // auth routes
@@ -23,8 +26,16 @@ router.post("/auth/forgot-password", authController.forgotPassword);
 router.post("/auth/reset-password", authController.resetPassword);
 
 // ── Public catalog (optional auth: guest sees defaults, logged-in sees attempt summary)
-router.get("/writing/reverse-translation", optionalAuth, reverseTranslationController.listLessons);
-router.get("/writing/see-and-write", optionalAuth, seeWriteController.listLessons);
+router.get(
+  "/writing/reverse-translation",
+  optionalAuth,
+  reverseTranslationController.listLessons,
+);
+router.get(
+  "/writing/see-and-write",
+  optionalAuth,
+  seeWriteController.listLessons,
+);
 router.get("/writing/rewrite", optionalAuth, rewriteController.listLessons);
 router.get("/writing/exam", optionalAuth, examController.listExams);
 
@@ -33,7 +44,10 @@ router.get("/me", userController.authMe);
 router.post("/auth/change-password", authController.changePassword);
 
 // ── Reverse Translation ─────────────────────────────────
-router.get("/writing/reverse-translation/:id", reverseTranslationController.getLesson);
+router.get(
+  "/writing/reverse-translation/:id",
+  reverseTranslationController.getLesson,
+);
 router.post(
   "/writing/reverse-translation/:id/submit",
   reverseTranslationController.submitAnswer,
