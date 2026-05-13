@@ -38,12 +38,15 @@ export function SAWKeyword({
 			onClick={isInteractive ? onClick : undefined}
 			onKeyDown={handleKeyDown}
 			className={cn(
-				"flex flex-col place-content-center p-3 gap-2 items-center border border-secondary-black rounded-2xl transition-colors select-none",
+				"flex flex-col place-content-center p-3 gap-2 items-center border border-secondary-black rounded-2xl transition-colors select-none bg-neutral-50",
 				status === "correct" && "bg-secondary-green",
 				status === "wrong" && "bg-secondary-red",
 				status === "missed" && "bg-secondary-yellow",
 				isSelectedNoStatus && "bg-secondary-black",
-				isInteractive && !selected && !status && "cursor-pointer hover:bg-neutral-100",
+				isInteractive &&
+					!selected &&
+					!status &&
+					"cursor-pointer hover:bg-neutral-200",
 				isInteractive && selected && "cursor-pointer",
 				disabled && "opacity-40 cursor-not-allowed",
 			)}

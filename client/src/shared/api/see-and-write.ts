@@ -9,8 +9,7 @@ import type {
 	ParagraphSubmitResponse,
 } from "@shared/types/see-and-write";
 import { axiosPrivate } from "@shared/api/axios-client";
-
-const SUBMIT_TIMEOUT_MS = 50_000;
+import { SUBMIT_TIMEOUT_MS } from "@shared/lib/utils";
 
 export const fetchSAWList = async (
 	params?: SAWListQueryParams,
