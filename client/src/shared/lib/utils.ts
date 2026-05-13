@@ -119,3 +119,5 @@ export const statusFilterSection = {
 		{ id: "completed", label: "Hoàn thành" },
 	],
 } as const;
+
+export const SUBMIT_TIMEOUT_MS = 50_000 as const;

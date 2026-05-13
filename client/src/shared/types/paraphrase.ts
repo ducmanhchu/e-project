@@ -46,3 +46,22 @@ export type ParaphraseListQueryParams = {
 };
 
 export type ParaphraseListResponse = APIResponse<ParaphraseListItem[]>;
+
+export type ParaphraseExerciseResponse = APIResponse<ParaphraseExercise>;
+
+export type ParaphraseSubmitPayload = {
+	sentenceOrder: number;
+	userAnswer: string;
+};
+
+export type ParaphraseSubmitResponse = APIResponse<{
+	score: number;
+	gradedBy: string;
+	feedback: {
+		suggestion: string;
+		improvements: string[];
+		comment: string;
+		modelAnswer: string;
+	};
+	isCompleted: boolean;
+}>;

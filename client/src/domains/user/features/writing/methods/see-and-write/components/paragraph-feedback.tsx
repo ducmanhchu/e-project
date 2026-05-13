@@ -28,7 +28,7 @@ export function ParagraphFeedback({ result, onRetry }: ParagraphFeedbackProps) {
 				<h2 className="text-secondary-black text-base font-medium">
 					Kết quả đánh giá
 				</h2>
-				<div className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-secondary-black bg-neutral-50">
+				<div className="flex items-center gap-2 px-4 py-2 rounded-2xl border bg-neutral-50">
 					<span className="text-muted-foreground text-sm">Điểm:</span>
 					<span
 						className={cn(
