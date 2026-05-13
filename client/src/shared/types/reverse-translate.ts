@@ -32,11 +32,7 @@ export type UserLastSubmission = {
 	createdAt: string;
 };
 
-export type ReverseTranslateListResponse = {
-	success: boolean;
-	data: RTItem[];
-	pagination: PaginationInfo;
-};
+export type ReverseTranslateListResponse = APIResponse<RTItem[]>;
 
 export type ReverseTranslateQueryParams = {
 	level?: string;
@@ -45,13 +41,6 @@ export type ReverseTranslateQueryParams = {
 	status?: string;
 	page?: number;
 	limit?: number;
-};
-
-export type PaginationInfo = {
-	page: number;
-	limit: number;
-	total: number;
-	totalPages: number;
 };
 
 export type RTExercise = Omit<RTItem, "createdAt"> & {

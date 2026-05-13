@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BookAIcon } from "@hugeicons/core-free-icons";
-import { useCallback } from "react";
+import { BookAIcon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { useCallback, useState } from "react";
 
 import { cn } from "@shared/lib/utils";
 import { Button } from "@shared/components/ui/button";
@@ -32,6 +32,17 @@ export function FeedbackPanel({
 		// Replace multiple spaces with a single space and trim
 		return cleaned.replace(/\s+/g, " ").trim();
 	}, []);
+
+	const [isSuggestionVisible, setIsSuggestionVisible] = useState(false);
+	const [prevViewingIdx, setPrevViewingIdx] = useState<number | null>(null);
+
+	if ((viewingFeedback?.idx ?? null) !== prevViewingIdx) {
+		setPrevViewingIdx(viewingFeedback?.idx ?? null);
+		setIsSuggestionVisible(false);
+	}
+
+	const isSuggestionMaskable = !!viewingFeedback && viewingFeedback.score < 70;
+	const shouldMaskSuggestion = isSuggestionMaskable && !isSuggestionVisible;
 
 	return (
 		<div className="col-span-1 flex flex-col gap-3 lg:h-full lg:overflow-y-auto">
@@ -169,10 +180,37 @@ export function FeedbackPanel({
 							</p>
 						</div>
 						<div className="flex flex-col gap-1">
-							<p className="text-muted-foreground text-sm font-normal">
-								Đáp án gợi ý:
-							</p>
-							<p className="text-green-800 text-base/7 font-normal text-justify">
+							<div className="flex items-center gap-2">
+								<p className="text-muted-foreground text-sm font-normal">
+									Đáp án gợi ý:
+								</p>
+								{isSuggestionMaskable && (
+									<button
+										type="button"
+										onClick={() => setIsSuggestionVisible((v) => !v)}
+										className="text-muted-foreground hover:text-secondary-black transition-colors inline-flex items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-black/40"
+										aria-label={
+											isSuggestionVisible
+												? "Ẩn đáp án gợi ý"
+												: "Hiện đáp án gợi ý"
+										}
+										aria-pressed={isSuggestionVisible}
+									>
+										<HugeiconsIcon
+											icon={isSuggestionVisible ? ViewOffIcon : ViewIcon}
+											size={16}
+										/>
+									</button>
+								)}
+							</div>
+							<p
+								className={cn(
+									"text-green-800 text-base/7 font-normal text-justify transition",
+									shouldMaskSuggestion &&
+										"blur-sm select-none pointer-events-none",
+								)}
+								aria-hidden={shouldMaskSuggestion}
+							>
 								{standardSuggestion(viewingFeedback.feedback.suggestion)}
 							</p>
 						</div>

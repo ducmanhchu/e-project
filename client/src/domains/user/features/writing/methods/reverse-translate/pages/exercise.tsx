@@ -36,6 +36,7 @@ import { WordCard } from "@user/features/writing/methods/reverse-translate/compo
 import { SentenceParagraph } from "@user/features/writing/methods/reverse-translate/components/sentence-paragraph";
 import { FeedbackPanel } from "@user/features/writing/methods/reverse-translate/components/feedback-panel";
 import { useReverseTranslate } from "@user/features/writing/methods/reverse-translate/hooks/use-reverse-translate";
+import { queryClient } from "@shared/lib/query-client";
 
 export function ReverseTranslateExercise() {
 	const navigate = useNavigate();
@@ -67,6 +68,11 @@ export function ReverseTranslateExercise() {
 		}
 	};
 
+	const handleBack = () => {
+		queryClient.invalidateQueries({ queryKey: ["reverse-translate", "list"] });
+		navigate(-1);
+	};
+
 	return (
 		<div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full min-h-dvh py-8 px-4 md:px-10 lg:px-20 lg:h-dvh lg:overflow-hidden">
 			<div className="col-span-2 flex flex-col gap-4 lg:min-h-0">
@@ -76,7 +82,7 @@ export function ReverseTranslateExercise() {
 						variant="outline"
 						size="icon"
 						className="border-secondary-black bg-secondary-white group hover:bg-secondary-black transition-colors duration-300"
-						onClick={() => navigate(-1)}
+						onClick={handleBack}
 					>
 						<HugeiconsIcon
 							icon={ArrowLeft02Icon}
@@ -134,6 +140,7 @@ export function ReverseTranslateExercise() {
 							onChange={(e) => setUserInput(e.target.value)}
 							onKeyDown={onKeyDown}
 							disabled={isAllCompleted || isSubmitting}
+							autoComplete="off"
 						/>
 						<InputGroupAddon align="inline-end">
 							<Dialog>

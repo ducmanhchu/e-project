@@ -41,7 +41,15 @@ export type HeaderContentProps = {
 	onLogout: () => void;
 };
 
+export type PaginationInfo = {
+	page: number;
+	limit: number;
+	total: number;
+	totalPages: number;
+};
+
 export type APIResponse<T> = {
 	data: T;
 	success: boolean;
+	pagination?: PaginationInfo;
 };

@@ -1,26 +1,26 @@
 import { Link } from "react-router";
 
+import type { ParaphraseListItem } from "@shared/types/paraphrase";
 import {
 	Card,
-	CardFooter,
 	CardHeader,
 	CardTitle,
 	CardDescription,
+	CardFooter,
 } from "@shared/components/ui/card";
+import { ExerciseLevelBadge } from "@user/components/exercise-level-badge";
+import { translateStatus, translateTopic } from "@shared/lib/utils";
 import { Button } from "@shared/components/ui/button";
 
-import type { RTItem } from "@shared/types/reverse-translate";
-import { translateTopic, translateStatus } from "@shared/lib/utils";
-import { ExerciseLevelBadge } from "@/domains/user/components/exercise-level-badge";
-
-export function ReverseTranslateCard({ card }: { card: RTItem }) {
+export function ParaphraseCard({ card }: { card: ParaphraseListItem }) {
 	return (
 		<Card className="flex flex-col justify-between">
 			<CardHeader>
 				<ExerciseLevelBadge level={card.level} />
 				<CardTitle className="line-clamp-2">{card.title}</CardTitle>
-				<CardDescription className="line-clamp-1">
+				<CardDescription className="line-clamp-1 flex flex-col gap-2">
 					{translateTopic(card.topic)}
+					<span>{card.totalSentences} câu hỏi</span>
 				</CardDescription>
 			</CardHeader>
 			<CardFooter>
@@ -34,7 +34,7 @@ export function ReverseTranslateCard({ card }: { card: RTItem }) {
 								: "greenHover"
 					}
 				>
-					<Link to={`/writing/reverse-translate/${card.id}`}>
+					<Link to={`/writing/paraphrase/${card.id}`}>
 						{translateStatus(card.status)}
 					</Link>
 				</Button>
