@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { RefreshIcon } from "@hugeicons/core-free-icons";
+import { RefreshIcon, Loading03Icon } from "@hugeicons/core-free-icons";
 
 import type { SAWExercise } from "@shared/types/see-and-write";
 import { Button } from "@shared/components/ui/button";
@@ -16,9 +16,14 @@ type ParagraphResult = NonNullable<SAWExercise["lastSubmission"]>;
 type ParagraphFeedbackProps = {
 	result: ParagraphResult;
 	onRetry: () => void;
+	isResetting?: boolean;
 };
 
-export function ParagraphFeedback({ result, onRetry }: ParagraphFeedbackProps) {
+export function ParagraphFeedback({
+	result,
+	onRetry,
+	isResetting,
+}: ParagraphFeedbackProps) {
 	const { score, feedback, userAnswer } = result;
 	const isPass = score >= 70;
 
@@ -143,9 +148,23 @@ export function ParagraphFeedback({ result, onRetry }: ParagraphFeedbackProps) {
 				</Card>
 			)}
 
-			<Button variant="blackHover" className="w-full" onClick={onRetry}>
-				<HugeiconsIcon icon={RefreshIcon} />
-				Làm lại bài tập
+			<Button
+				variant="blackHover"
+				className="w-full"
+				onClick={onRetry}
+				disabled={isResetting}
+			>
+				{isResetting ? (
+					<>
+						<HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
+						Đang xử lý...
+					</>
+				) : (
+					<>
+						<HugeiconsIcon icon={RefreshIcon} />
+						Làm lại bài tập
+					</>
+				)}
 			</Button>
 		</div>
 	);

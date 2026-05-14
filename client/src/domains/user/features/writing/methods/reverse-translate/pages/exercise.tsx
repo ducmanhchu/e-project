@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	ArrowLeft02Icon,
 	ArrowUp02Icon,
+	Redo02Icon,
 	IdeaIcon,
 	HelpCircleIcon,
 	Loading03Icon,
@@ -53,12 +54,14 @@ export function ReverseTranslateExercise() {
 		userInput,
 		setUserInput,
 		handleSubmit,
+		handleReset,
 		hint,
 		isAllCompleted,
 		progress,
 		isLoading,
 		isVocabListLoading,
 		isSubmitting,
+		isResetting,
 	} = useReverseTranslate(id as string);
 
 	const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -178,21 +181,34 @@ export function ReverseTranslateExercise() {
 								</DialogContent>
 							</Dialog>
 
-							<InputGroupButton
-								variant="blackHover"
-								size="icon-sm"
-								onClick={handleSubmit}
-								disabled={isAllCompleted || isSubmitting || !userInput.trim()}
-							>
-								{isSubmitting ? (
-									<HugeiconsIcon
-										icon={Loading03Icon}
-										className="animate-spin"
-									/>
-								) : (
-									<HugeiconsIcon icon={ArrowUp02Icon} />
-								)}
-							</InputGroupButton>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<InputGroupButton
+										variant="blackHover"
+										size="icon-sm"
+										onClick={isAllCompleted ? handleReset : handleSubmit}
+										disabled={
+											isAllCompleted
+												? isResetting
+												: isSubmitting || !userInput.trim()
+										}
+									>
+										{isSubmitting || isResetting ? (
+											<HugeiconsIcon
+												icon={Loading03Icon}
+												className="animate-spin"
+											/>
+										) : (
+											<HugeiconsIcon
+												icon={isAllCompleted ? Redo02Icon : ArrowUp02Icon}
+											/>
+										)}
+									</InputGroupButton>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>{isAllCompleted ? "Làm lại" : "Gửi"}</p>
+								</TooltipContent>
+							</Tooltip>
 						</InputGroupAddon>
 					</InputGroup>
 					<div className="flex gap-2 ms-4 items-center">

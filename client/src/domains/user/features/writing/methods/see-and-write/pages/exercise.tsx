@@ -42,6 +42,7 @@ export function SeeAndWriteExercise() {
 		paragraphResult,
 
 		handleRetry,
+		isResetting,
 	} = useSeeAndWrite(id as string);
 
 	const handleBack = () => {
@@ -148,7 +149,11 @@ export function SeeAndWriteExercise() {
 
 				{/* Bước 3 */}
 				{currentStep === "viewing" && paragraphResult && (
-					<ParagraphFeedback result={paragraphResult} onRetry={handleRetry} />
+					<ParagraphFeedback
+						result={paragraphResult}
+						onRetry={handleRetry}
+						isResetting={isResetting}
+					/>
 				)}
 			</div>
 		</div>
