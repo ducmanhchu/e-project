@@ -8,13 +8,16 @@ import "./index.css";
 import { router } from "./router.ts";
 import { queryClient } from "@/shared/lib/query-client";
 import { Toaster } from "@shared/components/ui/sonner";
+import { TooltipProvider } from "@shared/components/ui/tooltip";
 
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
 		<GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
 			<QueryClientProvider client={queryClient}>
-				<RouterProvider router={router} />
-				<Toaster />
+				<TooltipProvider>
+					<RouterProvider router={router} />
+					<Toaster />
+				</TooltipProvider>
 			</QueryClientProvider>
 		</GoogleOAuthProvider>
 	</StrictMode>,

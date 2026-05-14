@@ -46,12 +46,21 @@
 	--color-sidebar-ring: var(--sidebar-ring);
 	--font-sans: "Inter Variable", sans-serif;
 	--font-heading: var(--font-sans);
+
+	--color-secondary-white: var(--secondary-white);
+	--color-secondary-black: var(--secondary-black);
+	--color-secondary-yellow: var(--secondary-yellow);
+	--color-secondary-orange: var(--secondary-orange);
+	--color-secondary-pink: var(--secondary-pink);
+	--color-secondary-green: var(--secondary-green);
+	--color-secondary-blue: var(--secondary-blue);
+	--color-secondary-red: var(--secondary-red);
 }
 
 :root {
 	--radius: 0.625rem;
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.148 0.004 228.8);
+	--background: oklch(0.9857 0.0126 86.83);
+	--foreground: oklch(0.1591 0 0);
 	--card: oklch(1 0 0);
 	--card-foreground: oklch(0.148 0.004 228.8);
 	--popover: oklch(1 0 0);
@@ -59,7 +68,7 @@
 	--primary: oklch(0.218 0.008 223.9);
 	--primary-foreground: oklch(0.987 0.002 197.1);
 	--secondary: oklch(0.963 0.002 197.1);
-	--secondary-foreground: oklch(0.218 0.008 223.9);
+	--secondary-foreground: oklch(0.1591 0 0);
 	--muted: oklch(0.963 0.002 197.1);
 	--muted-foreground: oklch(0.56 0.021 213.5);
 	--accent: oklch(0.218 0.008 223.9);
@@ -81,6 +90,15 @@
 	--sidebar-accent-foreground: oklch(0.218 0.008 223.9);
 	--sidebar-border: oklch(0.925 0.005 214.3);
 	--sidebar-ring: oklch(0.723 0.014 214.4);
+
+	--secondary-white: oklch(0.9857 0.0126 86.83);
+	--secondary-black: oklch(0.1591 0 0);
+	--secondary-yellow: oklch(0.8781 0.1688 91.86);
+	--secondary-orange: oklch(0.700925 0.201198 44.7666);
+	--secondary-pink: oklch(0.6936 0.2245 351.51);
+	--secondary-green: oklch(0.8009 0.2143 142.92);
+	--secondary-blue: oklch(0.5776 0.204 259.26);
+	--secondary-red: oklch(0.6463 0.227 29);
 }
 
 .dark {
@@ -131,4 +149,43 @@
 		scrollbar-width: thin;
 		scrollbar-color: var(--muted-foreground) transparent;
 	}
+}
+
+@keyframes ww-marquee-left {
+	0% {
+		transform: translate3d(0, 0, 0);
+	}
+	100% {
+		transform: translate3d(-50%, 0, 0);
+	}
+}
+
+@keyframes ww-marquee-right {
+	0% {
+		transform: translate3d(-50%, 0, 0);
+	}
+	100% {
+		transform: translate3d(0, 0, 0);
+	}
+}
+
+.ww-marquee-track {
+	width: max-content;
+	will-change: transform;
+	animation-duration: var(--ww-marquee-duration, 22s);
+	animation-timing-function: linear;
+	animation-iteration-count: infinite;
+	animation-play-state: running;
+}
+
+.ww-marquee-track:hover {
+	animation-play-state: paused;
+}
+
+.ww-marquee-left {
+	animation-name: ww-marquee-left;
+}
+
+.ww-marquee-right {
+	animation-name: ww-marquee-right;
 }
