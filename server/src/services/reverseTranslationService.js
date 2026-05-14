@@ -137,7 +137,7 @@ export async function getLesson(lessonId, userId) {
         order: s.order,
         vietnameseText: s.vietnameseText,
         isCompleted: progress?.isCompleted ?? false,
-        lastSubmission: lastSubMap.get(s.order) || null,
+        lastSubmission: progress ? lastSubMap.get(s.order) ?? null : null,
       };
     }),
   };

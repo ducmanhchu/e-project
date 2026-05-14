@@ -1,6 +1,17 @@
 import { Attempt } from "@server/models/attempt/Attempt";
 import { resetAttempt } from "@server/helpers/attemptHelper";
 import { ApiError } from "@server/helpers/ApiError";
+import * as reverseTranslationService from "@server/services/reverseTranslationService";
+import * as seeWriteService from "@server/services/seeWriteService";
+import * as rewriteService from "@server/services/rewriteService";
+import * as examService from "@server/services/examService";
+
+const LESSON_GETTERS = {
+  ReverseTranslation: reverseTranslationService.getLesson,
+  SeeWrite: seeWriteService.getLesson,
+  Rewrite: rewriteService.getLesson,
+  Exam: examService.getExam,
+};
 
 /**
  * GET /api/attempts?lessonIds=id1,id2
@@ -49,10 +60,9 @@ export async function updateAttempt(req, res, next) {
 
     if (action === "retry") {
       await resetAttempt(attempt);
-      return res.json({
-        success: true,
-        data: { status: "in_progress", completedSentences: 0, bestScore: 0 },
-      });
+      const getter = LESSON_GETTERS[attempt.lessonType];
+      const data = await getter(attempt.lessonId, req.user._id);
+      return res.json({ success: true, data });
     }
 
     throw ApiError.badRequest(`Unknown action: ${action}`);
