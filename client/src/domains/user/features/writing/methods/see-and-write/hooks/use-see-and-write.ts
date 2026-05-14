@@ -1,11 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import {
 	fetchSAWExercise,
 	submitKeyword,
 	submitParagraph,
 } from "@shared/api/see-and-write";
+import { resetExercise } from "@shared/api/attempt";
 import type {
 	SAWExercise,
 	SAWStep,
@@ -179,12 +181,29 @@ export function useSeeAndWrite(exerciseId: string) {
 		submitParagraphMutation.mutate(trimmed);
 	}, [paragraph, paragraphValidation.isValid, submitParagraphMutation]);
 
+	const resetMutation = useMutation({
+		mutationFn: () => resetExercise(exerciseId, { action: "retry" }),
+		onSuccess: () => {
+			setKeywordResult(null);
+			setParagraphResult(null);
+			setSelectedKeywordIds(new Set());
+			setParagraph("");
+			queryClient.invalidateQueries({
+				queryKey: ["see-and-write", "exercise", exerciseId],
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["see-and-write", "list"],
+			});
+		},
+		onError: () => {
+			toast.error("Không thể làm lại bài tập. Vui lòng thử lại sau.");
+		},
+	});
+
 	const handleRetry = useCallback(() => {
-		setKeywordResult(null);
-		setParagraphResult(null);
-		setSelectedKeywordIds(new Set());
-		setParagraph("");
-	}, []);
+		if (resetMutation.isPending) return;
+		resetMutation.mutate();
+	}, [resetMutation]);
 
 	return {
 		exercise,
@@ -212,5 +231,6 @@ export function useSeeAndWrite(exerciseId: string) {
 
 		// Retry
 		handleRetry,
+		isResetting: resetMutation.isPending,
 	};
 }

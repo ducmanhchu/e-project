@@ -35,6 +35,8 @@ export type WritingContentType =
 
 export type ExerciseStatus = "not_started" | "in_progress" | "completed";
 
+export type AttemptAction = "retry";
+
 export type HeaderContentProps = {
 	me?: User;
 	isLoading: boolean;

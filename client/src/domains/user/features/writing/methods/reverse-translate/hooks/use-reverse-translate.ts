@@ -1,10 +1,13 @@
 import { useMemo, useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { toast } from "sonner";
+
 import {
 	fetchRTExercise,
 	submitRTExercise,
 } from "@shared/api/reverse-translate";
+import { resetExercise } from "@shared/api/attempt";
 import { fetchWordList } from "@shared/api/vocab";
 import type {
 	CurrentFeedback,
@@ -83,6 +86,9 @@ export function useReverseTranslate(exerciseId: string) {
 				});
 			}
 		},
+		onError: () => {
+			toast.error("Có lỗi khi gửi câu trả lời. Vui lòng thử lại sau!");
+		},
 	});
 
 	const handleSubmit = useCallback(() => {
@@ -135,6 +141,29 @@ export function useReverseTranslate(exerciseId: string) {
 
 	const isAllCompleted = currentSentenceIdx === null && sentences.length > 0;
 
+	const resetMutation = useMutation({
+		mutationFn: () => resetExercise(exerciseId, { action: "retry" }),
+		onSuccess: () => {
+			setUserInput("");
+			setViewingSentenceIdx(null);
+			setCurrentFeedback(null);
+			queryClient.invalidateQueries({
+				queryKey: ["reverse-translate", "exercise", exerciseId],
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["reverse-translate", "list"],
+			});
+		},
+		onError: () => {
+			toast.error("Không thể làm lại bài tập. Vui lòng thử lại sau.");
+		},
+	});
+
+	const handleReset = useCallback(() => {
+		if (resetMutation.isPending) return;
+		resetMutation.mutate();
+	}, [resetMutation]);
+
 	return {
 		exercise,
 		sentences,
@@ -146,11 +175,13 @@ export function useReverseTranslate(exerciseId: string) {
 		userInput,
 		setUserInput,
 		handleSubmit,
+		handleReset,
 		hint,
 		isAllCompleted,
 		progress,
 		isLoading: exerciseQuery.isLoading,
 		isVocabListLoading: vocabListQuery.isLoading,
 		isSubmitting: submitMutation.isPending,
+		isResetting: resetMutation.isPending,
 	};
 }

@@ -33,6 +33,15 @@ export function FeedbackPanel({
 		return cleaned.replace(/\s+/g, " ").trim();
 	}, []);
 
+	const standardImprovements = useCallback((input: string) => {
+		// Replace all occurrences of **...** with '...'
+		let cleaned = input.replace(/\*\*(.*?)\*\*/g, "'$1'");
+		// Remove all parentheses () blocks, including the parenthesis and their inner content
+		cleaned = cleaned.replace(/\([^)]*\)/g, "");
+		// Replace multiple spaces with a single space and trim
+		return cleaned.replace(/\s+/g, " ").trim();
+	}, []);
+
 	const [isSuggestionVisible, setIsSuggestionVisible] = useState(false);
 	const [prevViewingIdx, setPrevViewingIdx] = useState<number | null>(null);
 
@@ -225,7 +234,7 @@ export function FeedbackPanel({
 											key={idx}
 											className="text-secondary-black text-base/7 font-normal mb-4 text-justify"
 										>
-											{item}
+											{standardImprovements(item)}
 										</li>
 									))}
 								</ul>

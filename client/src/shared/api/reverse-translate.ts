@@ -1,4 +1,3 @@
-import { axiosPrivate } from "@shared/api/axios-client";
 import type {
 	ReverseTranslateListResponse,
 	ReverseTranslateQueryParams,
@@ -6,6 +5,8 @@ import type {
 	RTExerciseSubmitPayload,
 	RTExerciseSubmitResponse,
 } from "@shared/types/reverse-translate";
+
+import { axiosPrivate } from "@shared/lib/axios-instances";
 import { SUBMIT_TIMEOUT_MS } from "@shared/lib/utils";
 
 export const fetchReverseTranslateList = async (
