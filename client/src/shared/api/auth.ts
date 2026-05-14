@@ -1,4 +1,4 @@
-import { axiosPublic, axiosPrivate } from "./axios-client";
+import { axiosPublic, axiosPrivate } from "@shared/lib/axios-instances";
 import type {
 	SignInPayload,
 	SignInResponse,

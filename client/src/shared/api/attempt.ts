@@ -3,7 +3,7 @@ import type { RTExercise } from "@shared/types/reverse-translate";
 import type { SAWExercise } from "@shared/types/see-and-write";
 import type { ParaphraseExercise } from "@shared/types/paraphrase";
 
-import { axiosPrivate } from "@shared/api/axios-client";
+import { axiosPrivate } from "@shared/lib/axios-instances";
 
 export const resetExercise = async (
 	id: string,

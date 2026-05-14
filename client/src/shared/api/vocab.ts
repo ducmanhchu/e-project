@@ -2,7 +2,7 @@ import type {
 	WordListQueryParams,
 	WordListResponse,
 } from "@shared/types/vocab";
-import { axiosPrivate } from "@shared/api/axios-client";
+import { axiosPrivate } from "@shared/lib/axios-instances";
 
 export const fetchWordList = async (
 	params?: WordListQueryParams,

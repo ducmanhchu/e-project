@@ -7,8 +7,11 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import "./index.css";
 import { router } from "./router.ts";
 import { queryClient } from "@/shared/lib/query-client";
+import { axiosInterceptors } from "@shared/api/axios-interceptors";
 import { Toaster } from "@shared/components/ui/sonner";
 import { TooltipProvider } from "@shared/components/ui/tooltip";
+
+axiosInterceptors();
 
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
