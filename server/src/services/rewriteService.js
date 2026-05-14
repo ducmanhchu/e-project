@@ -131,7 +131,7 @@ export async function getLesson(lessonId, userId) {
         order: s.order,
         targetSentence: s.targetSentence,
         isCompleted: progress?.isCompleted ?? false,
-        lastSubmission: lastSubMap.get(s.order) || null,
+        lastSubmission: progress ? lastSubMap.get(s.order) ?? null : null,
       };
     }),
   };
