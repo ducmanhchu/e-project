@@ -110,8 +110,12 @@ router.get("/slang-hang/dialogues", slangHangController.list);
 router.get("/slang-hang/dialogues/:id", slangHangController.getOne);
 router.get("/slang-hang/azure-token", slangHangController.azureToken);
 router.post(
-  "/slang-hang/dialogue-attempts",
-  slangHangController.recordMessageAttempt,
+  "/slang-hang/dialogues/:id/submit",
+  slangHangController.submitMessageAttempt,
+);
+router.post(
+  "/slang-hang/dialogues/:id/retry",
+  slangHangController.retry,
 );
 
 // ── Deck folders (PER-USER, 1 level only) ──────────

@@ -193,6 +193,10 @@ export async function deleteDialogue({ id }) {
   if (!result) throw ApiError.notFound("Dialogue not found");
 }
 
+export async function retry({ userId, dialogueId }) {
+  await DialogueAttempt.deleteOne({ userId, dialogueId });
+}
+
 export async function getAzureSpeechToken() {
   return speechAuthProvider.getSpeechToken();
 }

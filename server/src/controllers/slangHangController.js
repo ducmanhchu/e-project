@@ -91,25 +91,39 @@ export async function azureToken(req, res, next) {
 }
 
 /**
- * POST /api/slang-hang/dialogue-attempts
+ * POST /api/slang-hang/dialogues/:id/retry
+ *
+ * Clears the user's progress for this dialogue so they can start over.
+ * Idempotent — succeeds whether or not the user has any prior progress.
+ */
+export async function retry(req, res, next) {
+  try {
+    validateObjectId(req.params.id, "id");
+    await slangHangService.retry({
+      userId: req.user._id,
+      dialogueId: req.params.id,
+    });
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * POST /api/slang-hang/dialogues/:id/submit
  *
  * Records one message attempt (user's reading of one message) into the user's
  * DialogueAttempt for this dialogue. Upserts: creates the parent attempt on
  * first call, replaces the entry with the same messageOrder (latest semantics).
  */
-export async function recordMessageAttempt(req, res, next) {
+export async function submitMessageAttempt(req, res, next) {
   try {
-    validateFields(req.body, [
-      "dialogueId",
-      "messageOrder",
-      "targetText",
-      "feedback",
-    ]);
-    validateObjectId(req.body.dialogueId, "dialogueId");
+    validateObjectId(req.params.id, "id");
+    validateFields(req.body, ["messageOrder", "targetText", "feedback"]);
 
     const data = await slangHangService.recordMessageAttempt({
       userId: req.user._id,
-      dialogueId: req.body.dialogueId,
+      dialogueId: req.params.id,
       messageOrder: req.body.messageOrder,
       targetText: req.body.targetText,
       feedback: req.body.feedback,
