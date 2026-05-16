@@ -106,10 +106,8 @@ router.get("/me/vocabulary/:id", vocabularyController.getMyVocabularyById);
 router.delete("/me/vocabulary/:id", vocabularyController.deleteWord);
 
 // ── Slang Hang ──────────────────────────────────────────
-router.post("/slang-hang/generate", slangHangController.generate);
 router.get("/slang-hang/dialogues", slangHangController.list);
 router.get("/slang-hang/dialogues/:id", slangHangController.getOne);
-router.delete("/slang-hang/dialogues/:id", slangHangController.remove);
 router.get("/slang-hang/azure-token", slangHangController.azureToken);
 router.post(
   "/slang-hang/dialogue-attempts",

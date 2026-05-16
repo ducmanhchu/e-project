@@ -2,9 +2,14 @@ import { ApiError } from "@server/helpers/ApiError";
 import { Dialogue } from "@server/models/slangHang/Dialogue";
 import { DialogueAttempt } from "@server/models/slangHang/DialogueAttempt";
 import { WRITING_TOPIC } from "@server/const/writting";
-import { SLANG_HANG_LIMITS, SLANG_HANG_MODE } from "@server/const/slangHang";
+import {
+  SLANG_HANG_LIMITS,
+  SLANG_HANG_MODE,
+  SLANG_HANG_LEVEL,
+} from "@server/const/slangHang";
 import * as slangHangProvider from "@server/services/ai/slangHangProvider";
 import * as speechAuthProvider from "@server/services/azure/speechAuthProvider";
+import { buildTitleSearch } from "@server/helpers/writing/listLessonsQuery";
 
 function validateTopic(topic) {
   if (!Object.values(WRITING_TOPIC).includes(topic)) {
@@ -16,6 +21,21 @@ function validateMode(mode) {
   if (mode === undefined) return;
   if (!Object.values(SLANG_HANG_MODE).includes(mode)) {
     throw ApiError.badRequest("Invalid mode");
+  }
+}
+
+function validateLevel(level) {
+  if (!Object.values(SLANG_HANG_LEVEL).includes(level)) {
+    throw ApiError.badRequest("Invalid level");
+  }
+}
+
+function validateTitle(title) {
+  if (typeof title !== "string" || title.trim() === "") {
+    throw ApiError.badRequest("title is required");
+  }
+  if (title.trim().length > 200) {
+    throw ApiError.badRequest("title must be ≤ 200 characters");
   }
 }
 
@@ -66,6 +86,8 @@ function mapDialogueToResponse(doc) {
   const json = typeof doc.toJSON === "function" ? doc.toJSON() : doc;
   return {
     id: json.id ?? String(json._id),
+    title: json.title,
+    level: json.level,
     topic: json.topic,
     mode: json.mode ?? SLANG_HANG_MODE.SINGLE_ROLE,
     scenario: json.scenario,
@@ -75,13 +97,16 @@ function mapDialogueToResponse(doc) {
   };
 }
 
-export async function generateDialogue({ userId, topic, mode }) {
+export async function generateDialogue({ title, level, topic, mode }) {
+  validateTitle(title);
+  validateLevel(level);
   validateTopic(topic);
   validateMode(mode);
-  const ai = await slangHangProvider.generateDialogue({ topic });
+  const ai = await slangHangProvider.generateDialogue({ topic, level });
   const sanitized = sanitizeMessages(ai);
   const doc = await Dialogue.create({
-    userId,
+    title: title.trim(),
+    level,
     topic,
     mode: mode || SLANG_HANG_MODE.SINGLE_ROLE,
     ...sanitized,
@@ -92,6 +117,8 @@ export async function generateDialogue({ userId, topic, mode }) {
 function toListItem(doc) {
   return {
     id: String(doc._id),
+    title: doc.title,
+    level: doc.level,
     topic: doc.topic,
     scenario: doc.scenario,
     messageCount: Array.isArray(doc.messages) ? doc.messages.length : 0,
@@ -99,19 +126,32 @@ function toListItem(doc) {
   };
 }
 
-export async function listDialogues({ userId, page = 1, limit = 12 }) {
+export async function listDialogues({
+  userId,
+  level,
+  topic,
+  search,
+  page = 1,
+  limit = 12,
+}) {
   const p = Math.max(1, Number(page));
   const l = Math.min(Math.max(1, Number(limit)), 50);
   const skip = (p - 1) * l;
 
+  const query = {};
+  if (Array.isArray(level) && level.length) query.level = { $in: level };
+  if (Array.isArray(topic) && topic.length) query.topic = { $in: topic };
+  const titleFilter = buildTitleSearch(search);
+  if (titleFilter) query.title = titleFilter;
+
   const [dialogues, total] = await Promise.all([
-    Dialogue.find({ userId })
-      .select("topic scenario createdAt messages.order")
+    Dialogue.find(query)
+      .select("title level topic scenario createdAt messages.order")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(l)
       .lean(),
-    Dialogue.countDocuments({ userId }),
+    Dialogue.countDocuments(query),
   ]);
 
   const attempts = await DialogueAttempt.find({
@@ -142,17 +182,14 @@ export async function getDialogue({ userId, id }) {
     DialogueAttempt.findOne({ userId, dialogueId: id }).lean(),
   ]);
   if (!doc) throw ApiError.notFound("Dialogue not found");
-  if (String(doc.userId) !== String(userId)) {
-    throw ApiError.forbidden("Forbidden");
-  }
   return {
     ...mapDialogueToResponse(doc),
     ...flattenAttempt(attempt),
   };
 }
 
-export async function deleteDialogue({ userId, id }) {
-  const result = await Dialogue.findOneAndDelete({ _id: id, userId });
+export async function deleteDialogue({ id }) {
+  const result = await Dialogue.findByIdAndDelete(id);
   if (!result) throw ApiError.notFound("Dialogue not found");
 }
 
@@ -230,12 +267,9 @@ export async function recordMessageAttempt({
   }
 
   const dlg = await Dialogue.findById(dialogueId)
-    .select("userId mode messages.order messages.speakerKey")
+    .select("mode messages.order messages.speakerKey")
     .lean();
   if (!dlg) throw ApiError.notFound("Dialogue not found");
-  if (String(dlg.userId) !== String(userId)) {
-    throw ApiError.forbidden("Forbidden");
-  }
   const totalMessages = Array.isArray(dlg.messages) ? dlg.messages.length : 0;
   if (messageOrder >= totalMessages) {
     throw ApiError.badRequest("messageOrder out of range");

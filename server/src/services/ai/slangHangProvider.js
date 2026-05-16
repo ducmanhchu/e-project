@@ -107,9 +107,19 @@ const GENERATE_SCHEMA = {
   propertyOrdering: ["scenario", "speakers", "messages"],
 };
 
-export async function generateDialogue({ topic }) {
-  console.log(`[slang-hang] generate request: topic=${topic}`);
+const LEVEL_GUIDANCE = {
+  beginner:
+    "Learner level: BEGINNER. Use very common, widely-known slang only. Keep sentences short and vocabulary simple. Avoid regional/obscure expressions.",
+  intermediate:
+    "Learner level: INTERMEDIATE. Mix common slang with some moderately known colloquial expressions. Medium sentence length.",
+  advanced:
+    "Learner level: ADVANCED. Include richer slang including regional/generational variants. Longer, more nuanced exchanges are welcome.",
+};
+
+export async function generateDialogue({ topic, level }) {
+  console.log(`[slang-hang] generate request: topic=${topic}, level=${level}`);
   const startedAt = Date.now();
+  const levelHint = LEVEL_GUIDANCE[level] ?? "";
 
   return withRetry(async () => {
     const response = await genai.models.generateContent({
@@ -117,7 +127,11 @@ export async function generateDialogue({ topic }) {
       contents: [
         {
           role: "user",
-          parts: [{ text: `Topic: ${topic}\nGenerate a dialogue.` }],
+          parts: [
+            {
+              text: `Topic: ${topic}\n${levelHint}\nGenerate a dialogue.`,
+            },
+          ],
         },
       ],
       config: {
