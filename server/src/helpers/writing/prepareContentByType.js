@@ -1,5 +1,6 @@
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
+import { normalizeImageFields } from "@server/helpers/imageFields";
 import { WRITING_TYPE } from "@server/const/writting";
 
 /**
@@ -49,10 +50,11 @@ function prepareDescribe(body) {
   validateFields(body, ["image"]);
 
   const wordPool = Array.isArray(body.wordPool) ? body.wordPool : [];
+  const imgFields = normalizeImageFields(body.image, body.imagePublicId);
 
   return {
     fields: {
-      image: body.image,
+      ...imgFields,
       ...(wordPool.length > 0 && { wordPool }),
       ...(body.minWordCount != null && { minWordCount: body.minWordCount }),
       ...(body.maxWordCount != null && { maxWordCount: body.maxWordCount }),
@@ -90,7 +92,8 @@ function prepareExam(body) {
     throw ApiError.badRequest(`examType must be one of: ${ALLOWED_TYPES.join(", ")}`);
   }
 
-  if (body.examType === "ielts_task1" && !body.imageUrl?.trim()) {
+  const imgFields = normalizeImageFields(body.imageUrl, body.imagePublicId, "imageUrl");
+  if (body.examType === "ielts_task1" && !imgFields.imageUrl) {
     throw ApiError.badRequest("imageUrl is required for IELTS Task 1");
   }
 
@@ -98,7 +101,7 @@ function prepareExam(body) {
     fields: {
       examType: body.examType,
       examPrompt: body.examPrompt.trim(),
-      ...(body.imageUrl && { imageUrl: body.imageUrl.trim() }),
+      ...imgFields,
     },
     totalSentences: 1,
   };

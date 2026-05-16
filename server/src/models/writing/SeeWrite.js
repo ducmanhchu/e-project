@@ -20,6 +20,7 @@ const seeWriteSchema = new mongoose.Schema(
     description: { type: String, trim: true },
     level: { type: String, enum: Object.values(WRITING_LEVEL) },
     image: { type: String, required: true },
+    imagePublicId: { type: String },
     wordPool: [wordPoolItemSchema],
     minWordCount: Number,
     maxWordCount: Number,

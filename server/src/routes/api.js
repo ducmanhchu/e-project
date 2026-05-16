@@ -8,6 +8,11 @@ import * as examController from "@server/controllers/examController";
 import * as attemptController from "@server/controllers/attemptController";
 import * as vocabularyController from "@server/controllers/vocabularyController";
 import * as slangHangController from "@server/controllers/slangHangController";
+import * as deckController from "@server/controllers/deckController";
+import * as folderController from "@server/controllers/folderController";
+import * as communityController from "@server/controllers/communityController";
+import * as uploadController from "@server/controllers/uploadController";
+import { mediaUpload } from "@server/middlewares/upload";
 import {
   protectedRoute,
   optionalAuth,
@@ -38,6 +43,19 @@ router.get(
 );
 router.get("/writing/rewrite", optionalAuth, rewriteController.listLessons);
 router.get("/writing/exam", optionalAuth, examController.listExams);
+
+// ── Community (public decks; anonymous-friendly) ──────────
+router.get("/community/decks", optionalAuth, communityController.listPublicDecks);
+router.get(
+  "/community/decks/:deckId",
+  optionalAuth,
+  communityController.getPublicDeck,
+);
+router.get(
+  "/community/decks/:deckId/cards",
+  optionalAuth,
+  communityController.listPublicDeckCards,
+);
 
 router.use(protectedRoute);
 router.get("/me", userController.authMe);
@@ -96,6 +114,39 @@ router.get("/slang-hang/azure-token", slangHangController.azureToken);
 router.post(
   "/slang-hang/dialogue-attempts",
   slangHangController.recordMessageAttempt,
+);
+
+// ── Deck folders (PER-USER, 1 level only) ──────────
+router.post("/me/folders", folderController.createFolder);
+router.get("/me/folders", folderController.listMyFolders);
+router.get("/me/folders/:folderId", folderController.getMyFolderById);
+router.patch("/me/folders/:folderId", folderController.updateFolder);
+router.delete("/me/folders/:folderId", folderController.deleteFolder);
+
+// ── Decks (PER-USER flashcard decks) ──────────────────
+router.post("/me/decks", deckController.createDeck);
+router.post("/me/decks/clone", communityController.cloneDeck);
+router.get("/me/decks", deckController.listMyDecks);
+router.get("/me/decks/:deckId", deckController.getMyDeckById);
+router.patch("/me/decks/:deckId", deckController.updateDeck);
+router.delete("/me/decks/:deckId", deckController.deleteDeck);
+
+// ── Cards (deckId via query/body) ────────────────────
+router.get("/me/cards", deckController.listCards);
+router.post("/me/cards", deckController.addCardManual);
+router.post("/me/cards/from-vocab", deckController.addCardsFromVocab);
+router.patch("/me/cards/:cardId", deckController.updateCard);
+router.delete("/me/cards/:cardId", deckController.deleteCard);
+router.post("/me/cards/:cardId/rate", deckController.rateCard);
+
+// ── Study (shuffled cards of a deck) ─────────────────
+router.get("/me/study", deckController.getStudyCards);
+
+// ── User upload (image for flashcards) ───────────────
+router.post(
+  "/me/upload/image",
+  mediaUpload.single("file"),
+  uploadController.uploadImage,
 );
 
 export default router;

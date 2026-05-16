@@ -14,6 +14,7 @@ const examSchema = new mongoose.Schema(
     },
     examPrompt: { type: String, required: true },
     imageUrl: { type: String },
+    imagePublicId: { type: String },
   },
   {
     timestamps: true,
