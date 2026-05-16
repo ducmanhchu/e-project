@@ -2,6 +2,10 @@ import { Exam } from "@server/models/writing/Exam";
 import { Attempt } from "@server/models/attempt/Attempt";
 import { Submission } from "@server/models/attempt/Submission";
 import { ApiError } from "@server/helpers/ApiError";
+import {
+  normalizeImageFields,
+  destroyCloudinaryImage,
+} from "@server/helpers/imageFields";
 import { aiGradeExam } from "@server/services/ai/gradingProvider";
 import {
   findOrCreateAttempt,
@@ -127,6 +131,7 @@ export async function getExam(examId, userId) {
     examType: exam.examType,
     examPrompt: exam.examPrompt,
     imageUrl: exam.imageUrl || null,
+    imagePublicId: exam.imagePublicId || null,
     minWordCount: EXAM_MIN_WORDS[exam.examType],
     status: attempt?.status ?? "not_started",
     completedSentences: attempt?.completedSentences ?? 0,
@@ -229,6 +234,7 @@ export async function adminListExams(filters = {}, pagination = {}) {
     examType: 1,
     examPrompt: 1,
     imageUrl: 1,
+    imagePublicId: 1,
     createdAt: 1,
   };
 
@@ -253,6 +259,7 @@ export async function adminListExams(filters = {}, pagination = {}) {
       examType: e.examType,
       examPrompt: e.examPrompt,
       imageUrl: e.imageUrl || null,
+      imagePublicId: e.imagePublicId || null,
       createdAt: e.createdAt,
     })),
     total,
@@ -275,6 +282,7 @@ export async function adminGetExam(examId) {
     examType: exam.examType,
     examPrompt: exam.examPrompt,
     imageUrl: exam.imageUrl || null,
+    imagePublicId: exam.imagePublicId || null,
     createdAt: exam.createdAt,
     updatedAt: exam.updatedAt,
   };
@@ -294,13 +302,15 @@ export async function updateExam(examId, body) {
   const exam = await Exam.findById(examId);
   if (!exam) throw ApiError.notFound("Exam not found");
 
-  const allowedFields = ["title", "level", "topic", "description", "examPrompt", "imageUrl"];
+  const allowedFields = ["title", "level", "topic", "description", "examPrompt"];
   const updates = {};
   for (const field of allowedFields) {
     if (body[field] !== undefined) {
       updates[field] = typeof body[field] === "string" ? body[field].trim() : body[field];
     }
   }
+  const imgFields = normalizeImageFields(body.imageUrl, body.imagePublicId, "imageUrl");
+  Object.assign(updates, imgFields);
 
   if (Object.keys(updates).length === 0) {
     throw ApiError.badRequest("No valid fields to update");
@@ -314,15 +324,24 @@ export async function updateExam(examId, body) {
   if (updates.topic && !Object.values(WRITING_TOPIC).includes(updates.topic)) {
     throw ApiError.badRequest(`Invalid topic: ${updates.topic}`);
   }
-  if (exam.examType === "ielts_task1" && "imageUrl" in updates && !updates.imageUrl) {
+  if (exam.examType === "ielts_task1" && "imageUrl" in imgFields && !imgFields.imageUrl) {
     throw ApiError.badRequest("imageUrl is required for IELTS Task 1");
   }
+
+  const oldPublicIdToDestroy =
+    "imageUrl" in imgFields &&
+    exam.imagePublicId &&
+    exam.imagePublicId !== imgFields.imagePublicId
+      ? exam.imagePublicId
+      : null;
 
   const updated = await Exam.findByIdAndUpdate(
     examId,
     { $set: updates },
     { new: true, runValidators: true },
   ).lean();
+
+  if (oldPublicIdToDestroy) await destroyCloudinaryImage(oldPublicIdToDestroy);
 
   return {
     id: updated._id,
@@ -332,6 +351,7 @@ export async function updateExam(examId, body) {
     examType: updated.examType,
     examPrompt: updated.examPrompt,
     imageUrl: updated.imageUrl || null,
+    imagePublicId: updated.imagePublicId || null,
     updatedAt: updated.updatedAt,
   };
 }
@@ -342,6 +362,10 @@ export async function updateExam(examId, body) {
 export async function deleteExam(examId) {
   const deleted = await Exam.findByIdAndDelete(examId);
   if (!deleted) throw ApiError.notFound("Exam not found");
+
+  if (deleted.imagePublicId) {
+    await destroyCloudinaryImage(deleted.imagePublicId);
+  }
 
   const attempts = await Attempt.find({ lessonId: examId, lessonType: "Exam" })
     .select("_id")

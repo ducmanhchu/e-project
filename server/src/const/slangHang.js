@@ -12,6 +12,12 @@ export const SLANG_HANG_MODE = {
   BOTH_ROLES: "both_roles", // learner records both A and B
 };
 
+export const SLANG_HANG_LEVEL = {
+  BEGINNER: "beginner",
+  INTERMEDIATE: "intermediate",
+  ADVANCED: "advanced",
+};
+
 export const SLANG_HANG_RETRY = {
   MAX_ATTEMPTS: 3,
   INITIAL_DELAY_MS: 500,

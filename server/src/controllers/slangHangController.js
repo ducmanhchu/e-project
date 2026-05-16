@@ -1,14 +1,16 @@
 import * as slangHangService from "@server/services/slangHangService";
 import { validateFields, validateObjectId } from "@server/helpers/validateFields";
+import { parseQueryList } from "@server/helpers/writing/listLessonsQuery";
 
 /**
- * POST /api/slang-hang/generate
+ * POST /api/admin/slang-hang/generate — [ADMIN]
  */
 export async function generate(req, res, next) {
   try {
-    validateFields(req.body, ["topic"]);
+    validateFields(req.body, ["title", "level", "topic"]);
     const data = await slangHangService.generateDialogue({
-      userId: req.user._id,
+      title: req.body.title,
+      level: req.body.level,
       topic: req.body.topic,
       mode: req.body.mode,
     });
@@ -23,9 +25,12 @@ export async function generate(req, res, next) {
  */
 export async function list(req, res, next) {
   try {
-    const { page = 1, limit = 12 } = req.query;
+    const { level, topic, search, page = 1, limit = 12 } = req.query;
     const result = await slangHangService.listDialogues({
       userId: req.user._id,
+      level: parseQueryList(level),
+      topic: parseQueryList(topic),
+      search,
       page,
       limit,
     });
@@ -61,15 +66,12 @@ export async function getOne(req, res, next) {
 }
 
 /**
- * DELETE /api/slang-hang/dialogues/:id
+ * DELETE /api/admin/slang-hang/dialogues/:id — [ADMIN]
  */
 export async function remove(req, res, next) {
   try {
     validateObjectId(req.params.id, "id");
-    await slangHangService.deleteDialogue({
-      userId: req.user._id,
-      id: req.params.id,
-    });
+    await slangHangService.deleteDialogue({ id: req.params.id });
     res.json({ success: true });
   } catch (e) {
     next(e);
@@ -89,25 +91,39 @@ export async function azureToken(req, res, next) {
 }
 
 /**
- * POST /api/slang-hang/dialogue-attempts
+ * POST /api/slang-hang/dialogues/:id/retry
+ *
+ * Clears the user's progress for this dialogue so they can start over.
+ * Idempotent — succeeds whether or not the user has any prior progress.
+ */
+export async function retry(req, res, next) {
+  try {
+    validateObjectId(req.params.id, "id");
+    await slangHangService.retry({
+      userId: req.user._id,
+      dialogueId: req.params.id,
+    });
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * POST /api/slang-hang/dialogues/:id/submit
  *
  * Records one message attempt (user's reading of one message) into the user's
  * DialogueAttempt for this dialogue. Upserts: creates the parent attempt on
  * first call, replaces the entry with the same messageOrder (latest semantics).
  */
-export async function recordMessageAttempt(req, res, next) {
+export async function submitMessageAttempt(req, res, next) {
   try {
-    validateFields(req.body, [
-      "dialogueId",
-      "messageOrder",
-      "targetText",
-      "feedback",
-    ]);
-    validateObjectId(req.body.dialogueId, "dialogueId");
+    validateObjectId(req.params.id, "id");
+    validateFields(req.body, ["messageOrder", "targetText", "feedback"]);
 
     const data = await slangHangService.recordMessageAttempt({
       userId: req.user._id,
-      dialogueId: req.body.dialogueId,
+      dialogueId: req.params.id,
       messageOrder: req.body.messageOrder,
       targetText: req.body.targetText,
       feedback: req.body.feedback,

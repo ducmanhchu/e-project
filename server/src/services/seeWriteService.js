@@ -2,6 +2,10 @@ import { SeeWrite } from "@server/models/writing/SeeWrite";
 import { Attempt } from "@server/models/attempt/Attempt";
 import { Vocabulary } from "@server/models/vocabulary/Vocabulary";
 import { ApiError } from "@server/helpers/ApiError";
+import {
+  normalizeImageFields,
+  destroyCloudinaryImage,
+} from "@server/helpers/imageFields";
 import { aiGradeSeeWrite } from "@server/services/ai/gradingProvider";
 import { ensureEnriched } from "@server/services/vocabularyService";
 import {
@@ -13,48 +17,19 @@ import {
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_THRESHOLD } from "@server/const/exercise";
 import { WRITING_TYPE } from "@server/const/writting";
+import {
+  SW_LESSON_TYPE,
+  SW_LIST_PROJECTION,
+  SW_ADMIN_PROJECTION,
+  SW_POPULATE_WORDPOOL,
+  SW_UPDATABLE_FIELDS,
+} from "@server/const/seeWrite";
 import { createWriting } from "@server/services/writingService";
 import {
   resolveSort,
   buildLessonsListPromise,
   buildTitleSearch,
 } from "@server/helpers/writing/listLessonsQuery";
-
-const LESSON_TYPE = "SeeWrite";
-
-const SW_LIST_PROJECTION = {
-  title: 1,
-  level: 1,
-  topic: 1,
-  image: 1,
-  createdAt: 1,
-};
-
-const SW_ADMIN_PROJECTION = {
-  title: 1,
-  level: 1,
-  topic: 1,
-  image: 1,
-  wordPool: 1,
-  minWordCount: 1,
-  maxWordCount: 1,
-  createdAt: 1,
-};
-
-const SW_POPULATE_WORDPOOL = {
-  path: "wordPool.id",
-  select: "word ipa partOfSpeech definitions audio",
-};
-
-const UPDATABLE_FIELDS = [
-  "title",
-  "level",
-  "topic",
-  "description",
-  "image",
-  "minWordCount",
-  "maxWordCount",
-];
 
 // ──────────────── Helpers ────────────────
 
@@ -169,7 +144,7 @@ export async function listLessons(filters, pagination, userId) {
 
   const statusFilter = await buildStatusFilter({
     userId,
-    lessonType: LESSON_TYPE,
+    lessonType: SW_LESSON_TYPE,
     statuses: status,
   });
   const query = { ...buildLessonQuery(filters), ...(statusFilter || {}) };
@@ -191,7 +166,7 @@ export async function listLessons(filters, pagination, userId) {
     const attempts = await Attempt.find({
       userId,
       lessonId: { $in: lessons.map((l) => l._id) },
-      lessonType: LESSON_TYPE,
+      lessonType: SW_LESSON_TYPE,
     })
       .select("lessonId status completedSentences bestScore completedAt")
       .lean();
@@ -207,6 +182,7 @@ export async function listLessons(filters, pagination, userId) {
         level: lesson.level,
         topic: lesson.topic,
         image: lesson.image,
+        imagePublicId: lesson.imagePublicId || null,
         createdAt: lesson.createdAt,
         status: a?.status ?? "not_started",
         completedSentences: a?.completedSentences ?? 0,
@@ -230,7 +206,7 @@ export async function getLesson(lessonId, userId) {
   const attempt = await Attempt.findOne({
     userId,
     lessonId,
-    lessonType: LESSON_TYPE,
+    lessonType: SW_LESSON_TYPE,
   }).lean();
 
   const progress = attempt?.sentenceProgress?.find((p) => p.sentenceOrder === 1);
@@ -255,6 +231,7 @@ export async function getLesson(lessonId, userId) {
     level: lesson.level,
     topic: lesson.topic,
     image: lesson.image,
+    imagePublicId: lesson.imagePublicId || null,
     wordPool: shuffleArray(wordPool),
     requiredKeywordCount,
     minWordCount: lesson.minWordCount || null,
@@ -310,7 +287,7 @@ export async function checkKeywords(userId, lessonId, selectedKeywordIds) {
     (results.correct.length / (requiredIds.size || 1)) * 100,
   );
 
-  const attempt = await findOrCreateAttempt(userId, lessonId, LESSON_TYPE);
+  const attempt = await findOrCreateAttempt(userId, lessonId, SW_LESSON_TYPE);
   attempt.keywordQuiz = { ...results, score: quizScore };
   if (attempt.status === "not_started") attempt.status = "in_progress";
   attempt.markModified("keywordQuiz");
@@ -334,7 +311,7 @@ export async function submitAnswer(userId, lessonId, userAnswer) {
   const requiredWords = (lesson.wordPool || [])
     .filter((w) => w.isRequired && w.id?.word)
     .map((w) => w.id.word);
-  const attempt = await findOrCreateAttempt(userId, lessonId, LESSON_TYPE);
+  const attempt = await findOrCreateAttempt(userId, lessonId, SW_LESSON_TYPE);
 
   if (requiredWords.length > 0 && !attempt.keywordQuiz) {
     throw ApiError.badRequest("Keyword quiz is required before submitting");
@@ -445,6 +422,7 @@ export async function adminListLessons(filters = {}, pagination = {}) {
       level: l.level,
       topic: l.topic,
       image: l.image,
+      imagePublicId: l.imagePublicId || null,
       wordPool: (l.wordPool || []).map(formatAdminPoolEntry),
       minWordCount: l.minWordCount,
       maxWordCount: l.maxWordCount,
@@ -470,6 +448,7 @@ export async function adminGetLesson(lessonId) {
     topic: lesson.topic,
     description: lesson.description,
     image: lesson.image,
+    imagePublicId: lesson.imagePublicId || null,
     wordPool: (lesson.wordPool || []).map(formatAdminPoolEntry),
     minWordCount: lesson.minWordCount,
     maxWordCount: lesson.maxWordCount,
@@ -498,10 +477,16 @@ export async function createLesson(body) {
  * PUT /admin/writing/see-and-write/:id — Update lesson
  */
 export async function updateLesson(lessonId, body) {
+  const existing = await SeeWrite.findById(lessonId).lean();
+  if (!existing) throw ApiError.notFound("Lesson not found");
+
   const updates = {};
-  for (const field of UPDATABLE_FIELDS) {
+  for (const field of SW_UPDATABLE_FIELDS) {
     if (body[field] !== undefined) updates[field] = body[field];
   }
+  const imgFields = normalizeImageFields(body.image, body.imagePublicId);
+  Object.assign(updates, imgFields);
+
   if (body.requiredWords !== undefined || body.distractorWords !== undefined) {
     updates.wordPool = await resolveWordPool(
       body.requiredWords,
@@ -512,6 +497,13 @@ export async function updateLesson(lessonId, body) {
     throw ApiError.badRequest("No valid fields to update");
   }
 
+  const oldPublicIdToDestroy =
+    "image" in imgFields &&
+    existing.imagePublicId &&
+    existing.imagePublicId !== imgFields.imagePublicId
+      ? existing.imagePublicId
+      : null;
+
   const updated = await SeeWrite.findByIdAndUpdate(
     lessonId,
     { $set: updates },
@@ -521,6 +513,8 @@ export async function updateLesson(lessonId, body) {
     .lean();
   if (!updated) throw ApiError.notFound("Lesson not found");
 
+  if (oldPublicIdToDestroy) await destroyCloudinaryImage(oldPublicIdToDestroy);
+
   return {
     id: updated._id,
     title: updated.title,
@@ -528,6 +522,7 @@ export async function updateLesson(lessonId, body) {
     topic: updated.topic,
     description: updated.description,
     image: updated.image,
+    imagePublicId: updated.imagePublicId || null,
     wordPool: (updated.wordPool || []).map(formatAdminPoolEntry),
     minWordCount: updated.minWordCount,
     maxWordCount: updated.maxWordCount,
@@ -541,5 +536,8 @@ export async function updateLesson(lessonId, body) {
 export async function deleteLesson(lessonId) {
   const deleted = await SeeWrite.findByIdAndDelete(lessonId);
   if (!deleted) throw ApiError.notFound("Lesson not found");
+  if (deleted.imagePublicId) {
+    await destroyCloudinaryImage(deleted.imagePublicId);
+  }
   return { id: lessonId };
 }

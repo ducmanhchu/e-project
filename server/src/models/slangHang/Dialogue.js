@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 import { WRITING_TOPIC } from "@server/const/writting";
-import { SLANG_HANG_LIMITS, SLANG_HANG_MODE } from "@server/const/slangHang";
+import {
+  SLANG_HANG_LIMITS,
+  SLANG_HANG_MODE,
+  SLANG_HANG_LEVEL,
+} from "@server/const/slangHang";
 
 const slangSchema = new mongoose.Schema(
   {
@@ -45,9 +49,15 @@ const speakerSchema = new mongoose.Schema(
 
 const dialogueSchema = new mongoose.Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200,
+    },
+    level: {
+      type: String,
+      enum: Object.values(SLANG_HANG_LEVEL),
       required: true,
       index: true,
     },
@@ -100,7 +110,7 @@ const dialogueSchema = new mongoose.Schema(
   },
 );
 
-dialogueSchema.index({ userId: 1, createdAt: -1 });
+dialogueSchema.index({ createdAt: -1 });
 
 export const Dialogue = mongoose.model(
   "Dialogue",
