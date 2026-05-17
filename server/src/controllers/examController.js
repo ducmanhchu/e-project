@@ -185,3 +185,4 @@ export async function deleteExam(req, res, next) {
     next(e);
   }
 }
+

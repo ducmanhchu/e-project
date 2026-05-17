@@ -12,12 +12,18 @@ import * as deckController from "@server/controllers/deckController";
 import * as folderController from "@server/controllers/folderController";
 import * as communityController from "@server/controllers/communityController";
 import * as uploadController from "@server/controllers/uploadController";
+import * as walletController from "@server/controllers/walletController";
+import * as paymentController from "@server/controllers/paymentController";
 import { mediaUpload } from "@server/middlewares/upload";
 import {
   protectedRoute,
   optionalAuth,
 } from "@server/middlewares/authMiddleware";
 const router = express.Router();
+
+// Payment provider webhooks (public, signature-verified inside handler).
+// Provider key in URL: "payos" | "sepay".
+router.post("/payments/webhook/:provider", paymentController.webhook);
 
 // auth routes
 router.post("/auth/signup", authController.signUp);
@@ -45,7 +51,11 @@ router.get("/writing/rewrite", optionalAuth, rewriteController.listLessons);
 router.get("/writing/exam", optionalAuth, examController.listExams);
 
 // ── Community (public decks; anonymous-friendly) ──────────
-router.get("/community/decks", optionalAuth, communityController.listPublicDecks);
+router.get(
+  "/community/decks",
+  optionalAuth,
+  communityController.listPublicDecks,
+);
 router.get(
   "/community/decks/:deckId",
   optionalAuth,
@@ -60,6 +70,15 @@ router.get(
 router.use(protectedRoute);
 router.get("/me", userController.authMe);
 router.post("/auth/change-password", authController.changePassword);
+
+// ── Credits ─────────────────────────────────────────────
+router.get("/me/credits", walletController.getCredits);
+router.get("/me/credits/transactions", walletController.listTransactions);
+
+// ── Payments ────────────────────────────────────────────
+router.get("/payments/packs", paymentController.listPacks);
+router.post("/payments/checkout", paymentController.checkout);
+router.get("/payments/orders/:orderCode", paymentController.getOrder);
 
 // ── Reverse Translation ─────────────────────────────────
 router.get(
@@ -113,10 +132,7 @@ router.post(
   "/slang-hang/dialogues/:id/submit",
   slangHangController.submitMessageAttempt,
 );
-router.post(
-  "/slang-hang/dialogues/:id/retry",
-  slangHangController.retry,
-);
+router.post("/slang-hang/dialogues/:id/retry", slangHangController.retry);
 
 // ── Deck folders (PER-USER, 1 level only) ──────────
 router.post("/me/folders", folderController.createFolder);

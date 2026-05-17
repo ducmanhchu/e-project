@@ -10,6 +10,7 @@ import {
 import * as slangHangProvider from "@server/services/ai/slangHangProvider";
 import * as speechAuthProvider from "@server/services/azure/speechAuthProvider";
 import { buildTitleSearch } from "@server/helpers/writing/listLessonsQuery";
+import { chargeForSubmit } from "@server/helpers/chargeForSubmit";
 
 function validateTopic(topic) {
   if (!Object.values(WRITING_TOPIC).includes(topic)) {
@@ -194,6 +195,7 @@ export async function deleteDialogue({ id }) {
 }
 
 export async function retry({ userId, dialogueId }) {
+  // Retry only deletes the existing attempt (no AI call) → free of charge.
   await DialogueAttempt.deleteOne({ userId, dialogueId });
 }
 
@@ -299,6 +301,18 @@ export async function recordMessageAttempt({
     attemptedAt: new Date(),
   };
 
+  return chargeForSubmit(
+    {
+      userId,
+      reason: `submit slang_hang ${dialogueId}/${messageOrder}`,
+      referenceType: "DialogueAttempt",
+      referenceId: dialogueId,
+    },
+    () => recordWithRetry(userId, dialogueId, newAttempt, totalLearnerMessages),
+  );
+}
+
+async function recordWithRetry(userId, dialogueId, newAttempt, totalLearnerMessages) {
   for (let i = 0; i < MAX_SAVE_RETRIES; i++) {
     try {
       const saved = await buildAndSaveAttempt({

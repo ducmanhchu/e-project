@@ -2,6 +2,7 @@ import { Exam } from "@server/models/writing/Exam";
 import { Attempt } from "@server/models/attempt/Attempt";
 import { Submission } from "@server/models/attempt/Submission";
 import { ApiError } from "@server/helpers/ApiError";
+import { chargeForSubmit } from "@server/helpers/chargeForSubmit";
 import {
   normalizeImageFields,
   destroyCloudinaryImage,
@@ -154,37 +155,47 @@ export async function submitAnswer(userId, examId, userAnswer) {
     throw ApiError.badRequest(`Word count ${wordCount} is below IELTS minimum ${minWords}`);
   }
 
-  const { result: grading, provider } = await aiGradeExam(userAnswer, exam);
-
-  const band = roundBand(Math.max(1, Math.min(9, grading.overallBand)));
-  const score = bandToScore(band);
-
-  const attempt = await findOrCreateAttempt(userId, examId, "Exam");
-  const { submission, progress } = await submitAndUpdateProgress(attempt, {
-    sentenceOrder: 1,
-    userAnswer,
-    score,
-    gradedBy: provider,
-    feedback: {
-      bandScore: band,
-      summary: grading.summary,
-      enhancedVersion: grading.enhancedVersion || null,
-      criteria: grading.criteria || [],
-      corrections: grading.corrections || [],
+  return chargeForSubmit(
+    {
+      userId,
+      reason: `submit exam ${examId}`,
+      referenceType: "Attempt",
+      referenceId: examId,
     },
-    isCompleted: band >= COMPLETION_BAND,
-    totalSentences: 1,
-  });
+    async () => {
+      const { result: grading, provider } = await aiGradeExam(userAnswer, exam);
 
-  return {
-    score,
-    bandScore: band,
-    feedback: submission.feedback,
-    gradedBy: provider,
-    bestScore: progress.bestScore,
-    bestBand: roundBand(progress.bestScore / 10),
-    isCompleted: band >= COMPLETION_BAND,
-  };
+      const band = roundBand(Math.max(1, Math.min(9, grading.overallBand)));
+      const score = bandToScore(band);
+
+      const attempt = await findOrCreateAttempt(userId, examId, "Exam");
+      const { submission, progress } = await submitAndUpdateProgress(attempt, {
+        sentenceOrder: 1,
+        userAnswer,
+        score,
+        gradedBy: provider,
+        feedback: {
+          bandScore: band,
+          summary: grading.summary,
+          enhancedVersion: grading.enhancedVersion || null,
+          criteria: grading.criteria || [],
+          corrections: grading.corrections || [],
+        },
+        isCompleted: band >= COMPLETION_BAND,
+        totalSentences: 1,
+      });
+
+      return {
+        score,
+        bandScore: band,
+        feedback: submission.feedback,
+        gradedBy: provider,
+        bestScore: progress.bestScore,
+        bestBand: roundBand(progress.bestScore / 10),
+        isCompleted: band >= COMPLETION_BAND,
+      };
+    },
+  );
 }
 
 /**
@@ -381,3 +392,4 @@ export async function deleteExam(examId) {
 
   return { id: examId, deletedAttempts: attempts.length };
 }
+

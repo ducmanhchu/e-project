@@ -38,6 +38,9 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    // Credit wallet (only permanent balance; subscriptions removed)
+    credits: { type: Number, default: 0, min: 0 },
   },
   {
     timestamps: true,

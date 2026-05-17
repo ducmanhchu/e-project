@@ -2,6 +2,7 @@ import { SeeWrite } from "@server/models/writing/SeeWrite";
 import { Attempt } from "@server/models/attempt/Attempt";
 import { Vocabulary } from "@server/models/vocabulary/Vocabulary";
 import { ApiError } from "@server/helpers/ApiError";
+import { chargeForSubmit } from "@server/helpers/chargeForSubmit";
 import {
   normalizeImageFields,
   destroyCloudinaryImage,
@@ -325,43 +326,53 @@ export async function submitAnswer(userId, lessonId, userAnswer) {
     );
   }
 
-  // Grading prompt expects flat {word, isRequired} shape
-  const lessonForGrading = {
-    ...lesson,
-    wordPool: requiredWords.map((word) => ({ word, isRequired: true })),
-  };
-
-  const { result: grading, provider } = await aiGradeSeeWrite(
-    userAnswer,
-    lessonForGrading,
-    lesson.level,
-  );
-
-  const score = Math.min(100, Math.max(0, Math.round(grading.score)));
-  const isCompleted = score >= COMPLETION_THRESHOLD;
-
-  const { submission, progress } = await submitAndUpdateProgress(attempt, {
-    sentenceOrder: 1,
-    userAnswer,
-    score,
-    gradedBy: provider,
-    feedback: {
-      summary: grading.summary,
-      enhancedVersion: grading.enhancedVersion || null,
-      criteria: grading.criteria || [],
-      corrections: grading.corrections || [],
+  return chargeForSubmit(
+    {
+      userId,
+      reason: `submit see_and_write ${lessonId}`,
+      referenceType: "Attempt",
+      referenceId: lessonId,
     },
-    isCompleted,
-    totalSentences: 1,
-  });
+    async () => {
+      // Grading prompt expects flat {word, isRequired} shape
+      const lessonForGrading = {
+        ...lesson,
+        wordPool: requiredWords.map((word) => ({ word, isRequired: true })),
+      };
 
-  return {
-    score,
-    feedback: submission.feedback,
-    gradedBy: provider,
-    bestScore: progress.bestScore,
-    isCompleted,
-  };
+      const { result: grading, provider } = await aiGradeSeeWrite(
+        userAnswer,
+        lessonForGrading,
+        lesson.level,
+      );
+
+      const score = Math.min(100, Math.max(0, Math.round(grading.score)));
+      const isCompleted = score >= COMPLETION_THRESHOLD;
+
+      const { submission, progress } = await submitAndUpdateProgress(attempt, {
+        sentenceOrder: 1,
+        userAnswer,
+        score,
+        gradedBy: provider,
+        feedback: {
+          summary: grading.summary,
+          enhancedVersion: grading.enhancedVersion || null,
+          criteria: grading.criteria || [],
+          corrections: grading.corrections || [],
+        },
+        isCompleted,
+        totalSentences: 1,
+      });
+
+      return {
+        score,
+        feedback: submission.feedback,
+        gradedBy: provider,
+        bestScore: progress.bestScore,
+        isCompleted,
+      };
+    },
+  );
 }
 
 /**
@@ -541,3 +552,4 @@ export async function deleteLesson(lessonId) {
   }
   return { id: lessonId };
 }
+

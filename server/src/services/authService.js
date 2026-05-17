@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { TOKEN_LIFE } from "@server/const/auth";
 import * as googleAuthProvider from "@server/services/auth/googleAuthProvider";
+import * as walletService from "@server/services/wallet/walletService";
 
 /**
  * @param {Object} data
@@ -98,6 +99,11 @@ export async function googleLogin(idToken) {
         isEmailVerified: true,
       });
       isNewUser = true;
+      walletService
+        .grantSignupBonus(user._id)
+        .catch((err) =>
+          console.error("[googleLogin] grantSignupBonus failed:", err.message),
+        );
     } catch (err) {
       if (err.code === 11000) {
         user = await User.findOne({
