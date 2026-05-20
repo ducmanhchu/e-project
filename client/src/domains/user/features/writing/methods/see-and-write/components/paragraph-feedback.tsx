@@ -149,7 +149,7 @@ export function ParagraphFeedback({
 			)}
 
 			<Button
-				variant="blackHover"
+				variant={isResetting ? "greenHover" : "blackHover"}
 				className="w-full"
 				onClick={onRetry}
 				disabled={isResetting}

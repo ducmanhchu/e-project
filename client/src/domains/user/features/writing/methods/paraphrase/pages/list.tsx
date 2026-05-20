@@ -18,7 +18,7 @@ import {
 	PaginationPrevious,
 } from "@shared/components/ui/pagination";
 
-import { FilterSection } from "@user/features/writing/components/filter-section";
+import { FilterSection } from "@/domains/user/components/filter-section";
 import { ParaphraseCard } from "@user/features/writing/methods/paraphrase/components/card";
 
 const ITEMS_PER_PAGE = 12;

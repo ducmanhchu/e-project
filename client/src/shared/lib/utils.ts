@@ -11,26 +11,26 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 const vietnameseTopics: Record<WritingExerciseTopic, string> = {
-	personal_communication: "Giao tiếp hàng ngày",
-	everyday_life: "Sinh hoạt hàng ngày",
-	transportation_travel: "Di chuyển và du lịch",
-	school_education: "Học tập và giáo dục",
-	work_business: "Công việc và kinh doanh",
-	public_services: "Dịch vụ công cộng",
-	health_medicine: "Sức khỏe và y tế",
-	shopping_money: "Mua sắm và tài chính",
+	personal_communication: "Giao tiếp",
+	everyday_life: "Thường ngày",
+	transportation_travel: "Du lịch",
+	school_education: "Giáo dục",
+	work_business: "Kinh doanh",
+	public_services: "Dịch vụ công",
+	health_medicine: "Y tế",
+	shopping_money: "Tài chính",
 	food_drink: "Ẩm thực",
-	entertainment_leisure: "Giải trí và nghỉ dưỡng",
-	nature_environment: "Tự nhiên và môi trường",
-	science_technology: "Khoa học và công nghệ",
-	culture_society: "Văn hóa và xã hội",
-	government_politics: "Chính trị và quốc tế",
-	history_geography: "Lịch sử và địa lý",
+	entertainment_leisure: "Giải trí",
+	nature_environment: "Tự nhiên",
+	science_technology: "Khoa học",
+	culture_society: "Văn hóa",
+	government_politics: "Chính trị",
+	history_geography: "Lịch sử",
 	sports_fitness: "Thể thao",
-	arts_literature: "Nghệ thuật và văn học",
-	religion_spirituality: "Tôn giáo và tinh thần",
-	law_justice: "Pháp luật và hôn nhân",
-	philosophy_ethics: "Triết học và đạo đức",
+	arts_literature: "Nghệ thuật",
+	religion_spirituality: "Tôn giáo",
+	law_justice: "Pháp luật",
+	philosophy_ethics: "Triết học",
 } as const;
 
 const vietnameseStatus: Record<ExerciseStatus, string> = {
@@ -55,6 +55,22 @@ const vietnameseWritingCriteria: { [key: string]: string } = {
 	lexical_resource: "Vốn từ vựng",
 	grammatical_range_accuracy: "Ngữ pháp",
 } as const;
+
+const vietnameseSpeakingCriteria: { [key: string]: string } = {
+	accuracy: "Độ chính xác",
+	fluency: "Độ trôi chảy",
+	completeness: "Độ đầy đủ",
+	prosody: "Ngữ điệu",
+	mispronunciation: "Phát âm sai",
+	omission: "Bỏ sót",
+	insertion: "Đọc thừa",
+	unexpectedBreak: "Ngắt nghỉ không mong đợi",
+	missingBreak: "Thiếu ngắt nghỉ",
+} as const;
+
+export function translateSpeakingCriteria(criteria: string): string {
+	return vietnameseSpeakingCriteria[criteria] || criteria;
+}
 
 export function translateWritingCriteria(criteria: string): string {
 	return vietnameseWritingCriteria[criteria] || criteria;
@@ -86,26 +102,26 @@ export const baseFilterSections = [
 		id: "topic",
 		label: "Chủ đề",
 		options: [
-			{ id: "personal_communication", label: "Giao tiếp hàng ngày" },
-			{ id: "everyday_life", label: "Sinh hoạt hàng ngày" },
-			{ id: "transportation_travel", label: "Di chuyển và du lịch" },
-			{ id: "school_education", label: "Học tập và giáo dục" },
-			{ id: "work_business", label: "Công việc và kinh doanh" },
-			{ id: "public_services", label: "Dịch vụ công cộng" },
-			{ id: "health_medicine", label: "Sức khỏe và y tế" },
-			{ id: "shopping_money", label: "Mua sắm và tài chính" },
+			{ id: "personal_communication", label: "Giao tiếp" },
+			{ id: "everyday_life", label: "Thường ngày" },
+			{ id: "transportation_travel", label: "Du lịch" },
+			{ id: "school_education", label: "Giáo dục" },
+			{ id: "work_business", label: "Kinh doanh" },
+			{ id: "public_services", label: "Dịch vụ công" },
+			{ id: "health_medicine", label: "Y tế" },
+			{ id: "shopping_money", label: "Tài chính" },
 			{ id: "food_drink", label: "Ẩm thực" },
-			{ id: "entertainment_leisure", label: "Giải trí và nghỉ dưỡng" },
-			{ id: "nature_environment", label: "Tự nhiên và môi trường" },
-			{ id: "science_technology", label: "Khoa học và công nghệ" },
-			{ id: "culture_society", label: "Văn hóa và xã hội" },
-			{ id: "government_politics", label: "Chính trị và quốc tế" },
-			{ id: "history_geography", label: "Lịch sử và địa lý" },
+			{ id: "entertainment_leisure", label: "Giải trí" },
+			{ id: "nature_environment", label: "Tự nhiên" },
+			{ id: "science_technology", label: "Khoa học" },
+			{ id: "culture_society", label: "Văn hóa" },
+			{ id: "government_politics", label: "Chính trị" },
+			{ id: "history_geography", label: "Lịch sử" },
 			{ id: "sports_fitness", label: "Thể thao" },
-			{ id: "arts_literature", label: "Nghệ thuật và văn học" },
-			{ id: "religion_spirituality", label: "Tôn giáo và tinh thần" },
-			{ id: "law_justice", label: "Pháp luật và hôn nhân" },
-			{ id: "philosophy_ethics", label: "Triết học và đạo đức" },
+			{ id: "arts_literature", label: "Nghệ thuật" },
+			{ id: "religion_spirituality", label: "Tôn giáo" },
+			{ id: "law_justice", label: "Pháp luật" },
+			{ id: "philosophy_ethics", label: "Triết học" },
 		],
 	},
 ] as const;

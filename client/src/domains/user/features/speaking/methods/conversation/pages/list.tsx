@@ -18,7 +18,7 @@ import {
 	PaginationPrevious,
 } from "@shared/components/ui/pagination";
 
-import { FilterSection } from "@user/features/writing/components/filter-section";
+import { FilterSection } from "@/domains/user/components/filter-section";
 import { ConversationCard } from "@user/features/speaking/methods/conversation/components/card";
 
 const ITEMS_PER_PAGE = 12;
