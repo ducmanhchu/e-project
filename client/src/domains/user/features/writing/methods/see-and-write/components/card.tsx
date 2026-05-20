@@ -1,4 +1,10 @@
 import { Link } from "react-router";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+	CheckmarkCircle02Icon,
+	Progress01Icon,
+	Progress03Icon,
+} from "@hugeicons/core-free-icons";
 
 import type { SAWListItem } from "@shared/types/see-and-write";
 import {
@@ -39,6 +45,16 @@ export function SeeAndWriteCard({ card }: { card: SAWListItem }) {
 								: "greenHover"
 					}
 				>
+					<HugeiconsIcon
+						icon={
+							card.status === "not_started"
+								? Progress01Icon
+								: card.status === "in_progress"
+									? Progress03Icon
+									: CheckmarkCircle02Icon
+						}
+						className="size-3.5 mr-1"
+					/>
 					<Link to={`/writing/see-and-write/${card.id}`}>
 						{translateStatus(card.status)}
 					</Link>
