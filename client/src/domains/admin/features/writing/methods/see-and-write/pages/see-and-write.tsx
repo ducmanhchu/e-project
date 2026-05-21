@@ -169,7 +169,7 @@ export function SeeAndWrite() {
 
 	const onEditDialogOpenChange = useCallback((open: boolean) => {
 		setEditDialogOpen(open);
-		if (!open) setEditingId(null);
+		if (!open) setTimeout(() => setEditingId(null), 150);
 	}, []);
 
 	const handleSort = useCallback(
@@ -246,7 +246,6 @@ export function SeeAndWrite() {
 				</Button>
 
 				<GooeyInput
-					className="self-start"
 					collapsedWidth={180}
 					expandedWidth={300}
 					placeholder="Tìm kiếm bài tập"

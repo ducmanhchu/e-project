@@ -256,7 +256,8 @@ export function SAWCreateDialog({ open, onOpenChange }: SAWCreateDialogProps) {
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
 				showCloseButton
-				className="sm:max-w-xl max-h-[90vh] overflow-y-auto"
+				className="sm:max-w-xl max-h-[90vh] overflow-y-auto no-scrollbar"
+				aria-describedby={undefined}
 			>
 				<DialogHeader>
 					<DialogTitle>Tạo mới bài tập</DialogTitle>
