@@ -54,7 +54,7 @@ export function LoginForm({
 		onSuccess: (data: SignInResponse) => {
 			setAccessToken(data.accessToken);
 			queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-			navigate("/admin/back-translate", { replace: true });
+			navigate("/admin/reverse-translate", { replace: true });
 		},
 		onError: (error) => {
 			const message =
@@ -87,7 +87,10 @@ export function LoginForm({
 							role="alert"
 							className="mb-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
 						>
-							<HugeiconsIcon icon={Shield01Icon} className="mt-0.5 size-4 shrink-0" />
+							<HugeiconsIcon
+								icon={Shield01Icon}
+								className="mt-0.5 size-4 shrink-0"
+							/>
 							<span>
 								Tài khoản của bạn không có quyền truy cập trang quản trị.
 							</span>
@@ -151,7 +154,10 @@ export function LoginForm({
 								)}
 								<Button type="submit" disabled={login.isPending}>
 									{login.isPending && (
-										<HugeiconsIcon icon={Loading02Icon} className="size-4 animate-spin" />
+										<HugeiconsIcon
+											icon={Loading02Icon}
+											className="size-4 animate-spin"
+										/>
 									)}
 									Đăng nhập
 								</Button>

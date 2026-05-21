@@ -2,6 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type {
 	ExerciseStatus,
+	ExerciseLevel,
 	WritingContentType,
 	WritingExerciseTopic,
 } from "@shared/types/utils";
@@ -67,6 +68,16 @@ const vietnameseSpeakingCriteria: { [key: string]: string } = {
 	unexpectedBreak: "Ngắt nghỉ không mong đợi",
 	missingBreak: "Thiếu ngắt nghỉ",
 } as const;
+
+const vietnameseLevels: Record<ExerciseLevel, string> = {
+	beginner: "Cơ bản",
+	intermediate: "Trung cấp",
+	advanced: "Nâng cao",
+} as const;
+
+export function translateLevel(level: ExerciseLevel) {
+	return vietnameseLevels[level];
+}
 
 export function translateSpeakingCriteria(criteria: string): string {
 	return vietnameseSpeakingCriteria[criteria] || criteria;
