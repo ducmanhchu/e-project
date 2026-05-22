@@ -1,7 +1,9 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { VolumeHighIcon } from "@hugeicons/core-free-icons";
+import { VolumeHighIcon, PauseIcon } from "@hugeicons/core-free-icons";
 
 import type { Word } from "@shared/types/vocab";
+import { useAzureTTS } from "@shared/hooks/use-azure-tts";
+
 import {
 	Card,
 	CardContent,
@@ -13,12 +15,7 @@ import { Badge } from "@shared/components/ui/badge";
 import { Button } from "@shared/components/ui/button";
 
 export function WordCard({ word }: { word: Word }) {
-	const handlePlayAudio = () => {
-		if (word.audio) {
-			const audio = new Audio(word.audio);
-			audio.play();
-		}
-	};
+	const { isPlaying, toggle: toggleAudio } = useAzureTTS({ enabled: false });
 
 	return (
 		<Card>
@@ -38,11 +35,14 @@ export function WordCard({ word }: { word: Word }) {
 						)}
 					</div>
 					<div className="flex gap-2">
-						{word.audio && (
-							<Button variant="ghost" size="icon" onClick={handlePlayAudio}>
-								<HugeiconsIcon icon={VolumeHighIcon} />
-							</Button>
-						)}
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={() => toggleAudio(word.word)}
+							aria-label={isPlaying ? "Dừng phát âm" : "Phát âm từ"}
+						>
+							<HugeiconsIcon icon={isPlaying ? PauseIcon : VolumeHighIcon} />
+						</Button>
 					</div>
 				</CardTitle>
 				<CardDescription>{word.ipa || "-"}</CardDescription>
