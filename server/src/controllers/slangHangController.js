@@ -1,6 +1,7 @@
 import * as slangHangService from "@server/services/slangHangService";
 import { validateFields, validateObjectId } from "@server/helpers/validateFields";
 import { parseQueryList } from "@server/helpers/writing/listLessonsQuery";
+import { parseIdList } from "@server/helpers/parseIdList";
 
 /**
  * POST /api/admin/slang-hang/generate — [ADMIN]
@@ -73,6 +74,19 @@ export async function remove(req, res, next) {
     validateObjectId(req.params.id, "id");
     await slangHangService.deleteDialogue({ id: req.params.id });
     res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * DELETE /api/admin/slang-hang/dialogues?ids=a,b,c — [ADMIN] Bulk delete
+ */
+export async function bulkDelete(req, res, next) {
+  try {
+    const ids = parseIdList(req.query.ids);
+    const { deleted } = await slangHangService.bulkDeleteDialogues(ids);
+    res.json({ success: true, deleted });
   } catch (e) {
     next(e);
   }
