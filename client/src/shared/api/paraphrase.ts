@@ -95,3 +95,13 @@ export const removeParaphraseExercise = async (
 	);
 	return data;
 };
+
+export const bulkDeleteParaphraseExercises = async (
+	ids: string,
+): Promise<{ success: boolean; deleted: number }> => {
+	const { data } = await axiosPrivate.delete<{
+		success: boolean;
+		deleted: number;
+	}>("/admin/writing/rewrite", { params: { ids } });
+	return data;
+};

@@ -144,3 +144,13 @@ export const deleteSAWExercise = async (
 	);
 	return data;
 };
+
+export const bulkDeleteSAWExercises = async (
+	ids: string,
+): Promise<{ success: boolean; deleted: number }> => {
+	const { data } = await axiosPrivate.delete<{
+		success: boolean;
+		deleted: number;
+	}>("/admin/writing/see-and-write", { params: { ids } });
+	return data;
+};

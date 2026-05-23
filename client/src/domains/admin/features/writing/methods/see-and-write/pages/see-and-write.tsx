@@ -8,9 +8,14 @@ import {
 import { toast } from "sonner";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Delete01Icon } from "@hugeicons/core-free-icons";
+import {
+	Add01Icon,
+	Delete01Icon,
+	Loading02Icon,
+} from "@hugeicons/core-free-icons";
 
 import {
+	bulkDeleteSAWExercises,
 	deleteSAWExercise,
 	fetchSAWAdminList,
 } from "@shared/api/see-and-write";
@@ -95,10 +100,12 @@ export function SeeAndWrite() {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 
-	const selectedCount = useMemo(
-		() => Object.values(rowSelection).filter(Boolean).length,
+	const selectedIds = useMemo(
+		() => Object.keys(rowSelection).filter((id) => rowSelection[id]),
 		[rowSelection],
 	);
+
+	const selectedCount = selectedIds.length;
 
 	useEffect(() => {
 		const timer = window.setTimeout(() => {
@@ -154,6 +161,31 @@ export function SeeAndWrite() {
 			toast.error("Không thể xóa bài tập.");
 		},
 	});
+
+	const bulkDeleteMutation = useMutation({
+		mutationFn: (ids: string) => bulkDeleteSAWExercises(ids),
+		onSuccess: async (response) => {
+			const deleted = response?.deleted;
+			setRowSelection({});
+			setDeleteDialogOpen(false);
+
+			await queryClient.invalidateQueries({ queryKey: ADMIN_LIST_QUERY_KEY });
+
+			if (items.length <= deleted && page > 1) {
+				setPage((p) => p - 1);
+			}
+
+			toast.success(`Đã xóa ${deleted} mục`);
+		},
+		onError: () => {
+			toast.error("Không thể xóa các bài tập đã chọn.");
+		},
+	});
+
+	const handleConfirmBulkDelete = useCallback(() => {
+		if (selectedIds.length === 0) return;
+		bulkDeleteMutation.mutate(selectedIds.join(","));
+	}, [selectedIds, bulkDeleteMutation]);
 
 	const onDeleteRow = useCallback(
 		(id: string) => {
@@ -402,8 +434,20 @@ export function SeeAndWrite() {
 						>
 							Hủy
 						</Button>
-						<Button type="button" variant="destructive">
-							Xóa
+						<Button
+							type="button"
+							variant="destructive"
+							disabled={bulkDeleteMutation.isPending}
+							onClick={handleConfirmBulkDelete}
+						>
+							{bulkDeleteMutation.isPending ? (
+								<HugeiconsIcon
+									icon={Loading02Icon}
+									className="size-4 animate-spin"
+								/>
+							) : (
+								"Xóa"
+							)}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
