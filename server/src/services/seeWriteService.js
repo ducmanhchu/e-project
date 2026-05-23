@@ -1,5 +1,6 @@
 import { SeeWrite } from "@server/models/writing/SeeWrite";
 import { Attempt } from "@server/models/attempt/Attempt";
+import { Submission } from "@server/models/attempt/Submission";
 import { Vocabulary } from "@server/models/vocabulary/Vocabulary";
 import { ApiError } from "@server/helpers/ApiError";
 import {
@@ -540,4 +541,40 @@ export async function deleteLesson(lessonId) {
     await destroyCloudinaryImage(deleted.imagePublicId);
   }
   return { id: lessonId };
+}
+
+/**
+ * DELETE /admin/writing/see-and-write?ids=a,b,c — Bulk delete + cascade attempts/submissions
+ */
+export async function bulkDeleteLessons(ids) {
+  const docs = await SeeWrite.find({ _id: { $in: ids } })
+    .select("_id imagePublicId")
+    .lean();
+  if (docs.length === 0) return { deleted: 0 };
+
+  const docIds = docs.map((d) => d._id);
+  const attempts = await Attempt.find({
+    lessonId: { $in: docIds },
+    lessonType: SW_LESSON_TYPE,
+  })
+    .select("_id")
+    .lean();
+  const attemptIds = attempts.map((a) => a._id);
+
+  await Promise.all([
+    SeeWrite.deleteMany({ _id: { $in: docIds } }),
+    attemptIds.length
+      ? Submission.deleteMany({ attemptId: { $in: attemptIds } })
+      : Promise.resolve(),
+    attemptIds.length
+      ? Attempt.deleteMany({ _id: { $in: attemptIds } })
+      : Promise.resolve(),
+  ]);
+
+  const publicIds = docs.map((d) => d.imagePublicId).filter(Boolean);
+  if (publicIds.length > 0) {
+    await Promise.allSettled(publicIds.map((pid) => destroyCloudinaryImage(pid)));
+  }
+
+  return { deleted: docs.length };
 }

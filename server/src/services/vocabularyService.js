@@ -24,6 +24,7 @@ async function fetchFromVocaxis(word) {
 
     return {
       ipa: entry.ipa?.us || entry.ipa?.uk || null,
+      partOfSpeech: entry.part_of_speech || null,
       definitions: entry.definitions.map((def) => ({
         definitionCefrLevel: def.definition_cefr_level || "",
         engDef: def.english || "",

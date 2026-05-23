@@ -1,5 +1,6 @@
 import { Rewrite } from "@server/models/writing/Rewrite";
 import { Attempt } from "@server/models/attempt/Attempt";
+import { Submission } from "@server/models/attempt/Submission";
 import { ApiError } from "@server/helpers/ApiError";
 import { aiGradeRewrite } from "@server/services/ai/gradingProvider";
 import {
@@ -271,6 +272,37 @@ export async function deleteLesson(lessonId) {
   if (!lesson) throw ApiError.notFound("Lesson not found");
   await Rewrite.findByIdAndDelete(lessonId);
   return { id: lessonId };
+}
+
+/**
+ * DELETE /admin/writing/rewrite?ids=a,b,c — Bulk delete + cascade
+ */
+export async function bulkDeleteLessons(ids) {
+  const docs = await Rewrite.find({ _id: { $in: ids } })
+    .select("_id")
+    .lean();
+  if (docs.length === 0) return { deleted: 0 };
+
+  const docIds = docs.map((d) => d._id);
+  const attempts = await Attempt.find({
+    lessonId: { $in: docIds },
+    lessonType: "Rewrite",
+  })
+    .select("_id")
+    .lean();
+  const attemptIds = attempts.map((a) => a._id);
+
+  await Promise.all([
+    Rewrite.deleteMany({ _id: { $in: docIds } }),
+    attemptIds.length
+      ? Submission.deleteMany({ attemptId: { $in: attemptIds } })
+      : Promise.resolve(),
+    attemptIds.length
+      ? Attempt.deleteMany({ _id: { $in: attemptIds } })
+      : Promise.resolve(),
+  ]);
+
+  return { deleted: docs.length };
 }
 
 /**

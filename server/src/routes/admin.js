@@ -24,6 +24,10 @@ adminRouter.post(
   "/writing/reverse-translation",
   reverseTranslationController.createLesson,
 );
+adminRouter.delete(
+  "/writing/reverse-translation",
+  reverseTranslationController.bulkDelete,
+);
 adminRouter.post(
   "/writing/reverse-translation/preview",
   reverseTranslationController.previewWriting,
@@ -48,6 +52,7 @@ adminRouter.post(
 // ── See & Write ───────────────────────────────────────
 adminRouter.get("/writing/see-and-write", seeWriteController.adminListLessons);
 adminRouter.post("/writing/see-and-write", seeWriteController.createLesson);
+adminRouter.delete("/writing/see-and-write", seeWriteController.bulkDelete);
 adminRouter.get("/writing/see-and-write/:id", seeWriteController.adminGetLesson);
 adminRouter.put("/writing/see-and-write/:id", seeWriteController.updateLesson);
 adminRouter.delete(
@@ -58,6 +63,7 @@ adminRouter.delete(
 // ── Rewrite ───────────────────────────────────────────
 adminRouter.get("/writing/rewrite", rewriteController.adminListLessons);
 adminRouter.post("/writing/rewrite", rewriteController.createLesson);
+adminRouter.delete("/writing/rewrite", rewriteController.bulkDelete);
 adminRouter.get("/writing/rewrite/:id", rewriteController.adminGetLesson);
 adminRouter.put("/writing/rewrite/:id", rewriteController.updateLesson);
 adminRouter.delete("/writing/rewrite/:id", rewriteController.deleteLesson);
@@ -65,6 +71,7 @@ adminRouter.delete("/writing/rewrite/:id", rewriteController.deleteLesson);
 // ── Exam (IELTS) ──────────────────────────────────────
 adminRouter.get("/writing/exam", examController.adminListExams);
 adminRouter.post("/writing/exam", examController.createExam);
+adminRouter.delete("/writing/exam", examController.bulkDelete);
 adminRouter.get("/writing/exam/:id", examController.adminGetExam);
 adminRouter.put("/writing/exam/:id", examController.updateExam);
 adminRouter.delete("/writing/exam/:id", examController.deleteExam);
@@ -76,6 +83,10 @@ adminRouter.delete("/vocabulary/:id", vocabularyController.deleteVocabulary);
 
 // ── Slang Hang ────────────────────────────────────────
 adminRouter.post("/slang-hang/generate", slangHangController.generate);
+adminRouter.delete(
+  "/slang-hang/dialogues",
+  slangHangController.bulkDelete,
+);
 adminRouter.delete(
   "/slang-hang/dialogues/:id",
   slangHangController.remove,
