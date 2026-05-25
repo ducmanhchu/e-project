@@ -1,4 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	lazy,
+	Suspense,
+	useCallback,
+	useEffect,
+	useDeferredValue,
+	useMemo,
+	useRef,
+	useState,
+	useTransition,
+} from "react";
 import {
 	keepPreviousData,
 	useMutation,
@@ -7,132 +17,122 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-	Add01Icon,
-	Delete01Icon,
-	Loading02Icon,
-} from "@hugeicons/core-free-icons";
 
 import {
 	bulkDeleteSAWExercises,
 	deleteSAWExercise,
 	fetchSAWAdminList,
 } from "@shared/api/see-and-write";
-import type { SAWAdminListQueryParams } from "@shared/types/see-and-write";
-import { baseFilterSections } from "@shared/lib/utils";
+import type {
+	SAWAdminListItem,
+	SAWAdminListQueryParams,
+} from "@shared/types/see-and-write";
+import type { APIResponse } from "@shared/types/utils";
 
-import { GooeyInput } from "@shared/components/ui/gooey-input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@shared/components/ui/select";
-import {
-	Pagination,
-	PaginationContent,
-	PaginationEllipsis,
-	PaginationItem,
-	PaginationLink,
-	PaginationNext,
-	PaginationPrevious,
-} from "@shared/components/ui/pagination";
-import { Button } from "@shared/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@shared/components/ui/dialog";
 import { DataTable } from "@admin/components/data-table";
 import {
 	createSAWColumns,
-	type AdminSortField,
-} from "@/domains/admin/features/writing/methods/see-and-write/components/saw-columns";
-import { SAWCreateDialog } from "@admin/features/writing/methods/see-and-write/components/saw-create-dialog";
-import { SAWEditDialog } from "@admin/features/writing/methods/see-and-write/components/saw-edit-dialog";
+	type SAWAdminSortField,
+} from "@admin/features/writing/methods/see-and-write/components/columns";
+import { SAWDeletingIdProvider } from "@admin/features/writing/methods/see-and-write/components/deleting-provider";
+import { SAWBulkDeleteDialog } from "@admin/features/writing/methods/see-and-write/components/bulk-delete-dialog";
+import { ADMIN_SAW_LIST_QUERY_KEY } from "@admin/features/writing/methods/see-and-write/components/form-options";
+import { SAWListPagination } from "@admin/features/writing/methods/see-and-write/components/list-pagination";
+import { SAWListToolbar } from "@admin/features/writing/methods/see-and-write/components/list-toolbar";
+import { Skeleton } from "@shared/components/ui/skeleton";
 
-const ITEMS_PER_PAGE = 10;
-const SEARCH_DEBOUNCE_MS = 300;
-const ALL_FILTER = "all";
+const SAW_ITEMS_PER_PAGE = 10;
+const SAW_ALL_FILTER = "all";
 
-const levelSection = baseFilterSections.find((s) => s.id === "level")!;
-const topicSection = baseFilterSections.find((s) => s.id === "topic")!;
+const SAWCreateDialog = lazy(() =>
+	import("@admin/features/writing/methods/see-and-write/components/create-dialog").then(
+		(m) => ({ default: m.SAWCreateDialog }),
+	),
+);
 
-function generatePageNumbers(
-	current: number,
-	total: number,
-): (number | "ellipsis")[] {
-	if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+const SAWEditDialog = lazy(() =>
+	import("@admin/features/writing/methods/see-and-write/components/edit-dialog").then(
+		(m) => ({ default: m.SAWEditDialog }),
+	),
+);
 
-	const pages: (number | "ellipsis")[] = [1];
-
-	if (current > 3) pages.push("ellipsis");
-
-	const start = Math.max(2, current - 1);
-	const end = Math.min(total - 1, current + 1);
-	for (let i = start; i <= end; i++) pages.push(i);
-
-	if (current < total - 2) pages.push("ellipsis");
-
-	pages.push(total);
-	return pages;
+function DialogSuspenseFallback() {
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
+			<Skeleton className="h-10 w-48 rounded-lg" />
+		</div>
+	);
 }
 
-const ADMIN_LIST_QUERY_KEY = ["admin", "see-and-write", "list"] as const;
+const pageHeader = (
+	<div className="flex flex-col gap-1">
+		<h1 className="text-xl font-bold">Quan sát và viết</h1>
+		<p className="text-sm text-muted-foreground">
+			Quản lý dữ liệu bài tập cho phương pháp quan sát và viết.
+		</p>
+	</div>
+);
 
 export function SeeAndWrite() {
 	const queryClient = useQueryClient();
+	const [, startListTransition] = useTransition();
+
 	const [searchInput, setSearchInput] = useState("");
-	const [debouncedSearch, setDebouncedSearch] = useState("");
-	const [levelFilter, setLevelFilter] = useState(ALL_FILTER);
-	const [topicFilter, setTopicFilter] = useState(ALL_FILTER);
+	const deferredSearch = useDeferredValue(searchInput.trim());
+	const prevDeferredSearchRef = useRef(deferredSearch);
+
+	const [levelFilter, setLevelFilter] = useState(SAW_ALL_FILTER);
+	const [topicFilter, setTopicFilter] = useState(SAW_ALL_FILTER);
 	const [page, setPage] = useState(1);
-	const [sortBy, setSortBy] = useState<AdminSortField>("level");
+	const [sortBy, setSortBy] = useState<SAWAdminSortField>("level");
 	const [order, setOrder] = useState<"asc" | "desc">("asc");
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+	const [deletingId, setDeletingId] = useState<string | undefined>();
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 
-	const selectedIds = useMemo(
-		() => Object.keys(rowSelection).filter((id) => rowSelection[id]),
-		[rowSelection],
-	);
+	const selectedCount = useMemo(() => {
+		let count = 0;
+		for (const id in rowSelection) {
+			if (rowSelection[id]) count += 1;
+		}
+		return count;
+	}, [rowSelection]);
 
-	const selectedCount = selectedIds.length;
-
+	// Reset trang/chọn khi giá trị search dùng cho API thay đổi (sau defer)
 	useEffect(() => {
-		const timer = window.setTimeout(() => {
-			setDebouncedSearch(searchInput.trim());
+		if (prevDeferredSearchRef.current === deferredSearch) return;
+		prevDeferredSearchRef.current = deferredSearch;
+		startListTransition(() => {
 			setRowSelection({});
 			setPage(1);
-		}, SEARCH_DEBOUNCE_MS);
-		return () => window.clearTimeout(timer);
-	}, [searchInput]);
+		});
+	}, [deferredSearch]);
 
 	const queryParams = useMemo((): SAWAdminListQueryParams => {
 		const params: SAWAdminListQueryParams = {
 			page,
-			limit: ITEMS_PER_PAGE,
+			limit: SAW_ITEMS_PER_PAGE,
 			sortBy,
 			order,
 		};
 
-		if (debouncedSearch) params.search = debouncedSearch;
-		if (levelFilter !== ALL_FILTER) params.level = levelFilter;
-		if (topicFilter !== ALL_FILTER) params.topic = topicFilter;
+		if (deferredSearch) params.search = deferredSearch;
+		if (levelFilter !== SAW_ALL_FILTER) params.level = levelFilter;
+		if (topicFilter !== SAW_ALL_FILTER) params.topic = topicFilter;
 
 		return params;
-	}, [page, debouncedSearch, levelFilter, topicFilter, sortBy, order]);
+	}, [page, deferredSearch, levelFilter, topicFilter, sortBy, order]);
+
+	const listQueryKey = useMemo(
+		() => [...ADMIN_SAW_LIST_QUERY_KEY, queryParams] as const,
+		[queryParams],
+	);
 
 	const { data, isLoading, isError } = useQuery({
-		queryKey: [...ADMIN_LIST_QUERY_KEY, queryParams],
+		queryKey: listQueryKey,
 		queryFn: () => fetchSAWAdminList(queryParams),
 		placeholderData: keepPreviousData,
 	});
@@ -142,6 +142,12 @@ export function SeeAndWrite() {
 
 	const deleteMutation = useMutation({
 		mutationFn: (id: string) => deleteSAWExercise(id),
+		onMutate: (id) => {
+			setDeletingId(id);
+		},
+		onSettled: () => {
+			setDeletingId(undefined);
+		},
 		onSuccess: async (_, deletedId) => {
 			setRowSelection((prev) => {
 				const next = { ...prev };
@@ -149,10 +155,16 @@ export function SeeAndWrite() {
 				return next;
 			});
 
-			await queryClient.invalidateQueries({ queryKey: ADMIN_LIST_QUERY_KEY });
+			const cached =
+				queryClient.getQueryData<APIResponse<SAWAdminListItem[]>>(listQueryKey);
+			const itemCount = cached?.data?.length ?? 0;
 
-			if (items.length === 1 && page > 1) {
-				setPage((p) => p - 1);
+			await queryClient.invalidateQueries({
+				queryKey: ADMIN_SAW_LIST_QUERY_KEY,
+			});
+
+			if (itemCount === 1 && page > 1) {
+				startListTransition(() => setPage((p) => p - 1));
 			}
 
 			toast.success("Xóa bài tập thành công");
@@ -165,14 +177,20 @@ export function SeeAndWrite() {
 	const bulkDeleteMutation = useMutation({
 		mutationFn: (ids: string) => bulkDeleteSAWExercises(ids),
 		onSuccess: async (response) => {
-			const deleted = response?.deleted;
+			const deleted = response?.deleted ?? 0;
 			setRowSelection({});
 			setDeleteDialogOpen(false);
 
-			await queryClient.invalidateQueries({ queryKey: ADMIN_LIST_QUERY_KEY });
+			const cached =
+				queryClient.getQueryData<APIResponse<SAWAdminListItem[]>>(listQueryKey);
+			const itemCount = cached?.data?.length ?? 0;
 
-			if (items.length <= deleted && page > 1) {
-				setPage((p) => p - 1);
+			await queryClient.invalidateQueries({
+				queryKey: ADMIN_SAW_LIST_QUERY_KEY,
+			});
+
+			if (itemCount <= deleted && page > 1) {
+				startListTransition(() => setPage((p) => p - 1));
 			}
 
 			toast.success(`Đã xóa ${deleted} mục`);
@@ -183,9 +201,10 @@ export function SeeAndWrite() {
 	});
 
 	const handleConfirmBulkDelete = useCallback(() => {
-		if (selectedIds.length === 0) return;
-		bulkDeleteMutation.mutate(selectedIds.join(","));
-	}, [selectedIds, bulkDeleteMutation]);
+		const ids = Object.keys(rowSelection).filter((id) => rowSelection[id]);
+		if (ids.length === 0) return;
+		bulkDeleteMutation.mutate(ids.join(","));
+	}, [rowSelection, bulkDeleteMutation]);
 
 	const onDeleteRow = useCallback(
 		(id: string) => {
@@ -201,19 +220,21 @@ export function SeeAndWrite() {
 
 	const onEditDialogOpenChange = useCallback((open: boolean) => {
 		setEditDialogOpen(open);
-		if (!open) setTimeout(() => setEditingId(null), 150);
+		if (!open) setEditingId(null);
 	}, []);
 
 	const handleSort = useCallback(
-		(field: AdminSortField) => {
-			if (sortBy === field) {
-				setOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-			} else {
-				setSortBy(field);
-				setOrder(field === "createdAt" ? "desc" : "asc");
-			}
-			setRowSelection({});
-			setPage(1);
+		(field: SAWAdminSortField) => {
+			startListTransition(() => {
+				if (sortBy === field) {
+					setOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+				} else {
+					setSortBy(field);
+					setOrder(field === "createdAt" ? "desc" : "asc");
+				}
+				setRowSelection({});
+				setPage(1);
+			});
 		},
 		[sortBy],
 	);
@@ -226,113 +247,49 @@ export function SeeAndWrite() {
 				onSort: handleSort,
 				onEditRow,
 				onDeleteRow,
-				deletingId: deleteMutation.isPending
-					? deleteMutation.variables
-					: undefined,
 			}),
-		[
-			sortBy,
-			order,
-			handleSort,
-			onEditRow,
-			onDeleteRow,
-			deleteMutation.isPending,
-			deleteMutation.variables,
-		],
-	);
-
-	const pageNumbers = useMemo(
-		() => (pagination ? generatePageNumbers(page, pagination.totalPages) : []),
-		[page, pagination],
+		[sortBy, order, handleSort, onEditRow, onDeleteRow],
 	);
 
 	const onLevelFilterChange = useCallback((value: string) => {
-		setLevelFilter(value);
-		setRowSelection({});
-		setPage(1);
+		startListTransition(() => {
+			setLevelFilter(value);
+			setRowSelection({});
+			setPage(1);
+		});
 	}, []);
 
 	const onTopicFilterChange = useCallback((value: string) => {
-		setTopicFilter(value);
-		setRowSelection({});
-		setPage(1);
+		startListTransition(() => {
+			setTopicFilter(value);
+			setRowSelection({});
+			setPage(1);
+		});
+	}, []);
+
+	const onPageChange = useCallback((nextPage: number) => {
+		startListTransition(() => setPage(nextPage));
+	}, []);
+
+	const onCreateDialogOpenChange = useCallback((open: boolean) => {
+		setCreateDialogOpen(open);
 	}, []);
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="flex flex-col gap-1">
-				<h1 className="text-xl font-bold">Quan sát và viết</h1>
-				<p className="text-sm text-muted-foreground">
-					Quản lý dữ liệu bài tập cho phương pháp quan sát và viết.
-				</p>
-			</div>
+			{pageHeader}
 
-			<div className="flex flex-wrap justify-between items-center gap-3">
-				<div className="flex items-center gap-3">
-					<Button
-						type="button"
-						variant="blackHover"
-						onClick={() => setCreateDialogOpen(true)}
-					>
-						<HugeiconsIcon icon={Add01Icon} />
-						Thêm
-					</Button>
-
-					<GooeyInput
-						collapsedWidth={150}
-						expandedWidth={250}
-						placeholder="Tìm kiếm"
-						value={searchInput}
-						onValueChange={setSearchInput}
-					/>
-				</div>
-
-				<div className="flex items-center gap-3">
-					{selectedCount > 0 && (
-						<div className="flex items-center gap-3">
-							<p className="text-sm text-muted-foreground">
-								Đã chọn {selectedCount} mục
-							</p>
-							<Button
-								type="button"
-								variant="destructive"
-								onClick={() => setDeleteDialogOpen(true)}
-							>
-								<HugeiconsIcon icon={Delete01Icon} />
-								Xóa
-							</Button>
-						</div>
-					)}
-
-					<Select value={levelFilter} onValueChange={onLevelFilterChange}>
-						<SelectTrigger className="w-[160px]">
-							<SelectValue placeholder={levelSection.label} />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value={ALL_FILTER}>Tất cả cấp độ</SelectItem>
-							{levelSection.options.map((option) => (
-								<SelectItem key={option.id} value={option.id}>
-									{option.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-
-					<Select value={topicFilter} onValueChange={onTopicFilterChange}>
-						<SelectTrigger className="w-[180px]">
-							<SelectValue placeholder={topicSection.label} />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value={ALL_FILTER}>Tất cả chủ đề</SelectItem>
-							{topicSection.options.map((option) => (
-								<SelectItem key={option.id} value={option.id}>
-									{option.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-			</div>
+			<SAWListToolbar
+				searchInput={searchInput}
+				onSearchChange={setSearchInput}
+				levelFilter={levelFilter}
+				topicFilter={topicFilter}
+				selectedCount={selectedCount}
+				onAddClick={() => setCreateDialogOpen(true)}
+				onBulkDeleteClick={() => setDeleteDialogOpen(true)}
+				onLevelFilterChange={onLevelFilterChange}
+				onTopicFilterChange={onTopicFilterChange}
+			/>
 
 			{isError ? (
 				<p className="text-sm text-muted-foreground">
@@ -340,120 +297,56 @@ export function SeeAndWrite() {
 				</p>
 			) : (
 				<div className="flex flex-col gap-3">
-					<DataTable
-						columns={columns}
-						data={items}
-						isLoading={isLoading}
-						emptyMessage="Không tìm thấy bài tập nào phù hợp."
-						enableRowSelection
-						rowSelection={rowSelection}
-						onRowSelectionChange={setRowSelection}
-					/>
+					<SAWDeletingIdProvider deletingId={deletingId}>
+						<DataTable
+							columns={columns}
+							data={items}
+							isLoading={isLoading}
+							emptyMessage="Không tìm thấy bài tập nào phù hợp."
+							enableRowSelection
+							rowSelection={rowSelection}
+							onRowSelectionChange={setRowSelection}
+						/>
+					</SAWDeletingIdProvider>
 					<p className="text-sm self-end text-muted-foreground">
 						Tổng số {pagination?.total} mục
 					</p>
 				</div>
 			)}
 
-			{pagination && pagination.totalPages > 1 && (
-				<Pagination>
-					<PaginationContent>
-						<PaginationItem>
-							<PaginationPrevious
-								onClick={() => setPage((p) => Math.max(1, p - 1))}
-								aria-disabled={page === 1}
-								className={
-									page === 1
-										? "pointer-events-none opacity-50"
-										: "cursor-pointer"
-								}
-							/>
-						</PaginationItem>
+			{pagination ? (
+				<SAWListPagination
+					page={page}
+					totalPages={pagination.totalPages}
+					onPageChange={onPageChange}
+				/>
+			) : null}
 
-						{pageNumbers.map((p, i) =>
-							p === "ellipsis" ? (
-								<PaginationItem key={`ellipsis-${i}`}>
-									<PaginationEllipsis />
-								</PaginationItem>
-							) : (
-								<PaginationItem key={p}>
-									<PaginationLink
-										isActive={p === page}
-										onClick={() => setPage(p)}
-										className="cursor-pointer"
-									>
-										{p}
-									</PaginationLink>
-								</PaginationItem>
-							),
-						)}
+			{createDialogOpen ? (
+				<Suspense fallback={<DialogSuspenseFallback />}>
+					<SAWCreateDialog open onOpenChange={onCreateDialogOpenChange} />
+				</Suspense>
+			) : null}
 
-						<PaginationItem>
-							<PaginationNext
-								onClick={() =>
-									setPage((p) => Math.min(pagination.totalPages, p + 1))
-								}
-								aria-disabled={page === pagination.totalPages}
-								className={
-									page === pagination.totalPages
-										? "pointer-events-none opacity-50"
-										: "cursor-pointer"
-								}
-							/>
-						</PaginationItem>
-					</PaginationContent>
-				</Pagination>
-			)}
+			{editDialogOpen && editingId ? (
+				<Suspense fallback={<DialogSuspenseFallback />}>
+					<SAWEditDialog
+						open
+						onOpenChange={onEditDialogOpenChange}
+						exerciseId={editingId}
+					/>
+				</Suspense>
+			) : null}
 
-			<SAWCreateDialog
-				open={createDialogOpen}
-				onOpenChange={setCreateDialogOpen}
-			/>
-
-			<SAWEditDialog
-				open={editDialogOpen}
-				onOpenChange={onEditDialogOpenChange}
-				exerciseId={editingId}
-			/>
-
-			<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-				<DialogContent showCloseButton>
-					<DialogHeader>
-						<DialogTitle>Xác nhận</DialogTitle>
-						<DialogDescription>
-							Bạn có chắc muốn xóa{" "}
-							<span className="font-medium text-foreground">
-								{selectedCount} mục
-							</span>{" "}
-							đã chọn?
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button
-							type="button"
-							variant="outline"
-							onClick={() => setDeleteDialogOpen(false)}
-						>
-							Hủy
-						</Button>
-						<Button
-							type="button"
-							variant="destructive"
-							disabled={bulkDeleteMutation.isPending}
-							onClick={handleConfirmBulkDelete}
-						>
-							{bulkDeleteMutation.isPending ? (
-								<HugeiconsIcon
-									icon={Loading02Icon}
-									className="size-4 animate-spin"
-								/>
-							) : (
-								"Xóa"
-							)}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+			{deleteDialogOpen ? (
+				<SAWBulkDeleteDialog
+					open
+					onOpenChange={setDeleteDialogOpen}
+					selectedCount={selectedCount}
+					isPending={bulkDeleteMutation.isPending}
+					onConfirm={handleConfirmBulkDelete}
+				/>
+			) : null}
 		</div>
 	);
 }

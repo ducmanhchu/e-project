@@ -1,4 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	lazy,
+	Suspense,
+	useCallback,
+	useEffect,
+	useDeferredValue,
+	useMemo,
+	useRef,
+	useState,
+	useTransition,
+} from "react";
 import {
 	keepPreviousData,
 	useMutation,
@@ -7,132 +17,122 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-	Add01Icon,
-	Delete01Icon,
-	Loading02Icon,
-} from "@hugeicons/core-free-icons";
 
 import {
 	bulkDeleteParaphraseExercises,
 	fetchAdminParaphraseList,
 	removeParaphraseExercise,
 } from "@shared/api/paraphrase";
-import type { AdminParaphraseListQueryParams } from "@shared/types/paraphrase";
-import { baseFilterSections } from "@shared/lib/utils";
+import type {
+	AdminParaphraseListItem,
+	AdminParaphraseListQueryParams,
+} from "@shared/types/paraphrase";
+import type { APIResponse } from "@shared/types/utils";
 
-import { GooeyInput } from "@shared/components/ui/gooey-input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@shared/components/ui/select";
-import {
-	Pagination,
-	PaginationContent,
-	PaginationEllipsis,
-	PaginationItem,
-	PaginationLink,
-	PaginationNext,
-	PaginationPrevious,
-} from "@shared/components/ui/pagination";
-import { Button } from "@shared/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@shared/components/ui/dialog";
 import { DataTable } from "@admin/components/data-table";
 import {
 	createParaphraseColumns,
 	type ParaphraseAdminSortField,
-} from "@/domains/admin/features/writing/methods/paraphrase/components/paraphrase-columns";
-import { ParaphraseCreateDialog } from "@admin/features/writing/methods/paraphrase/components/paraphrase-create-dialog";
-import { ParaphraseEditDialog } from "@admin/features/writing/methods/paraphrase/components/paraphrase-edit-dialog";
+} from "@admin/features/writing/methods/paraphrase/components/columns";
+import { ParaphraseDeletingIdProvider } from "@admin/features/writing/methods/paraphrase/components/deleting-provider";
+import { ParaphraseBulkDeleteDialog } from "@admin/features/writing/methods/paraphrase/components/bulk-delete-dialog";
+import { ADMIN_PARAPHRASE_LIST_QUERY_KEY } from "@admin/features/writing/methods/paraphrase/components/form-options";
+import { ParaphraseListPagination } from "@admin/features/writing/methods/paraphrase/components/list-pagination";
+import { ParaphraseListToolbar } from "@admin/features/writing/methods/paraphrase/components/list-toolbar";
+import { Skeleton } from "@shared/components/ui/skeleton";
 
-const ITEMS_PER_PAGE = 10;
-const SEARCH_DEBOUNCE_MS = 300;
-const ALL_FILTER = "all";
+const PARAPHRASE_ITEMS_PER_PAGE = 10;
+const PARAPHRASE_ALL_FILTER = "all";
 
-const levelSection = baseFilterSections.find((s) => s.id === "level")!;
-const topicSection = baseFilterSections.find((s) => s.id === "topic")!;
+const ParaphraseCreateDialog = lazy(() =>
+	import("@admin/features/writing/methods/paraphrase/components/create-dialog").then(
+		(m) => ({ default: m.ParaphraseCreateDialog }),
+	),
+);
 
-function generatePageNumbers(
-	current: number,
-	total: number,
-): (number | "ellipsis")[] {
-	if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+const ParaphraseEditDialog = lazy(() =>
+	import("@admin/features/writing/methods/paraphrase/components/edit-dialog").then(
+		(m) => ({ default: m.ParaphraseEditDialog }),
+	),
+);
 
-	const pages: (number | "ellipsis")[] = [1];
-
-	if (current > 3) pages.push("ellipsis");
-
-	const start = Math.max(2, current - 1);
-	const end = Math.min(total - 1, current + 1);
-	for (let i = start; i <= end; i++) pages.push(i);
-
-	if (current < total - 2) pages.push("ellipsis");
-
-	pages.push(total);
-	return pages;
+function DialogSuspenseFallback() {
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
+			<Skeleton className="h-10 w-48 rounded-lg" />
+		</div>
+	);
 }
 
-const ADMIN_LIST_QUERY_KEY = ["admin", "paraphrase", "list"] as const;
+const pageHeader = (
+	<div className="flex flex-col gap-1">
+		<h1 className="text-xl font-bold">Viết lại câu</h1>
+		<p className="text-sm text-muted-foreground">
+			Quản lý dữ liệu bài tập cho phương pháp viết lại câu.
+		</p>
+	</div>
+);
 
 export function Paraphrase() {
 	const queryClient = useQueryClient();
+	const [, startListTransition] = useTransition();
+
 	const [searchInput, setSearchInput] = useState("");
-	const [debouncedSearch, setDebouncedSearch] = useState("");
-	const [levelFilter, setLevelFilter] = useState(ALL_FILTER);
-	const [topicFilter, setTopicFilter] = useState(ALL_FILTER);
+	const deferredSearch = useDeferredValue(searchInput.trim());
+	const prevDeferredSearchRef = useRef(deferredSearch);
+
+	const [levelFilter, setLevelFilter] = useState(PARAPHRASE_ALL_FILTER);
+	const [topicFilter, setTopicFilter] = useState(PARAPHRASE_ALL_FILTER);
 	const [page, setPage] = useState(1);
 	const [sortBy, setSortBy] = useState<ParaphraseAdminSortField>("level");
 	const [order, setOrder] = useState<"asc" | "desc">("asc");
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+	const [deletingId, setDeletingId] = useState<string | undefined>();
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 
-	const selectedIds = useMemo(
-		() => Object.keys(rowSelection).filter((id) => rowSelection[id]),
-		[rowSelection],
-	);
+	const selectedCount = useMemo(() => {
+		let count = 0;
+		for (const id in rowSelection) {
+			if (rowSelection[id]) count += 1;
+		}
+		return count;
+	}, [rowSelection]);
 
-	const selectedCount = selectedIds.length;
-
+	// Reset trang/chọn khi giá trị search dùng cho API thay đổi (sau defer)
 	useEffect(() => {
-		const timer = window.setTimeout(() => {
-			setDebouncedSearch(searchInput.trim());
+		if (prevDeferredSearchRef.current === deferredSearch) return;
+		prevDeferredSearchRef.current = deferredSearch;
+		startListTransition(() => {
 			setRowSelection({});
 			setPage(1);
-		}, SEARCH_DEBOUNCE_MS);
-		return () => window.clearTimeout(timer);
-	}, [searchInput]);
+		});
+	}, [deferredSearch]);
 
 	const queryParams = useMemo((): AdminParaphraseListQueryParams => {
 		const params: AdminParaphraseListQueryParams = {
 			page,
-			limit: ITEMS_PER_PAGE,
+			limit: PARAPHRASE_ITEMS_PER_PAGE,
 			sortBy,
 			order,
 		};
 
-		if (debouncedSearch) params.search = debouncedSearch;
-		if (levelFilter !== ALL_FILTER) params.level = levelFilter;
-		if (topicFilter !== ALL_FILTER) params.topic = topicFilter;
+		if (deferredSearch) params.search = deferredSearch;
+		if (levelFilter !== PARAPHRASE_ALL_FILTER) params.level = levelFilter;
+		if (topicFilter !== PARAPHRASE_ALL_FILTER) params.topic = topicFilter;
 
 		return params;
-	}, [page, debouncedSearch, levelFilter, topicFilter, sortBy, order]);
+	}, [page, deferredSearch, levelFilter, topicFilter, sortBy, order]);
+
+	const listQueryKey = useMemo(
+		() => [...ADMIN_PARAPHRASE_LIST_QUERY_KEY, queryParams] as const,
+		[queryParams],
+	);
 
 	const { data, isLoading, isError } = useQuery({
-		queryKey: [...ADMIN_LIST_QUERY_KEY, queryParams],
+		queryKey: listQueryKey,
 		queryFn: () => fetchAdminParaphraseList(queryParams),
 		placeholderData: keepPreviousData,
 	});
@@ -142,6 +142,12 @@ export function Paraphrase() {
 
 	const deleteMutation = useMutation({
 		mutationFn: (id: string) => removeParaphraseExercise(id),
+		onMutate: (id) => {
+			setDeletingId(id);
+		},
+		onSettled: () => {
+			setDeletingId(undefined);
+		},
 		onSuccess: async (_, deletedId) => {
 			setRowSelection((prev) => {
 				const next = { ...prev };
@@ -149,10 +155,18 @@ export function Paraphrase() {
 				return next;
 			});
 
-			await queryClient.invalidateQueries({ queryKey: ADMIN_LIST_QUERY_KEY });
+			const cached =
+				queryClient.getQueryData<APIResponse<AdminParaphraseListItem[]>>(
+					listQueryKey,
+				);
+			const itemCount = cached?.data?.length ?? 0;
 
-			if (items.length === 1 && page > 1) {
-				setPage((p) => p - 1);
+			await queryClient.invalidateQueries({
+				queryKey: ADMIN_PARAPHRASE_LIST_QUERY_KEY,
+			});
+
+			if (itemCount === 1 && page > 1) {
+				startListTransition(() => setPage((p) => p - 1));
 			}
 
 			toast.success("Xóa bài tập thành công");
@@ -165,14 +179,22 @@ export function Paraphrase() {
 	const bulkDeleteMutation = useMutation({
 		mutationFn: (ids: string) => bulkDeleteParaphraseExercises(ids),
 		onSuccess: async (response) => {
-			const deleted = response?.deleted;
+			const deleted = response?.deleted ?? 0;
 			setRowSelection({});
 			setDeleteDialogOpen(false);
 
-			await queryClient.invalidateQueries({ queryKey: ADMIN_LIST_QUERY_KEY });
+			const cached =
+				queryClient.getQueryData<APIResponse<AdminParaphraseListItem[]>>(
+					listQueryKey,
+				);
+			const itemCount = cached?.data?.length ?? 0;
 
-			if (items.length <= deleted && page > 1) {
-				setPage((p) => p - 1);
+			await queryClient.invalidateQueries({
+				queryKey: ADMIN_PARAPHRASE_LIST_QUERY_KEY,
+			});
+
+			if (itemCount <= deleted && page > 1) {
+				startListTransition(() => setPage((p) => p - 1));
 			}
 
 			toast.success(`Đã xóa ${deleted} mục`);
@@ -183,9 +205,10 @@ export function Paraphrase() {
 	});
 
 	const handleConfirmBulkDelete = useCallback(() => {
-		if (selectedIds.length === 0) return;
-		bulkDeleteMutation.mutate(selectedIds.join(","));
-	}, [selectedIds, bulkDeleteMutation]);
+		const ids = Object.keys(rowSelection).filter((id) => rowSelection[id]);
+		if (ids.length === 0) return;
+		bulkDeleteMutation.mutate(ids.join(","));
+	}, [rowSelection, bulkDeleteMutation]);
 
 	const onDeleteRow = useCallback(
 		(id: string) => {
@@ -201,19 +224,21 @@ export function Paraphrase() {
 
 	const onEditDialogOpenChange = useCallback((open: boolean) => {
 		setEditDialogOpen(open);
-		if (!open) setTimeout(() => setEditingId(null), 150); // delay để tránh chớp nháy màn hình khi đóng dialog
+		if (!open) setEditingId(null);
 	}, []);
 
 	const handleSort = useCallback(
 		(field: ParaphraseAdminSortField) => {
-			if (sortBy === field) {
-				setOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-			} else {
-				setSortBy(field);
-				setOrder(field === "createdAt" ? "desc" : "asc");
-			}
-			setRowSelection({});
-			setPage(1);
+			startListTransition(() => {
+				if (sortBy === field) {
+					setOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+				} else {
+					setSortBy(field);
+					setOrder(field === "createdAt" ? "desc" : "asc");
+				}
+				setRowSelection({});
+				setPage(1);
+			});
 		},
 		[sortBy],
 	);
@@ -226,113 +251,49 @@ export function Paraphrase() {
 				onSort: handleSort,
 				onEditRow,
 				onDeleteRow,
-				deletingId: deleteMutation.isPending
-					? deleteMutation.variables
-					: undefined,
 			}),
-		[
-			sortBy,
-			order,
-			handleSort,
-			onEditRow,
-			onDeleteRow,
-			deleteMutation.isPending,
-			deleteMutation.variables,
-		],
-	);
-
-	const pageNumbers = useMemo(
-		() => (pagination ? generatePageNumbers(page, pagination.totalPages) : []),
-		[page, pagination],
+		[sortBy, order, handleSort, onEditRow, onDeleteRow],
 	);
 
 	const onLevelFilterChange = useCallback((value: string) => {
-		setLevelFilter(value);
-		setRowSelection({});
-		setPage(1);
+		startListTransition(() => {
+			setLevelFilter(value);
+			setRowSelection({});
+			setPage(1);
+		});
 	}, []);
 
 	const onTopicFilterChange = useCallback((value: string) => {
-		setTopicFilter(value);
-		setRowSelection({});
-		setPage(1);
+		startListTransition(() => {
+			setTopicFilter(value);
+			setRowSelection({});
+			setPage(1);
+		});
+	}, []);
+
+	const onPageChange = useCallback((nextPage: number) => {
+		startListTransition(() => setPage(nextPage));
+	}, []);
+
+	const onCreateDialogOpenChange = useCallback((open: boolean) => {
+		setCreateDialogOpen(open);
 	}, []);
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="flex flex-col gap-1">
-				<h1 className="text-xl font-bold">Viết lại câu</h1>
-				<p className="text-sm text-muted-foreground">
-					Quản lý dữ liệu bài tập cho phương pháp viết lại câu.
-				</p>
-			</div>
+			{pageHeader}
 
-			<div className="flex flex-wrap justify-between items-center gap-3">
-				<div className="flex items-center gap-3">
-					<Button
-						type="button"
-						variant="blackHover"
-						onClick={() => setCreateDialogOpen(true)}
-					>
-						<HugeiconsIcon icon={Add01Icon} />
-						Thêm
-					</Button>
-
-					<GooeyInput
-						collapsedWidth={150}
-						expandedWidth={250}
-						placeholder="Tìm kiếm"
-						value={searchInput}
-						onValueChange={setSearchInput}
-					/>
-				</div>
-
-				<div className="flex items-center gap-3">
-					{selectedCount > 0 && (
-						<div className="flex items-center gap-3">
-							<p className="text-sm text-muted-foreground">
-								Đã chọn {selectedCount} mục
-							</p>
-							<Button
-								type="button"
-								variant="destructive"
-								onClick={() => setDeleteDialogOpen(true)}
-							>
-								<HugeiconsIcon icon={Delete01Icon} />
-								Xóa
-							</Button>
-						</div>
-					)}
-
-					<Select value={levelFilter} onValueChange={onLevelFilterChange}>
-						<SelectTrigger className="w-[160px]">
-							<SelectValue placeholder={levelSection.label} />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value={ALL_FILTER}>Tất cả cấp độ</SelectItem>
-							{levelSection.options.map((option) => (
-								<SelectItem key={option.id} value={option.id}>
-									{option.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-
-					<Select value={topicFilter} onValueChange={onTopicFilterChange}>
-						<SelectTrigger className="w-[180px]">
-							<SelectValue placeholder={topicSection.label} />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value={ALL_FILTER}>Tất cả chủ đề</SelectItem>
-							{topicSection.options.map((option) => (
-								<SelectItem key={option.id} value={option.id}>
-									{option.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-			</div>
+			<ParaphraseListToolbar
+				searchInput={searchInput}
+				onSearchChange={setSearchInput}
+				levelFilter={levelFilter}
+				topicFilter={topicFilter}
+				selectedCount={selectedCount}
+				onAddClick={() => setCreateDialogOpen(true)}
+				onBulkDeleteClick={() => setDeleteDialogOpen(true)}
+				onLevelFilterChange={onLevelFilterChange}
+				onTopicFilterChange={onTopicFilterChange}
+			/>
 
 			{isError ? (
 				<p className="text-sm text-muted-foreground">
@@ -340,120 +301,59 @@ export function Paraphrase() {
 				</p>
 			) : (
 				<div className="flex flex-col gap-3">
-					<DataTable
-						columns={columns}
-						data={items}
-						isLoading={isLoading}
-						emptyMessage="Không tìm thấy bài tập nào phù hợp."
-						enableRowSelection
-						rowSelection={rowSelection}
-						onRowSelectionChange={setRowSelection}
-					/>
+					<ParaphraseDeletingIdProvider deletingId={deletingId}>
+						<DataTable
+							columns={columns}
+							data={items}
+							isLoading={isLoading}
+							emptyMessage="Không tìm thấy bài tập nào phù hợp."
+							enableRowSelection
+							rowSelection={rowSelection}
+							onRowSelectionChange={setRowSelection}
+						/>
+					</ParaphraseDeletingIdProvider>
 					<p className="text-sm self-end text-muted-foreground">
 						Tổng số {pagination?.total} mục
 					</p>
 				</div>
 			)}
 
-			{pagination && pagination.totalPages > 1 && (
-				<Pagination>
-					<PaginationContent>
-						<PaginationItem>
-							<PaginationPrevious
-								onClick={() => setPage((p) => Math.max(1, p - 1))}
-								aria-disabled={page === 1}
-								className={
-									page === 1
-										? "pointer-events-none opacity-50"
-										: "cursor-pointer"
-								}
-							/>
-						</PaginationItem>
+			{pagination ? (
+				<ParaphraseListPagination
+					page={page}
+					totalPages={pagination.totalPages}
+					onPageChange={onPageChange}
+				/>
+			) : null}
 
-						{pageNumbers.map((p, i) =>
-							p === "ellipsis" ? (
-								<PaginationItem key={`ellipsis-${i}`}>
-									<PaginationEllipsis />
-								</PaginationItem>
-							) : (
-								<PaginationItem key={p}>
-									<PaginationLink
-										isActive={p === page}
-										onClick={() => setPage(p)}
-										className="cursor-pointer"
-									>
-										{p}
-									</PaginationLink>
-								</PaginationItem>
-							),
-						)}
+			{createDialogOpen ? (
+				<Suspense fallback={<DialogSuspenseFallback />}>
+					<ParaphraseCreateDialog
+						open
+						onOpenChange={onCreateDialogOpenChange}
+					/>
+				</Suspense>
+			) : null}
 
-						<PaginationItem>
-							<PaginationNext
-								onClick={() =>
-									setPage((p) => Math.min(pagination.totalPages, p + 1))
-								}
-								aria-disabled={page === pagination.totalPages}
-								className={
-									page === pagination.totalPages
-										? "pointer-events-none opacity-50"
-										: "cursor-pointer"
-								}
-							/>
-						</PaginationItem>
-					</PaginationContent>
-				</Pagination>
-			)}
+			{editDialogOpen && editingId ? (
+				<Suspense fallback={<DialogSuspenseFallback />}>
+					<ParaphraseEditDialog
+						open
+						onOpenChange={onEditDialogOpenChange}
+						exerciseId={editingId}
+					/>
+				</Suspense>
+			) : null}
 
-			<ParaphraseCreateDialog
-				open={createDialogOpen}
-				onOpenChange={setCreateDialogOpen}
-			/>
-
-			<ParaphraseEditDialog
-				open={editDialogOpen}
-				onOpenChange={onEditDialogOpenChange}
-				exerciseId={editingId}
-			/>
-
-			<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-				<DialogContent showCloseButton>
-					<DialogHeader>
-						<DialogTitle>Xác nhận</DialogTitle>
-						<DialogDescription>
-							Bạn có chắc muốn xóa{" "}
-							<span className="font-medium text-foreground">
-								{selectedCount} mục
-							</span>{" "}
-							đã chọn?
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button
-							type="button"
-							variant="outline"
-							onClick={() => setDeleteDialogOpen(false)}
-						>
-							Hủy
-						</Button>
-						<Button
-							type="button"
-							variant="destructive"
-							disabled={bulkDeleteMutation.isPending}
-							onClick={handleConfirmBulkDelete}
-						>
-							{bulkDeleteMutation.isPending ? (
-								<HugeiconsIcon
-									icon={Loading02Icon}
-									className="size-4 animate-spin"
-								/>
-							) : (
-								"Xóa"
-							)}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+			{deleteDialogOpen ? (
+				<ParaphraseBulkDeleteDialog
+					open
+					onOpenChange={setDeleteDialogOpen}
+					selectedCount={selectedCount}
+					isPending={bulkDeleteMutation.isPending}
+					onConfirm={handleConfirmBulkDelete}
+				/>
+			) : null}
 		</div>
 	);
 }

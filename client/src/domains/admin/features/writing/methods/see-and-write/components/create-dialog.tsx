@@ -34,8 +34,9 @@ import {
 } from "@shared/components/ui/select";
 import { toast } from "sonner";
 
+import { ADMIN_SAW_LIST_QUERY_KEY } from "@admin/features/writing/methods/see-and-write/components/form-options";
+
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const ADMIN_LIST_QUERY_KEY = ["admin", "see-and-write", "list"] as const;
 
 const levelSection = baseFilterSections.find((s) => s.id === "level")!;
 const topicSection = baseFilterSections.find((s) => s.id === "topic")!;
@@ -206,7 +207,9 @@ export function SAWCreateDialog({ open, onOpenChange }: SAWCreateDialogProps) {
 			});
 		},
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ADMIN_LIST_QUERY_KEY });
+			await queryClient.invalidateQueries({
+				queryKey: ADMIN_SAW_LIST_QUERY_KEY,
+			});
 			toast.success("Tạo bài tập thành công");
 			onOpenChange(false);
 		},

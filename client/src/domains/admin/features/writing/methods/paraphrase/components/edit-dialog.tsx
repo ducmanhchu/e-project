@@ -49,7 +49,10 @@ import {
 import { toast } from "sonner";
 
 import {
-	ADMIN_LIST_QUERY_KEY,
+	ADMIN_PARAPHRASE_LIST_QUERY_KEY,
+	adminParaphraseExerciseQueryKey,
+} from "@admin/features/writing/methods/paraphrase/components/form-options";
+import {
 	buildSentencesPayload,
 	exerciseToFormValues,
 	getApiErrorMessage,
@@ -70,7 +73,7 @@ function getOptionLabel(
 type ParaphraseEditDialogProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	exerciseId: string | null;
+	exerciseId: string;
 };
 
 type ParaphraseEditFormProps = {
@@ -111,9 +114,11 @@ function ParaphraseEditForm({
 			return updateParaphraseExercise(exerciseId, payload);
 		},
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ADMIN_LIST_QUERY_KEY });
 			await queryClient.invalidateQueries({
-				queryKey: ["admin", "paraphrase", "exercise", exerciseId],
+				queryKey: ADMIN_PARAPHRASE_LIST_QUERY_KEY,
+			});
+			await queryClient.invalidateQueries({
+				queryKey: adminParaphraseExerciseQueryKey(exerciseId),
 			});
 			toast.success("Cập nhật bài tập thành công");
 			onOpenChange(false);
@@ -311,13 +316,13 @@ export function ParaphraseEditDialog({
 		isLoading,
 		isError,
 	} = useQuery({
-		queryKey: ["admin", "paraphrase", "exercise", exerciseId],
-		queryFn: () => fetchAdminParaphraseExercise(exerciseId!),
+		queryKey: adminParaphraseExerciseQueryKey(exerciseId),
+		queryFn: () => fetchAdminParaphraseExercise(exerciseId),
 		enabled: open && !!exerciseId,
 	});
 
 	const exercise = exerciseRes?.data;
-	const showForm = !isLoading && !isError && !!exercise && !!exerciseId;
+	const showForm = !isLoading && !isError && !!exercise;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>

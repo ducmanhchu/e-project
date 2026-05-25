@@ -32,8 +32,8 @@ import {
 } from "@shared/components/ui/select";
 import { toast } from "sonner";
 
+import { ADMIN_PARAPHRASE_LIST_QUERY_KEY } from "@admin/features/writing/methods/paraphrase/components/form-options";
 import {
-	ADMIN_LIST_QUERY_KEY,
 	buildSentencesPayload,
 	getApiErrorMessage,
 	paraphraseCreateDefaultValues,
@@ -77,7 +77,9 @@ export function ParaphraseCreateDialog({
 				sentences: buildSentencesPayload(values.sentencesRaw),
 			}),
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ADMIN_LIST_QUERY_KEY });
+			await queryClient.invalidateQueries({
+				queryKey: ADMIN_PARAPHRASE_LIST_QUERY_KEY,
+			});
 			toast.success("Tạo bài tập thành công");
 			onOpenChange(false);
 		},

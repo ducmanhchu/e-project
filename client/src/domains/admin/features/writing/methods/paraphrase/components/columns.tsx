@@ -3,18 +3,17 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	ArrowDown01Icon,
 	ArrowUp01Icon,
-	Delete01Icon,
-	Loading02Icon,
-	PencilEdit01Icon,
 	UnfoldMoreIcon,
 } from "@hugeicons/core-free-icons";
 
-import type { SAWAdminListItem } from "@shared/types/see-and-write";
+import type { AdminParaphraseListItem } from "@shared/types/paraphrase";
 import type { ExerciseLevel, WritingExerciseTopic } from "@shared/types/utils";
 import { cn, translateTopic } from "@shared/lib/utils";
 import { Badge } from "@shared/components/ui/badge";
 import { Button } from "@shared/components/ui/button";
 import { Checkbox } from "@shared/components/ui/checkbox";
+
+import { ParaphraseActionsCell } from "@admin/features/writing/methods/paraphrase/components/actions-cell";
 
 const levelStyle: Record<ExerciseLevel, string> = {
 	beginner: "bg-green-100 text-green-700",
@@ -38,23 +37,22 @@ function formatCreatedAt(value: string) {
 	}).format(new Date(value));
 }
 
-export type AdminSortField = "level" | "createdAt";
+export type ParaphraseAdminSortField = "level" | "createdAt";
 
-export type SAWColumnsOptions = {
-	sortBy: AdminSortField;
+export type ParaphraseColumnsOptions = {
+	sortBy: ParaphraseAdminSortField;
 	order: "asc" | "desc";
-	onSort: (field: AdminSortField) => void;
+	onSort: (field: ParaphraseAdminSortField) => void;
 	onEditRow: (id: string) => void;
 	onDeleteRow: (id: string) => void;
-	deletingId?: string;
 };
 
 function renderSortableHeader(
 	label: string,
-	field: AdminSortField,
-	sortBy: AdminSortField,
+	field: ParaphraseAdminSortField,
+	sortBy: ParaphraseAdminSortField,
 	order: "asc" | "desc",
-	onSort: (field: AdminSortField) => void,
+	onSort: (field: ParaphraseAdminSortField) => void,
 ) {
 	const isActive = sortBy === field;
 
@@ -82,14 +80,13 @@ function renderSortableHeader(
 	);
 }
 
-export function createSAWColumns({
+export function createParaphraseColumns({
 	sortBy,
 	order,
 	onSort,
 	onEditRow,
 	onDeleteRow,
-	deletingId,
-}: SAWColumnsOptions): ColumnDef<SAWAdminListItem>[] {
+}: ParaphraseColumnsOptions): ColumnDef<AdminParaphraseListItem>[] {
 	return [
 		{
 			id: "select",
@@ -112,22 +109,6 @@ export function createSAWColumns({
 			),
 			enableSorting: false,
 			enableHiding: false,
-		},
-		{
-			id: "image",
-			accessorKey: "image",
-			header: "Ảnh",
-			enableSorting: false,
-			cell: ({ row }) => {
-				const src = row.getValue("image") as string;
-				return (
-					<img
-						src={src}
-						alt={row.original.title}
-						className="size-12 shrink-0 rounded-md object-cover"
-					/>
-				);
-			},
 		},
 		{
 			accessorKey: "level",
@@ -156,6 +137,13 @@ export function createSAWColumns({
 			),
 		},
 		{
+			accessorKey: "totalSentences",
+			header: "Số câu hỏi",
+			cell: ({ row }) => (
+				<span className="tabular-nums">{row.getValue("totalSentences")}</span>
+			),
+		},
+		{
 			accessorKey: "createdAt",
 			header: () =>
 				renderSortableHeader("Ngày tạo", "createdAt", sortBy, order, onSort),
@@ -169,50 +157,13 @@ export function createSAWColumns({
 			id: "actions",
 			header: () => <span className="sr-only">Thao tác</span>,
 			enableSorting: false,
-			cell: ({ row }) => {
-				const id = row.original.id;
-				const isDeleting = deletingId === id;
-
-				return (
-					<div className="flex items-center justify-end gap-1">
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							onClick={() => onEditRow(id)}
-						>
-							<HugeiconsIcon
-								icon={PencilEdit01Icon}
-								className="size-3.5 text-secondary-black"
-							/>
-							Sửa
-						</Button>
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							className="text-destructive hover:text-destructive"
-							disabled={isDeleting}
-							onClick={() => onDeleteRow(id)}
-						>
-							{isDeleting ? (
-								<HugeiconsIcon
-									icon={Loading02Icon}
-									className="size-3.5 text-secondary-red animate-spin"
-								/>
-							) : (
-								<>
-									<HugeiconsIcon
-										icon={Delete01Icon}
-										className="size-3.5 text-secondary-red"
-									/>
-									Xóa
-								</>
-							)}
-						</Button>
-					</div>
-				);
-			},
+			cell: ({ row }) => (
+				<ParaphraseActionsCell
+					id={row.original.id}
+					onEditRow={onEditRow}
+					onDeleteRow={onDeleteRow}
+				/>
+			),
 		},
 	];
 }

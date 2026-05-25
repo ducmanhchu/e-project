@@ -5,8 +5,6 @@ import type { AdminParaphraseListItem } from "@shared/types/paraphrase";
 import type { WritingExerciseTopic } from "@shared/types/utils";
 import { baseFilterSections } from "@shared/lib/utils";
 
-export const ADMIN_LIST_QUERY_KEY = ["admin", "paraphrase", "list"] as const;
-
 const topicSection = baseFilterSections.find((s) => s.id === "topic")!;
 
 export const topicValues = topicSection.options.map((o) => o.id) as [

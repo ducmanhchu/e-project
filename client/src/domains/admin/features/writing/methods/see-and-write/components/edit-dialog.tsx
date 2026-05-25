@@ -39,10 +39,14 @@ import {
 } from "@shared/components/ui/select";
 import { Skeleton } from "@shared/components/ui/skeleton";
 import { toast } from "sonner";
-import { SAWWordPoolSection } from "@admin/features/writing/methods/see-and-write/components/saw-word-pool-section";
+
+import {
+	ADMIN_SAW_LIST_QUERY_KEY,
+	adminSAWExerciseQueryKey,
+} from "@admin/features/writing/methods/see-and-write/components/form-options";
+import { SAWWordPoolSection } from "@admin/features/writing/methods/see-and-write/components/word-pool-section";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const ADMIN_LIST_QUERY_KEY = ["admin", "see-and-write", "list"] as const;
 
 const levelSection = baseFilterSections.find((s) => s.id === "level")!;
 const topicSection = baseFilterSections.find((s) => s.id === "topic")!;
@@ -150,7 +154,7 @@ function getApiErrorMessage(error: unknown): string {
 type SAWEditDialogProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	exerciseId: string | null;
+	exerciseId: string;
 };
 
 type SAWEditFormProps = {
@@ -223,9 +227,11 @@ function SAWEditForm({ exercise, exerciseId, onOpenChange }: SAWEditFormProps) {
 			return updateSAWExercise(exerciseId, payload);
 		},
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ADMIN_LIST_QUERY_KEY });
 			await queryClient.invalidateQueries({
-				queryKey: ["admin", "see-and-write", "exercise", exerciseId],
+				queryKey: ADMIN_SAW_LIST_QUERY_KEY,
+			});
+			await queryClient.invalidateQueries({
+				queryKey: adminSAWExerciseQueryKey(exerciseId),
 			});
 			toast.success("Cập nhật bài tập thành công");
 			onOpenChange(false);
@@ -579,8 +585,8 @@ export function SAWEditDialog({
 		isLoading,
 		isError,
 	} = useQuery({
-		queryKey: ["admin", "see-and-write", "exercise", exerciseId],
-		queryFn: () => fetchSAWAdminExercise(exerciseId!),
+		queryKey: adminSAWExerciseQueryKey(exerciseId),
+		queryFn: () => fetchSAWAdminExercise(exerciseId),
 		enabled: open && !!exerciseId,
 	});
 
