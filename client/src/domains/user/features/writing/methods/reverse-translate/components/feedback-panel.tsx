@@ -3,6 +3,7 @@ import { BookAIcon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
 
 import { cn } from "@shared/lib/utils";
+import { ShimmerText } from "@user/components/shimmer-text";
 import { Button } from "@shared/components/ui/button";
 import { Skeleton } from "@shared/components/ui/skeleton";
 import {
@@ -15,6 +16,17 @@ import {
 } from "@shared/components/ui/dialog";
 import { WordCard } from "@/domains/user/features/writing/methods/reverse-translate/components/word-card";
 import type { FeedbackPanelProps } from "@shared/types/reverse-translate";
+
+function ReverseTranslateFeedbackAssessing() {
+	return (
+		<div className="flex flex-1 flex-col items-center justify-center gap-4 h-full p-4">
+			<h2 className="text-base font-medium text-secondary-black">
+				Kết quả đánh giá
+			</h2>
+			<ShimmerText className="flex-1 w-full" />
+		</div>
+	);
+}
 
 export function FeedbackPanel({
 	viewingFeedback,
@@ -131,28 +143,7 @@ export function FeedbackPanel({
 			{/* Feedback content */}
 			<div className="flex flex-col gap-4 bg-neutral-50 rounded-4xl border flex-1 px-5 py-4 overflow-y-auto no-scrollbar">
 				{isSubmitting ? (
-					<>
-						<Skeleton className="h-4 w-28" />
-						<div className="flex flex-col gap-1">
-							<Skeleton className="h-4 w-24" />
-							<Skeleton className="h-5 w-full" />
-						</div>
-						<div className="flex flex-col gap-1">
-							<Skeleton className="h-4 w-24" />
-							<Skeleton className="h-5 w-full" />
-							<Skeleton className="h-5 w-3/4" />
-						</div>
-						<div className="flex flex-col gap-1">
-							<Skeleton className="h-4 w-24" />
-							<Skeleton className="h-5 w-full" />
-							<Skeleton className="h-5 w-5/6" />
-						</div>
-						<div className="flex flex-col gap-1">
-							<Skeleton className="h-4 w-20" />
-							<Skeleton className="h-5 w-full" />
-							<Skeleton className="h-5 w-2/3" />
-						</div>
-					</>
+					<ReverseTranslateFeedbackAssessing />
 				) : !viewingFeedback ? (
 					<div className="flex flex-1 items-center justify-center">
 						<p className="text-sm text-muted-foreground text-center">

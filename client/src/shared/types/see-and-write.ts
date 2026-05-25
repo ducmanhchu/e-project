@@ -142,3 +142,79 @@ export type ParagraphSubmitResponse = APIResponse<{
 	bestScore: number;
 	isCompleted: boolean;
 }>;
+
+// ADMIN
+export type SAWAdminListItem = Pick<
+	SAWListItem,
+	"id" | "title" | "level" | "topic" | "image" | "createdAt"
+> & {
+	imagePublicId?: null | string;
+	minWordCount: number;
+	maxWordCount: number;
+	wordPool: {
+		id: string;
+		word: string;
+		ipa?: string;
+		partOfSpeech?: string;
+		meaning?: string;
+		audio?: string;
+		isRequired: boolean;
+	}[];
+};
+
+export type SAWAdminListQueryParams = {
+	level?: string;
+	topic?: string;
+	page?: number;
+	limit?: number;
+	search?: string;
+	sortBy?: "level" | "createdAt";
+	order?: "asc" | "desc";
+};
+
+export type SAWAdminExercise = {
+	id: string;
+	title: string;
+	level: ExerciseLevel;
+	topic: WritingExerciseTopic;
+	description: string;
+	image: string;
+	imagePublicId?: null | string;
+	wordPool: {
+		id: string;
+		word: string;
+		ipa?: string;
+		partOfSpeech?: string;
+		meaning?: string;
+		audio?: string;
+		isRequired: boolean;
+	}[];
+	minWordCount: number;
+	maxWordCount: number;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type SAWExerciseCreatePayload = {
+	title: string;
+	level: ExerciseLevel;
+	image: string;
+	topic?: WritingExerciseTopic;
+	description?: string;
+	minWordCount?: number;
+	maxWordCount?: number;
+	requiredWords?: string[];
+	distractorWords?: string[];
+};
+
+export type SAWExerciseUpdatePayload = {
+	title?: string;
+	level?: ExerciseLevel;
+	topic?: WritingExerciseTopic;
+	description?: string;
+	image?: string;
+	minWordCount?: number;
+	maxWordCount?: number;
+	requiredWords?: string[];
+	distractorWords?: string[];
+};

@@ -37,6 +37,7 @@ import {
 	TooltipTrigger,
 } from "@shared/components/ui/tooltip";
 
+import { ShimmerText } from "@user/components/shimmer-text";
 import { useParaphrase } from "@user/features/writing/methods/paraphrase/hooks/use-paraphrase";
 import { SentenceFeedback } from "@user/features/writing/methods/paraphrase/components/sentence-feedback";
 
@@ -185,8 +186,9 @@ export function ParaphraseExercise() {
 							<Tooltip>
 								<TooltipTrigger asChild>
 									<InputGroupButton
-										variant="blackHover"
-										size="icon-sm"
+										variant={shouldShowRedoIcon ? "greenHover" : "blackHover"}
+										size={isSubmitting ? "xs" : "icon-sm"}
+										className={cn(isSubmitting && "h-8! w-48 shrink-0 px-2")}
 										onClick={shouldShowRedoIcon ? handleRedo : handleSubmit}
 										disabled={
 											isLoading ||
@@ -195,10 +197,16 @@ export function ParaphraseExercise() {
 										}
 									>
 										{isSubmitting ? (
-											<HugeiconsIcon
-												icon={Loading03Icon}
-												className="animate-spin"
-											/>
+											<>
+												<HugeiconsIcon
+													icon={Loading03Icon}
+													className="animate-spin shrink-0"
+												/>
+												<ShimmerText
+													className="min-h-0 min-w-0 flex-1 justify-start overflow-hidden"
+													textClassName="text-xs whitespace-nowrap [--base-color:var(--color-secondary-white)] [--shimmer-color:white]"
+												/>
+											</>
 										) : (
 											<HugeiconsIcon
 												icon={shouldShowRedoIcon ? Redo02Icon : ArrowUp02Icon}
