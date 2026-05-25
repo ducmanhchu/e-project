@@ -9,7 +9,21 @@ import {
 } from "@server/const/slangHang";
 import * as slangHangProvider from "@server/services/ai/slangHangProvider";
 import * as speechAuthProvider from "@server/services/azure/speechAuthProvider";
-import { buildTitleSearch } from "@server/helpers/writing/listLessonsQuery";
+import {
+	buildTitleSearch,
+	buildLessonsListPromise,
+	resolveSort,
+} from "@server/helpers/writing/listLessonsQuery";
+
+/** Projection dùng khi admin list có sort (aggregate hoặc find). */
+const DIALOGUE_LIST_PROJECTION = Object.freeze({
+	title: 1,
+	level: 1,
+	topic: 1,
+	scenario: 1,
+	createdAt: 1,
+	messages: 1,
+});
 
 function validateTopic(topic) {
 	if (!Object.values(WRITING_TOPIC).includes(topic)) {
@@ -334,6 +348,10 @@ function toListItem(doc) {
 
 /**
  * Truy vấn dialogue có phân trang (dùng chung user list và admin list).
+ * Khi có `sortBy`, dùng sort tùy chỉnh (level rank hoặc createdAt); không thì mặc định createdAt giảm dần.
+ * @param {object} opts
+ * @param {string} [opts.sortBy] — "level" | "createdAt" (chỉ admin truyền)
+ * @param {1|-1} [opts.order] — 1 = asc, -1 = desc
  */
 async function queryDialoguesPaginated({
 	level,
@@ -341,6 +359,8 @@ async function queryDialoguesPaginated({
 	search,
 	page = 1,
 	limit = 12,
+	sortBy,
+	order,
 }) {
 	const p = Math.max(1, Number(page));
 	const l = Math.min(Math.max(1, Number(limit)), 50);
@@ -352,13 +372,25 @@ async function queryDialoguesPaginated({
 	const titleFilter = buildTitleSearch(search);
 	if (titleFilter) query.title = titleFilter;
 
+	const dialoguesPromise =
+		sortBy !== undefined
+			? buildLessonsListPromise(Dialogue, {
+					query,
+					projection: DIALOGUE_LIST_PROJECTION,
+					sortBy,
+					order,
+					page: p,
+					limit: l,
+				})
+			: Dialogue.find(query)
+					.select("title level topic scenario createdAt messages.order")
+					.sort({ createdAt: -1 })
+					.skip(skip)
+					.limit(l)
+					.lean();
+
 	const [dialogues, total] = await Promise.all([
-		Dialogue.find(query)
-			.select("title level topic scenario createdAt messages.order")
-			.sort({ createdAt: -1 })
-			.skip(skip)
-			.limit(l)
-			.lean(),
+		dialoguesPromise,
 		Dialogue.countDocuments(query),
 	]);
 
@@ -367,6 +399,9 @@ async function queryDialoguesPaginated({
 
 /**
  * GET /admin/slang-hang/dialogues — Danh sách dialogue (không có progress user)
+ * @param {object} filters
+ * @param {string} [filters.sortBy] — "level" | "createdAt" (mặc định "level")
+ * @param {string} [filters.order] — "asc" | "desc" (mặc định "asc")
  */
 export async function adminListDialogues({
 	level,
@@ -374,7 +409,13 @@ export async function adminListDialogues({
 	search,
 	page = 1,
 	limit = 12,
+	sortBy,
+	order,
 }) {
+	const { sortBy: resolvedSortBy, order: resolvedOrder } = resolveSort({
+		sortBy,
+		order,
+	});
 	const {
 		dialogues,
 		total,
@@ -386,6 +427,8 @@ export async function adminListDialogues({
 		search,
 		page,
 		limit,
+		sortBy: resolvedSortBy,
+		order: resolvedOrder,
 	});
 
 	return {
