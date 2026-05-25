@@ -194,6 +194,24 @@ export async function deleteDialogue({ id }) {
   if (!result) throw ApiError.notFound("Dialogue not found");
 }
 
+/**
+ * DELETE /admin/slang-hang/dialogues?ids=a,b,c — Bulk delete + cascade attempts
+ */
+export async function bulkDeleteDialogues(ids) {
+  const docs = await Dialogue.find({ _id: { $in: ids } })
+    .select("_id")
+    .lean();
+  if (docs.length === 0) return { deleted: 0 };
+
+  const docIds = docs.map((d) => d._id);
+  await Promise.all([
+    Dialogue.deleteMany({ _id: { $in: docIds } }),
+    DialogueAttempt.deleteMany({ dialogueId: { $in: docIds } }),
+  ]);
+
+  return { deleted: docs.length };
+}
+
 export async function retry({ userId, dialogueId }) {
   // Retry only deletes the existing attempt (no AI call) → free of charge.
   await DialogueAttempt.deleteOne({ userId, dialogueId });

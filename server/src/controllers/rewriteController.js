@@ -2,6 +2,7 @@ import * as rewriteService from "@server/services/rewriteService";
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
 import { parseQueryList } from "@server/helpers/writing/listLessonsQuery";
+import { parseIdList } from "@server/helpers/parseIdList";
 
 /**
  * GET /api/writing/rewrite — Public list (optional auth, user-only shape)
@@ -148,3 +149,15 @@ export async function deleteLesson(req, res, next) {
   }
 }
 
+/**
+ * DELETE /api/admin/writing/rewrite?ids=a,b,c — [ADMIN] Bulk delete
+ */
+export async function bulkDelete(req, res, next) {
+  try {
+    const ids = parseIdList(req.query.ids);
+    const { deleted } = await rewriteService.bulkDeleteLessons(ids);
+    res.json({ success: true, deleted });
+  } catch (e) {
+    next(e);
+  }
+}

@@ -393,3 +393,38 @@ export async function deleteExam(examId) {
   return { id: examId, deletedAttempts: attempts.length };
 }
 
+/**
+ * DELETE /admin/writing/exam?ids=a,b,c — Bulk delete + cascade attempts/submissions
+ */
+export async function bulkDeleteExams(ids) {
+  const docs = await Exam.find({ _id: { $in: ids } })
+    .select("_id imagePublicId")
+    .lean();
+  if (docs.length === 0) return { deleted: 0 };
+
+  const docIds = docs.map((d) => d._id);
+  const attempts = await Attempt.find({
+    lessonId: { $in: docIds },
+    lessonType: "Exam",
+  })
+    .select("_id")
+    .lean();
+  const attemptIds = attempts.map((a) => a._id);
+
+  await Promise.all([
+    Exam.deleteMany({ _id: { $in: docIds } }),
+    attemptIds.length
+      ? Submission.deleteMany({ attemptId: { $in: attemptIds } })
+      : Promise.resolve(),
+    attemptIds.length
+      ? Attempt.deleteMany({ _id: { $in: attemptIds } })
+      : Promise.resolve(),
+  ]);
+
+  const publicIds = docs.map((d) => d.imagePublicId).filter(Boolean);
+  if (publicIds.length > 0) {
+    await Promise.allSettled(publicIds.map((pid) => destroyCloudinaryImage(pid)));
+  }
+
+  return { deleted: docs.length };
+}

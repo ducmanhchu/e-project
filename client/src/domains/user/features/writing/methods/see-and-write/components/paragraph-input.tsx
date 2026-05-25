@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUp02Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 
+import { ShimmerText } from "@user/components/shimmer-text";
 import { Button } from "@shared/components/ui/button";
 import {
 	Field,
@@ -86,10 +87,16 @@ export function ParagraphInput({
 				disabled={disabled}
 			>
 				{isSubmitting ? (
-					<>
-						<HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
-						Đang đánh giá...
-					</>
+					<div className="flex items-center gap-2">
+						<HugeiconsIcon
+							icon={Loading03Icon}
+							className="animate-spin shrink-0"
+						/>
+						<ShimmerText
+							className="min-h-0 min-w-0 flex-1 justify-start overflow-hidden"
+							textClassName="text-sm whitespace-nowrap [--base-color:var(--color-secondary-white)] [--shimmer-color:white]"
+						/>
+					</div>
 				) : (
 					<>
 						<HugeiconsIcon icon={ArrowUp02Icon} />

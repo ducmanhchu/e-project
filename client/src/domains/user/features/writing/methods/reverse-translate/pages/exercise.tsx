@@ -166,14 +166,14 @@ export function ReverseTranslateExercise() {
 										<p>{hint.length > 0 ? "Gợi ý" : "Không có gợi ý"}</p>
 									</TooltipContent>
 								</Tooltip>
-								<DialogContent>
-									<DialogHeader>
+								<DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden sm:max-w-[min(85dvw,calc(100%-2rem))]">
+									<DialogHeader className="shrink-0">
 										<DialogTitle>Gợi ý</DialogTitle>
 										<DialogDescription>
 											Những từ vựng có thể sử dụng trong câu.
 										</DialogDescription>
 									</DialogHeader>
-									<div className="grid grid-cols-1 gap-3 pt-2">
+									<div className="grid grid-cols-1 gap-3 pt-2 lg:grid-cols-2 min-h-0 flex-1 overflow-y-auto no-scrollbar">
 										{hint.map((word) => (
 											<WordCard key={word._id} word={word} />
 										))}
@@ -184,7 +184,7 @@ export function ReverseTranslateExercise() {
 							<Tooltip>
 								<TooltipTrigger asChild>
 									<InputGroupButton
-										variant="blackHover"
+										variant={isResetting ? "greenHover" : "blackHover"}
 										size="icon-sm"
 										onClick={isAllCompleted ? handleReset : handleSubmit}
 										disabled={

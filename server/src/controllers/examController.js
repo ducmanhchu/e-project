@@ -2,6 +2,7 @@ import * as examService from "@server/services/examService";
 import { ApiError } from "@server/helpers/ApiError";
 import { validateFields, validateObjectId } from "@server/helpers/validateFields";
 import { parseQueryList } from "@server/helpers/writing/listLessonsQuery";
+import { parseIdList } from "@server/helpers/parseIdList";
 
 /**
  * GET /api/writing/exam — Public list (optional auth, user-only shape)
@@ -186,3 +187,15 @@ export async function deleteExam(req, res, next) {
   }
 }
 
+/**
+ * DELETE /api/admin/writing/exam?ids=a,b,c — [ADMIN] Bulk delete
+ */
+export async function bulkDelete(req, res, next) {
+  try {
+    const ids = parseIdList(req.query.ids);
+    const { deleted } = await examService.bulkDeleteExams(ids);
+    res.json({ success: true, deleted });
+  } catch (e) {
+    next(e);
+  }
+}

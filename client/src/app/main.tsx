@@ -19,7 +19,7 @@ createRoot(document.getElementById("root")!).render(
 			<QueryClientProvider client={queryClient}>
 				<TooltipProvider>
 					<RouterProvider router={router} />
-					<Toaster />
+					<Toaster position="bottom-left" />
 				</TooltipProvider>
 			</QueryClientProvider>
 		</GoogleOAuthProvider>
