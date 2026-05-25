@@ -27,22 +27,24 @@ export const env = {
   AZURE_SPEECH_KEY: process.env.AZURE_SPEECH_KEY,
   AZURE_SPEECH_REGION: process.env.AZURE_SPEECH_REGION,
 
-  // Active payment provider for new checkouts: "payos" | "sepay"
-  PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER || "payos",
-
-  PAYOS_CLIENT_ID: process.env.PAYOS_CLIENT_ID,
-  PAYOS_API_KEY: process.env.PAYOS_API_KEY,
-  PAYOS_CHECKSUM_KEY: process.env.PAYOS_CHECKSUM_KEY,
-  PAYOS_RETURN_URL:
-    process.env.PAYOS_RETURN_URL ||
-    `${process.env.FRONTEND_URL || "http://localhost:5173"}/payment/success`,
-  PAYOS_CANCEL_URL:
-    process.env.PAYOS_CANCEL_URL ||
-    `${process.env.FRONTEND_URL || "http://localhost:5173"}/payment/cancel`,
+  // Active payment provider for new checkouts: "sepay" | "momo"
+  PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER || "sepay",
 
   // Sepay (bank transfer via VietQR)
   SEPAY_API_KEY: process.env.SEPAY_API_KEY,            // for webhook auth header
   SEPAY_ACCOUNT_NUMBER: process.env.SEPAY_ACCOUNT_NUMBER, // receiving bank account
   SEPAY_BANK_CODE: process.env.SEPAY_BANK_CODE,        // e.g. "MB", "VCB", "TCB"
-  SEPAY_ORDER_PREFIX: process.env.SEPAY_ORDER_PREFIX || "DH", // prefix for QR memo
+  SEPAY_ORDER_PREFIX: process.env.SEPAY_ORDER_PREFIX || "WW", // prefix for QR memo
+
+  // MoMo (Capture Wallet — hosted checkout + IPN webhook)
+  MOMO_PARTNER_CODE: process.env.MOMO_PARTNER_CODE,
+  MOMO_ACCESS_KEY: process.env.MOMO_ACCESS_KEY,
+  MOMO_SECRET_KEY: process.env.MOMO_SECRET_KEY,
+  // Test: https://test-payment.momo.vn  | Prod: https://payment.momo.vn
+  MOMO_ENDPOINT: process.env.MOMO_ENDPOINT || "https://test-payment.momo.vn",
+  MOMO_REDIRECT_URL:
+    process.env.MOMO_REDIRECT_URL ||
+    `${process.env.FRONTEND_URL || "http://localhost:5173"}/wallet`,
+  // IPN: server URL MoMo posts result to (use tunnel URL in dev)
+  MOMO_IPN_URL: process.env.MOMO_IPN_URL,
 };

@@ -1,15 +1,13 @@
-import { PaymentOrder } from "@server/models/payment/PaymentOrder";
+import { Order } from "@server/models/payment/Order";
 import {
   getProvider,
   getActiveProviderKey,
 } from "@server/services/payment/providerSelector";
 import * as walletService from "@server/services/wallet/walletService";
-import { env } from "@server/config/environment";
 import { ApiError } from "@server/helpers/ApiError";
 import {
   PACK_DEFINITIONS,
   PAYMENT_ORDER_EXPIRY_MINUTES,
-  PRODUCT_TYPE,
   PAYMENT_STATUS,
 } from "@server/const/payment";
 
@@ -35,7 +33,7 @@ const MAX_ORDER_CODE_RETRIES = 3;
 async function createOrderWithRetry(payload) {
   for (let attempt = 0; attempt < MAX_ORDER_CODE_RETRIES; attempt++) {
     try {
-      return await PaymentOrder.create(payload);
+      return await Order.create(payload);
     } catch (err) {
       const isDup = err?.code === 11000;
       if (!isDup || attempt === MAX_ORDER_CODE_RETRIES - 1) throw err;
@@ -51,16 +49,14 @@ async function persistAndCreateLink(order, { amount, description }) {
     orderCode: order.orderCode,
     amount,
     description,
-    returnUrl: env.PAYOS_RETURN_URL,
-    cancelUrl: env.PAYOS_CANCEL_URL,
   });
-  await PaymentOrder.findOneAndUpdate(
+  await Order.findOneAndUpdate(
     { _id: order._id },
     {
       $set: {
-        payosPaymentLinkId: link.paymentLinkId,
-        payosCheckoutUrl: link.checkoutUrl,
-        payosQrCode: link.qrCode,
+        paymentLinkId: link.paymentLinkId,
+        checkoutUrl: link.checkoutUrl,
+        qrCode: link.qrCode,
       },
     },
   );
@@ -83,8 +79,7 @@ export async function createCheckout(userId, packId) {
     userId,
     orderCode: generateOrderCode(),
     provider: providerKey,
-    productType: PRODUCT_TYPE.PACK,
-    productSnapshot: {
+    packSnapshot: {
       packId: pack.id,
       price: pack.price,
       baseCredits: pack.baseCredits,
@@ -111,39 +106,57 @@ export async function handleWebhook(providerKey, payload, headers) {
 
   const parsed = provider.parseWebhook(payload);
   if (!Number.isFinite(parsed.orderCode) || parsed.orderCode <= 0) {
-    throw new ApiError(400, "MISSING_ORDER_CODE");
+    // Common for: provider test pings, bank transfers without our memo prefix.
+    // Return 200 so the provider doesn't retry indefinitely.
+    console.warn(
+      `[webhook:${providerKey}] no orderCode in payload, ignoring. Raw:`,
+      JSON.stringify(payload).slice(0, 300),
+    );
+    return { success: true, ignored: "MISSING_ORDER_CODE" };
   }
 
-  const order = await PaymentOrder.findOne({ orderCode: parsed.orderCode });
-  if (!order) throw ApiError.notFound("ORDER_NOT_FOUND");
+  const order = await Order.findOne({ orderCode: parsed.orderCode });
+  if (!order) {
+    console.warn(
+      `[webhook:${providerKey}] order ${parsed.orderCode} not found, ignoring.`,
+    );
+    return { success: true, ignored: "ORDER_NOT_FOUND" };
+  }
 
   if (order.status === PAYMENT_STATUS.PAID) {
-    await PaymentOrder.findOneAndUpdate(
+    await Order.findOneAndUpdate(
       { _id: order._id },
       { $set: { webhookRaw: payload } },
     );
+    // Self-heal: if a prior delivery flipped status to PAID but crashed before
+    // grantPack, this retry will complete the grant.
+    await ensureCreditsGranted(order._id);
     return { success: true, alreadyProcessed: true };
   }
 
   if (!parsed.isPaid) {
-    await PaymentOrder.findOneAndUpdate(
-      { _id: order._id },
+    // Filter status: PENDING so a late "cancel" webhook can't overwrite a
+    // successful PAID from a concurrent webhook.
+    const cancelled = await Order.findOneAndUpdate(
+      { _id: order._id, status: PAYMENT_STATUS.PENDING },
       { $set: { status: PAYMENT_STATUS.CANCELLED, webhookRaw: payload } },
     );
+    if (!cancelled) return { success: true, alreadyProcessed: true };
     return { success: true };
   }
 
-  // Amount validation (mainly for Sepay; PayOS confirms exact amount).
-  const expectedAmount = order.productSnapshot.price;
+  // Amount validation — catches Sepay underpayment + any provider mismatch.
+  const expectedAmount = order.packSnapshot.price;
   if (
     typeof parsed.amount === "number" &&
     typeof expectedAmount === "number" &&
     parsed.amount !== expectedAmount
   ) {
-    await PaymentOrder.findOneAndUpdate(
-      { _id: order._id },
+    const cancelled = await Order.findOneAndUpdate(
+      { _id: order._id, status: PAYMENT_STATUS.PENDING },
       { $set: { status: PAYMENT_STATUS.CANCELLED, webhookRaw: payload } },
     );
+    if (!cancelled) return { success: true, alreadyProcessed: true };
     return {
       success: true,
       amountMismatch: true,
@@ -153,7 +166,7 @@ export async function handleWebhook(providerKey, payload, headers) {
   }
 
   // Atomic CAS: only the request that transitions pending → paid grants.
-  const claimed = await PaymentOrder.findOneAndUpdate(
+  const claimed = await Order.findOneAndUpdate(
     { _id: order._id, status: PAYMENT_STATUS.PENDING },
     {
       $set: {
@@ -168,28 +181,62 @@ export async function handleWebhook(providerKey, payload, headers) {
     return { success: true, alreadyProcessed: true };
   }
 
-  await walletService.grantPack(order.userId, order);
+  await ensureCreditsGranted(claimed._id);
   return { success: true };
 }
 
+/**
+ * Claim the right to grant credits for a PAID order, then call walletService.
+ * Atomic CAS on `creditsGranted` prevents double-grant across concurrent webhook
+ * retries. If grantPack throws, rolls back the claim so a subsequent retry can
+ * recover. Idempotent: safe to call multiple times on the same order.
+ */
+async function ensureCreditsGranted(orderId) {
+  const claimed = await Order.findOneAndUpdate(
+    {
+      _id: orderId,
+      status: PAYMENT_STATUS.PAID,
+      creditsGranted: { $ne: true },
+    },
+    { $set: { creditsGranted: true } },
+    { new: true },
+  );
+  if (!claimed) return; // already granted, or order not PAID yet
+
+  try {
+    await walletService.grantPack(claimed.userId, claimed);
+  } catch (err) {
+    await Order.updateOne(
+      { _id: orderId },
+      { $set: { creditsGranted: false } },
+    ).catch((rbErr) =>
+      console.error(
+        `[ensureCreditsGranted] rollback failed for order ${orderId}: ${rbErr.message}. Original: ${err.message}`,
+      ),
+    );
+    throw err;
+  }
+}
+
 export async function getOrderStatus(userId, orderCode) {
-  const order = await PaymentOrder.findOne({ userId, orderCode });
+  let order = await Order.findOne({ userId, orderCode });
   if (!order) throw ApiError.notFound("ORDER_NOT_FOUND");
 
-  let status = order.status;
-  if (status === PAYMENT_STATUS.PENDING && order.expiresAt < new Date()) {
-    await PaymentOrder.findOneAndUpdate(
-      { _id: order._id },
+  if (order.status === PAYMENT_STATUS.PENDING && order.expiresAt < new Date()) {
+    // Filter status: PENDING so a webhook racing this read can't have PAID
+    // overwritten with EXPIRED. Re-read if CAS missed to get the real state.
+    const expired = await Order.findOneAndUpdate(
+      { _id: order._id, status: PAYMENT_STATUS.PENDING },
       { $set: { status: PAYMENT_STATUS.EXPIRED } },
+      { new: true },
     );
-    status = PAYMENT_STATUS.EXPIRED;
+    order = expired || (await Order.findById(order._id));
   }
   return {
     orderCode: order.orderCode,
-    status,
+    status: order.status,
     provider: order.provider,
-    productType: order.productType,
-    productSnapshot: order.productSnapshot,
+    packSnapshot: order.packSnapshot,
     paidAt: order.paidAt,
     expiresAt: order.expiresAt,
   };

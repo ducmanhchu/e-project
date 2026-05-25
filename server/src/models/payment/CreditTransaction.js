@@ -7,33 +7,48 @@ const creditTransactionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
     type: {
       type: String,
       required: true,
-      enum: [
-        ...Object.values(TRANSACTION_TYPE),
-        // Legacy values kept for historical records (no longer generated).
-        "charge_retry",
-        "purchase_subscription",
-        "subscription_expired",
-      ],
+      enum: Object.values(TRANSACTION_TYPE),
     },
     amount: { type: Number, required: true },
     balanceAfter: { type: Number },
     reason: { type: String, required: true },
     referenceType: {
       type: String,
-      enum: ["PaymentOrder", "Attempt", "DialogueAttempt", null],
+      enum: ["Order", "Attempt", "DialogueAttempt", null],
       default: null,
     },
     referenceId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    // CAS target in walletService.refund — null → now flips claim ownership.
+    refundedAt: { type: Date, default: null },
   },
   { timestamps: true, versionKey: false },
 );
 
 creditTransactionSchema.index({ userId: 1, createdAt: -1 });
+creditTransactionSchema.index({ userId: 1, type: 1, createdAt: -1 });
+
+// DB-level idempotency: 1 PURCHASE_PACK per Order; 1 SIGNUP_BONUS per user.
+creditTransactionSchema.index(
+  { referenceType: 1, referenceId: 1, type: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      referenceType: "Order",
+      type: TRANSACTION_TYPE.PURCHASE_PACK,
+    },
+  },
+);
+creditTransactionSchema.index(
+  { userId: 1, type: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { type: TRANSACTION_TYPE.SIGNUP_BONUS },
+  },
+);
 
 export const CreditTransaction = mongoose.model(
   "CreditTransaction",

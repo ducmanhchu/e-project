@@ -23,11 +23,7 @@ export const PAYMENT_STATUS = {
   EXPIRED: "expired",
 };
 
-export const PRODUCT_TYPE = {
-  PACK: "pack",
-};
-
 export const PAYMENT_PROVIDER = {
-  PAYOS: "payos",
   SEPAY: "sepay",
+  MOMO: "momo",
 };

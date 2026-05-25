@@ -1,12 +1,12 @@
 import { env } from "@server/config/environment";
 import { PAYMENT_PROVIDER } from "@server/const/payment";
 import { ApiError } from "@server/helpers/ApiError";
-import * as payosProvider from "@server/services/payment/payosProvider";
 import * as sepayProvider from "@server/services/payment/sepayProvider";
+import * as momoProvider from "@server/services/payment/momoProvider";
 
 const PROVIDERS = {
-  [PAYMENT_PROVIDER.PAYOS]: payosProvider,
   [PAYMENT_PROVIDER.SEPAY]: sepayProvider,
+  [PAYMENT_PROVIDER.MOMO]: momoProvider,
 };
 
 /**
