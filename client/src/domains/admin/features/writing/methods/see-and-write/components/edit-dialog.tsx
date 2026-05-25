@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,7 +44,13 @@ import {
 	ADMIN_SAW_LIST_QUERY_KEY,
 	adminSAWExerciseQueryKey,
 } from "@admin/features/writing/methods/see-and-write/components/form-options";
-import { SAWWordPoolSection } from "@admin/features/writing/methods/see-and-write/components/word-pool-section";
+import { SAWEditWordPoolTable } from "@admin/features/writing/methods/see-and-write/components/word-pool-section";
+import {
+	createEmptyEditableWord,
+	toWordPayload,
+	wordPoolToEditableWords,
+	type SAWEditableWord,
+} from "@admin/features/writing/methods/see-and-write/components/word-pool-utils";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
@@ -63,13 +69,6 @@ function getOptionLabel(
 	return section.options.find((o) => o.id === value)?.label;
 }
 
-function parseCommaKeywords(raw: string): string[] {
-	return raw
-		.split(",")
-		.map((k) => k.trim())
-		.filter(Boolean);
-}
-
 const sawEditFormSchema = z
 	.object({
 		title: z.string().trim().min(1, "Vui lòng nhập tiêu đề"),
@@ -77,8 +76,6 @@ const sawEditFormSchema = z
 		topic: z.enum(topicValues),
 		imageSource: z.enum(["upload", "url", "keep"]),
 		imageUrl: z.string(),
-		requiredKeywords: z.string(),
-		distractorKeywords: z.string(),
 		minWordCount: z
 			.number()
 			.int("Số từ tối thiểu phải là số nguyên")
@@ -115,16 +112,6 @@ const sawEditFormSchema = z
 				});
 			}
 		}
-		if (data.requiredKeywords.trim()) {
-			const required = parseCommaKeywords(data.requiredKeywords);
-			if (required.length === 0) {
-				ctx.addIssue({
-					code: "custom",
-					message: "Vui lòng nhập ít nhất một từ khóa",
-					path: ["requiredKeywords"],
-				});
-			}
-		}
 	});
 
 type SAWEditFormValues = z.infer<typeof sawEditFormSchema>;
@@ -136,8 +123,6 @@ function exerciseToFormValues(exercise: SAWAdminExercise): SAWEditFormValues {
 		topic: exercise.topic,
 		imageSource: "keep",
 		imageUrl: exercise.image,
-		requiredKeywords: "",
-		distractorKeywords: "",
 		minWordCount: exercise.minWordCount,
 		maxWordCount: exercise.maxWordCount,
 	};
@@ -169,6 +154,16 @@ function SAWEditForm({ exercise, exerciseId, onOpenChange }: SAWEditFormProps) {
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [imagePreview, setImagePreview] = useState<string | null>(null);
 	const [fileError, setFileError] = useState<string | null>(null);
+	const [requiredWords, setRequiredWords] = useState<SAWEditableWord[]>(() =>
+		wordPoolToEditableWords(exercise.wordPool.filter((w) => w.isRequired)),
+	);
+	const [distractorWords, setDistractorWords] = useState<SAWEditableWord[]>(
+		() =>
+			wordPoolToEditableWords(exercise.wordPool.filter((w) => !w.isRequired)),
+	);
+	const [requiredWordsError, setRequiredWordsError] = useState<string | null>(
+		null,
+	);
 
 	const originalImage = exercise.image;
 
@@ -178,16 +173,6 @@ function SAWEditForm({ exercise, exerciseId, onOpenChange }: SAWEditFormProps) {
 	});
 
 	const imageSource = form.watch("imageSource");
-
-	const requiredWords = useMemo(
-		() => exercise.wordPool.filter((w) => w.isRequired),
-		[exercise.wordPool],
-	);
-
-	const distractorWords = useMemo(
-		() => exercise.wordPool.filter((w) => !w.isRequired),
-		[exercise.wordPool],
-	);
 
 	const resetImageFile = useCallback(() => {
 		if (imagePreview?.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
@@ -217,12 +202,8 @@ function SAWEditForm({ exercise, exerciseId, onOpenChange }: SAWEditFormProps) {
 				payload.image = values.imageUrl.trim();
 			}
 
-			if (values.requiredKeywords.trim()) {
-				payload.requiredWords = parseCommaKeywords(values.requiredKeywords);
-			}
-			if (values.distractorKeywords.trim()) {
-				payload.distractorWords = parseCommaKeywords(values.distractorKeywords);
-			}
+			payload.requiredWords = toWordPayload(requiredWords);
+			payload.distractorWords = toWordPayload(distractorWords);
 
 			return updateSAWExercise(exerciseId, payload);
 		},
@@ -273,9 +254,46 @@ function SAWEditForm({ exercise, exerciseId, onOpenChange }: SAWEditFormProps) {
 			setFileError("Vui lòng chọn ảnh để tải lên");
 			return;
 		}
+
+		const requiredPayload = toWordPayload(requiredWords);
+		if (requiredPayload.length === 0) {
+			setRequiredWordsError("Vui lòng nhập ít nhất một từ khóa");
+			return;
+		}
+
 		setFileError(null);
+		setRequiredWordsError(null);
 		updateMutation.mutate(values);
 	});
+
+	const updateRequiredWord = useCallback((index: number, word: string) => {
+		setRequiredWords((prev) =>
+			prev.map((entry, i) => (i === index ? { ...entry, word } : entry)),
+		);
+		setRequiredWordsError(null);
+	}, []);
+
+	const addRequiredWord = useCallback(() => {
+		setRequiredWords((prev) => [...prev, createEmptyEditableWord()]);
+	}, []);
+
+	const removeRequiredWord = useCallback((index: number) => {
+		setRequiredWords((prev) => prev.filter((_, i) => i !== index));
+	}, []);
+
+	const updateDistractorWord = useCallback((index: number, word: string) => {
+		setDistractorWords((prev) =>
+			prev.map((entry, i) => (i === index ? { ...entry, word } : entry)),
+		);
+	}, []);
+
+	const addDistractorWord = useCallback(() => {
+		setDistractorWords((prev) => [...prev, createEmptyEditableWord()]);
+	}, []);
+
+	const removeDistractorWord = useCallback((index: number) => {
+		setDistractorWords((prev) => prev.filter((_, i) => i !== index));
+	}, []);
 
 	const isPending = updateMutation.isPending;
 
@@ -455,40 +473,26 @@ function SAWEditForm({ exercise, exerciseId, onOpenChange }: SAWEditFormProps) {
 					)}
 				</Field>
 
-				<Controller
-					name="requiredKeywords"
-					control={form.control}
-					render={({ field, fieldState }) => (
-						<SAWWordPoolSection
-							label="Từ khóa mô tả hình ảnh"
-							words={requiredWords}
-							updateFieldName={field.name}
-							updateValue={field.value}
-							onUpdateChange={field.onChange}
-							placeholder="book, mother, child"
-							disabled={isPending}
-							invalid={fieldState.invalid}
-							error={fieldState.error}
-						/>
-					)}
+				<SAWEditWordPoolTable
+					label="Từ khóa mô tả hình ảnh"
+					words={requiredWords}
+					disabled={isPending}
+					invalid={!!requiredWordsError}
+					error={
+						requiredWordsError ? { message: requiredWordsError } : undefined
+					}
+					onAdd={addRequiredWord}
+					onUpdateWord={updateRequiredWord}
+					onRemove={removeRequiredWord}
 				/>
 
-				<Controller
-					name="distractorKeywords"
-					control={form.control}
-					render={({ field, fieldState }) => (
-						<SAWWordPoolSection
-							label="Từ khóa gây nhiễu"
-							words={distractorWords}
-							updateFieldName={field.name}
-							updateValue={field.value}
-							onUpdateChange={field.onChange}
-							placeholder="helicopter, harbor, vineyard"
-							disabled={isPending}
-							invalid={fieldState.invalid}
-							error={fieldState.error}
-						/>
-					)}
+				<SAWEditWordPoolTable
+					label="Từ khóa gây nhiễu"
+					words={distractorWords}
+					disabled={isPending}
+					onAdd={addDistractorWord}
+					onUpdateWord={updateDistractorWord}
+					onRemove={removeDistractorWord}
 				/>
 
 				<div className="grid gap-4 sm:grid-cols-2">
@@ -568,7 +572,7 @@ function SAWEditForm({ exercise, exerciseId, onOpenChange }: SAWEditFormProps) {
 							className="size-4 animate-spin"
 						/>
 					)}
-					Lưu thay đổi
+					Cập nhật
 				</Button>
 			</DialogFooter>
 		</form>
@@ -597,7 +601,7 @@ export function SAWEditDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
 				showCloseButton
-				className="sm:max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar"
+				className="sm:max-w-3xl max-h-[90vh] overflow-y-auto no-scrollbar"
 				aria-describedby={undefined}
 			>
 				<DialogHeader>

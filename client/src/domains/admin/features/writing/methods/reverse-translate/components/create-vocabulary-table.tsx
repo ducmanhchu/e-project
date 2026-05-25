@@ -15,6 +15,19 @@ import {
 
 import type { RTEditableVocab } from "@admin/features/writing/methods/reverse-translate/components/form-utils";
 
+/** Ô chỉ đọc — hiển thị metadata từ preview/DB, không cho sửa */
+function VocabReadOnlyCell({ value }: { value: string }) {
+	const display = value.trim() || "—";
+	return (
+		<TableCell
+			className="max-w-40 truncate text-sm text-muted-foreground"
+			title={value.trim() || undefined}
+		>
+			{display}
+		</TableCell>
+	);
+}
+
 type VocabRowProps = {
 	row: RTEditableVocab;
 	index: number;
@@ -60,6 +73,9 @@ const VocabRow = memo(function VocabRow({
 					aria-label="Từ vựng"
 				/>
 			</TableCell>
+			<VocabReadOnlyCell value={row.ipa} />
+			<VocabReadOnlyCell value={row.partOfSpeech} />
+			<VocabReadOnlyCell value={row.meaning} />
 			<TableCell className="w-12">
 				<Button
 					type="button"
@@ -99,7 +115,8 @@ export const RTCreateVocabularyTable = memo(function RTCreateVocabularyTable({
 
 	return (
 		<div className="space-y-2">
-			<div className="flex items-center justify-end">
+			<div className="flex items-center justify-between">
+				<p className="text-sm font-medium">Từ vựng của bài</p>
 				<Button
 					type="button"
 					variant="outline"
@@ -123,14 +140,17 @@ export const RTCreateVocabularyTable = memo(function RTCreateVocabularyTable({
 				</p>
 			) : (
 				<div
-					className="rounded-md border max-h-64 overflow-y-auto"
+					className="rounded-md border max-h-64 overflow-auto"
 					style={{ contentVisibility: "auto" }}
 				>
 					<Table>
 						<TableHeader>
 							<TableRow>
 								<TableHead className="w-28">Thuộc câu</TableHead>
-								<TableHead>Từ</TableHead>
+								<TableHead className="min-w-28">Từ</TableHead>
+								<TableHead className="min-w-24">IPA</TableHead>
+								<TableHead className="min-w-24">Loại từ</TableHead>
+								<TableHead className="min-w-32">Nghĩa</TableHead>
 								<TableHead className="w-12" />
 							</TableRow>
 						</TableHeader>

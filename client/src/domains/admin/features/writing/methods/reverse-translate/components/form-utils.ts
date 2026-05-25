@@ -52,14 +52,24 @@ export const rtCreateStep1DefaultValues: RTCreateStep1Values = {
 	paragraph: "",
 };
 
-/** Từ vựng chỉnh sửa ở bước 2 — UI chỉ hiển thị sentenceIndex + word */
+/** Từ vựng chỉnh sửa ở bước 2 — chỉnh sentenceIndex + word; ipa/loại từ/nghĩa chỉ đọc */
 export type RTEditableVocab = {
 	_key: string;
 	sentenceIndex: number;
 	word: string;
 	partOfSpeech: string;
+	ipa: string;
+	meaning: string;
 	example: string;
 };
+
+/** Lấy nghĩa hiển thị từ definitions (ưu tiên tiếng Việt) */
+export function formatVocabMeaning(
+	definitions: AdminRTExercise["vocabulary"][number]["definitions"],
+): string {
+	const def = definitions[0];
+	return def?.viDef?.trim() || def?.engDef?.trim() || "";
+}
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
 	if (isAxiosError(error)) {
@@ -93,6 +103,8 @@ export function mapPreviewVocabulary(
 		sentenceIndex: v.sentenceIndex,
 		word: v.word,
 		partOfSpeech: v.partOfSpeech,
+		ipa: "",
+		meaning: v.meaning,
 		example: v.example,
 	}));
 }
@@ -106,6 +118,8 @@ export function createManualVocabEntry(
 		sentenceIndex: defaultSentenceIndex,
 		word: "",
 		partOfSpeech: "",
+		ipa: "",
+		meaning: "",
 		example: "",
 	};
 }
@@ -159,10 +173,44 @@ export function exerciseToSentences(
 		}));
 }
 
-/** Luôn gửi toàn bộ câu — backend ghi đè mảng sentences khi cập nhật */
+/** Map từ vựng hiện có của bài sang state chỉnh sửa (bước 2 create) */
+export function exerciseToVocabulary(
+	exercise: AdminRTExercise,
+): RTEditableVocab[] {
+	return exercise.vocabulary.map((v, i) => ({
+		_key: `vocab-${v.vocabularyId}-${i}`,
+		sentenceIndex: v.sentenceIndex ?? 1,
+		word: v.word,
+		partOfSpeech: v.partOfSpeech,
+		ipa: v.ipa,
+		meaning: formatVocabMeaning(v.definitions),
+		example:
+			v.definitions[0]?.example?.engEx?.trim() ??
+			v.definitions[0]?.example?.viEx?.trim() ??
+			"",
+	}));
+}
+
+/**
+ * Payload từ vựng khi update — gửi toàn bộ danh sách hiện tại (cũ + mới/sửa),
+ * backend ghi đè vocabularyRefs.
+ */
+export function toUpdateVocabularyPayload(
+	vocabulary: RTEditableVocab[],
+): RTUpdatePayload["vocabulary"] {
+	return vocabulary
+		.filter((v) => v.word.trim())
+		.map((v) => ({
+			word: v.word.trim(),
+			sentenceIndex: v.sentenceIndex > 0 ? v.sentenceIndex : 1,
+		}));
+}
+
+/** Luôn gửi toàn bộ câu và từ vựng — backend ghi đè khi cập nhật */
 export function buildUpdatePayload(
 	values: RTEditFormValues,
 	sentences: RTPreviewSentence[],
+	vocabulary: RTEditableVocab[],
 ): RTUpdatePayload {
 	return {
 		title: values.title.trim(),
@@ -174,5 +222,6 @@ export function buildUpdatePayload(
 			vietnameseText: s.vietnameseText.trim(),
 			referenceAnswer: s.referenceAnswer.trim(),
 		})),
+		vocabulary: toUpdateVocabularyPayload(vocabulary),
 	};
 }
