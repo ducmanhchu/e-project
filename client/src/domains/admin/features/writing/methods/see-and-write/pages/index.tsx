@@ -15,11 +15,11 @@ import {
 } from "@hugeicons/core-free-icons";
 
 import {
-	bulkDeleteParaphraseExercises,
-	fetchAdminParaphraseList,
-	removeParaphraseExercise,
-} from "@shared/api/paraphrase";
-import type { AdminParaphraseListQueryParams } from "@shared/types/paraphrase";
+	bulkDeleteSAWExercises,
+	deleteSAWExercise,
+	fetchSAWAdminList,
+} from "@shared/api/see-and-write";
+import type { SAWAdminListQueryParams } from "@shared/types/see-and-write";
 import { baseFilterSections } from "@shared/lib/utils";
 
 import { GooeyInput } from "@shared/components/ui/gooey-input";
@@ -50,11 +50,11 @@ import {
 } from "@shared/components/ui/dialog";
 import { DataTable } from "@admin/components/data-table";
 import {
-	createParaphraseColumns,
-	type ParaphraseAdminSortField,
-} from "@/domains/admin/features/writing/methods/paraphrase/components/paraphrase-columns";
-import { ParaphraseCreateDialog } from "@admin/features/writing/methods/paraphrase/components/paraphrase-create-dialog";
-import { ParaphraseEditDialog } from "@admin/features/writing/methods/paraphrase/components/paraphrase-edit-dialog";
+	createSAWColumns,
+	type AdminSortField,
+} from "@/domains/admin/features/writing/methods/see-and-write/components/saw-columns";
+import { SAWCreateDialog } from "@admin/features/writing/methods/see-and-write/components/saw-create-dialog";
+import { SAWEditDialog } from "@admin/features/writing/methods/see-and-write/components/saw-edit-dialog";
 
 const ITEMS_PER_PAGE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -83,16 +83,16 @@ function generatePageNumbers(
 	return pages;
 }
 
-const ADMIN_LIST_QUERY_KEY = ["admin", "paraphrase", "list"] as const;
+const ADMIN_LIST_QUERY_KEY = ["admin", "see-and-write", "list"] as const;
 
-export function Paraphrase() {
+export function SeeAndWrite() {
 	const queryClient = useQueryClient();
 	const [searchInput, setSearchInput] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [levelFilter, setLevelFilter] = useState(ALL_FILTER);
 	const [topicFilter, setTopicFilter] = useState(ALL_FILTER);
 	const [page, setPage] = useState(1);
-	const [sortBy, setSortBy] = useState<ParaphraseAdminSortField>("level");
+	const [sortBy, setSortBy] = useState<AdminSortField>("level");
 	const [order, setOrder] = useState<"asc" | "desc">("asc");
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -116,8 +116,8 @@ export function Paraphrase() {
 		return () => window.clearTimeout(timer);
 	}, [searchInput]);
 
-	const queryParams = useMemo((): AdminParaphraseListQueryParams => {
-		const params: AdminParaphraseListQueryParams = {
+	const queryParams = useMemo((): SAWAdminListQueryParams => {
+		const params: SAWAdminListQueryParams = {
 			page,
 			limit: ITEMS_PER_PAGE,
 			sortBy,
@@ -133,7 +133,7 @@ export function Paraphrase() {
 
 	const { data, isLoading, isError } = useQuery({
 		queryKey: [...ADMIN_LIST_QUERY_KEY, queryParams],
-		queryFn: () => fetchAdminParaphraseList(queryParams),
+		queryFn: () => fetchSAWAdminList(queryParams),
 		placeholderData: keepPreviousData,
 	});
 
@@ -141,7 +141,7 @@ export function Paraphrase() {
 	const pagination = data?.pagination;
 
 	const deleteMutation = useMutation({
-		mutationFn: (id: string) => removeParaphraseExercise(id),
+		mutationFn: (id: string) => deleteSAWExercise(id),
 		onSuccess: async (_, deletedId) => {
 			setRowSelection((prev) => {
 				const next = { ...prev };
@@ -163,7 +163,7 @@ export function Paraphrase() {
 	});
 
 	const bulkDeleteMutation = useMutation({
-		mutationFn: (ids: string) => bulkDeleteParaphraseExercises(ids),
+		mutationFn: (ids: string) => bulkDeleteSAWExercises(ids),
 		onSuccess: async (response) => {
 			const deleted = response?.deleted;
 			setRowSelection({});
@@ -201,11 +201,11 @@ export function Paraphrase() {
 
 	const onEditDialogOpenChange = useCallback((open: boolean) => {
 		setEditDialogOpen(open);
-		if (!open) setTimeout(() => setEditingId(null), 150); // delay để tránh chớp nháy màn hình khi đóng dialog
+		if (!open) setTimeout(() => setEditingId(null), 150);
 	}, []);
 
 	const handleSort = useCallback(
-		(field: ParaphraseAdminSortField) => {
+		(field: AdminSortField) => {
 			if (sortBy === field) {
 				setOrder((prev) => (prev === "asc" ? "desc" : "asc"));
 			} else {
@@ -220,7 +220,7 @@ export function Paraphrase() {
 
 	const columns = useMemo(
 		() =>
-			createParaphraseColumns({
+			createSAWColumns({
 				sortBy,
 				order,
 				onSort: handleSort,
@@ -261,29 +261,31 @@ export function Paraphrase() {
 	return (
 		<div className="flex flex-col gap-6">
 			<div className="flex flex-col gap-1">
-				<h1 className="text-xl font-bold">Viết lại câu</h1>
+				<h1 className="text-xl font-bold">Quan sát và viết</h1>
 				<p className="text-sm text-muted-foreground">
-					Quản lý dữ liệu bài tập cho phương pháp viết lại câu.
+					Quản lý dữ liệu bài tập cho phương pháp quan sát và viết.
 				</p>
 			</div>
 
 			<div className="flex flex-wrap justify-between items-center gap-3">
-				<Button
-					type="button"
-					variant="blackHover"
-					onClick={() => setCreateDialogOpen(true)}
-				>
-					<HugeiconsIcon icon={Add01Icon} />
-					Thêm bài tập
-				</Button>
+				<div className="flex items-center gap-3">
+					<Button
+						type="button"
+						variant="blackHover"
+						onClick={() => setCreateDialogOpen(true)}
+					>
+						<HugeiconsIcon icon={Add01Icon} />
+						Thêm
+					</Button>
 
-				<GooeyInput
-					collapsedWidth={180}
-					expandedWidth={300}
-					placeholder="Tìm kiếm bài tập"
-					value={searchInput}
-					onValueChange={setSearchInput}
-				/>
+					<GooeyInput
+						collapsedWidth={150}
+						expandedWidth={250}
+						placeholder="Tìm kiếm"
+						value={searchInput}
+						onValueChange={setSearchInput}
+					/>
+				</div>
 
 				<div className="flex items-center gap-3">
 					{selectedCount > 0 && (
@@ -403,12 +405,12 @@ export function Paraphrase() {
 				</Pagination>
 			)}
 
-			<ParaphraseCreateDialog
+			<SAWCreateDialog
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
 			/>
 
-			<ParaphraseEditDialog
+			<SAWEditDialog
 				open={editDialogOpen}
 				onOpenChange={onEditDialogOpenChange}
 				exerciseId={editingId}
