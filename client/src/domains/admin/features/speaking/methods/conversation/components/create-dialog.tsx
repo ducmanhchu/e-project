@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading02Icon } from "@hugeicons/core-free-icons";
 
-import { createParaphraseExercise } from "@shared/api/paraphrase";
+import { createAdminConversation } from "@shared/api/conversation";
 import { baseFilterSections } from "@shared/lib/utils";
 import { Button } from "@shared/components/ui/button";
 import {
@@ -29,51 +29,63 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@shared/components/ui/select";
+import { Textarea } from "@shared/components/ui/textarea";
 import { toast } from "sonner";
 
-import { ParaphraseEditSentenceTable } from "@admin/features/writing/methods/paraphrase/components/edit-sentence-table";
-import { ADMIN_PARAPHRASE_LIST_QUERY_KEY } from "@admin/features/writing/methods/paraphrase/components/form-options";
+import { ConversationMessagesEditor } from "@admin/features/speaking/methods/conversation/components/messages-editor";
+import { ConversationSlangTable } from "@admin/features/speaking/methods/conversation/components/slang-table";
+import { ConversationSpeakerFields } from "@admin/features/speaking/methods/conversation/components/speaker-fields";
+import { ADMIN_CONVERSATION_LIST_QUERY_KEY } from "@admin/features/speaking/methods/conversation/components/form-options";
 import {
-	createEmptyEditableSentence,
-	createInitialEditableSentences,
+	appendMessage,
+	conversationCreateDefaultValues,
+	conversationCreateFormSchema,
+	createEmptySlang,
+	createInitialMessages,
+	createInitialSlang,
 	getApiErrorMessage,
-	paraphraseCreateDefaultValues,
-	paraphraseCreateFormSchema,
-	toSentencesUpdatePayload,
-	type ParaphraseCreateFormValues,
-	type ParaphraseEditableSentence,
-} from "@admin/features/writing/methods/paraphrase/components/paraphrase-form-utils";
+	toConversationPayload,
+	validateMessages,
+	validateSlangRows,
+	type ConversationCreateFormValues,
+	type EditableMessage,
+	type EditableSlang,
+} from "@admin/features/speaking/methods/conversation/components/conversation-form-utils";
 
 const levelSection = baseFilterSections.find((s) => s.id === "level")!;
 const topicSection = baseFilterSections.find((s) => s.id === "topic")!;
 
-type ParaphraseCreateDialogProps = {
+type ConversationCreateDialogProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 };
 
-export function ParaphraseCreateDialog({
+export function ConversationCreateDialog({
 	open,
 	onOpenChange,
-}: ParaphraseCreateDialogProps) {
+}: ConversationCreateDialogProps) {
 	const queryClient = useQueryClient();
-	const [sentences, setSentences] = useState<ParaphraseEditableSentence[]>(
-		createInitialEditableSentences,
+	const [messages, setMessages] = useState<EditableMessage[]>(
+		createInitialMessages,
 	);
-	const [sentencesError, setSentencesError] = useState<string | null>(null);
+	const [slangRows, setSlangRows] =
+		useState<EditableSlang[]>(createInitialSlang);
+	const [messagesError, setMessagesError] = useState<string | null>(null);
+	const [slangError, setSlangError] = useState<string | null>(null);
 
-	const form = useForm<ParaphraseCreateFormValues>({
-		resolver: zodResolver(paraphraseCreateFormSchema),
-		defaultValues: paraphraseCreateDefaultValues,
+	const form = useForm<ConversationCreateFormValues>({
+		resolver: zodResolver(conversationCreateFormSchema),
+		defaultValues: conversationCreateDefaultValues,
 	});
 
 	const resetAll = useCallback(() => {
-		form.reset(paraphraseCreateDefaultValues);
-		setSentences(createInitialEditableSentences());
-		setSentencesError(null);
+		form.reset(conversationCreateDefaultValues);
+		setMessages(createInitialMessages());
+		setSlangRows(createInitialSlang());
+		setMessagesError(null);
+		setSlangError(null);
 	}, [form]);
 
-	// Reset khi đóng dialog — gắn vào sự kiện thay vì useEffect để tránh cascading render
 	const handleOpenChange = useCallback(
 		(nextOpen: boolean) => {
 			if (!nextOpen) resetAll();
@@ -83,16 +95,13 @@ export function ParaphraseCreateDialog({
 	);
 
 	const createMutation = useMutation({
-		mutationFn: (values: ParaphraseCreateFormValues) =>
-			createParaphraseExercise({
-				title: values.title.trim(),
-				level: values.level,
-				topic: values.topic,
-				sentences: toSentencesUpdatePayload(sentences),
-			}),
+		mutationFn: (values: ConversationCreateFormValues) =>
+			createAdminConversation(
+				toConversationPayload(values, messages, slangRows),
+			),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({
-				queryKey: ADMIN_PARAPHRASE_LIST_QUERY_KEY,
+				queryKey: ADMIN_CONVERSATION_LIST_QUERY_KEY,
 			});
 			toast.success("Tạo bài tập thành công");
 			handleOpenChange(false);
@@ -104,35 +113,72 @@ export function ParaphraseCreateDialog({
 		},
 	});
 
-	const updateTargetSentence = useCallback(
-		(index: number, targetSentence: string) => {
-			setSentences((prev) =>
-				prev.map((sentence, i) =>
-					i === index ? { ...sentence, targetSentence } : sentence,
-				),
+	const addMessages = useCallback(() => {
+		setMessages((prev) => appendMessage(prev));
+		setMessagesError(null);
+	}, []);
+
+	const updateMessageText = useCallback((index: number, text: string) => {
+		setMessages((prev) =>
+			prev.map((msg, i) => (i === index ? { ...msg, text } : msg)),
+		);
+		setMessagesError(null);
+	}, []);
+
+	const removeMessage = useCallback((index: number) => {
+		setMessages((prev) => {
+			const next = prev.filter((_, i) => i !== index);
+			setSlangRows((slang) =>
+				slang.map((row) => ({
+					...row,
+					messageIndex: Math.min(
+						row.messageIndex,
+						Math.max(0, next.length - 1),
+					),
+				})),
 			);
-			setSentencesError(null);
+			return next;
+		});
+		setMessagesError(null);
+	}, []);
+
+	const addSlang = useCallback(() => {
+		setSlangRows((prev) => [...prev, createEmptySlang(messages.length)]);
+		setSlangError(null);
+	}, [messages.length]);
+
+	const updateSlang = useCallback(
+		(
+			index: number,
+			patch: Partial<Pick<EditableSlang, "messageIndex" | "term" | "meaning">>,
+		) => {
+			setSlangRows((prev) =>
+				prev.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+			);
+			setSlangError(null);
 		},
 		[],
 	);
 
-	const addSentence = useCallback(() => {
-		setSentences((prev) => [...prev, createEmptyEditableSentence(prev)]);
-		setSentencesError(null);
-	}, []);
-
-	const removeSentence = useCallback((index: number) => {
-		setSentences((prev) => prev.filter((_, i) => i !== index));
+	const removeSlang = useCallback((index: number) => {
+		setSlangRows((prev) => prev.filter((_, i) => i !== index));
+		setSlangError(null);
 	}, []);
 
 	const onSubmit = form.handleSubmit((values) => {
-		const payload = toSentencesUpdatePayload(sentences);
-		if (payload.length === 0) {
-			setSentencesError("Vui lòng nhập ít nhất một câu hỏi");
+		const msgErr = validateMessages(messages);
+		if (msgErr) {
+			setMessagesError(msgErr);
+			return;
+		}
+		const slangErr = validateSlangRows(slangRows, messages.length);
+		if (slangErr) {
+			setSlangError(slangErr);
 			return;
 		}
 
-		setSentencesError(null);
+		setMessagesError(null);
+		setSlangError(null);
 		createMutation.mutate(values);
 	});
 
@@ -142,7 +188,7 @@ export function ParaphraseCreateDialog({
 		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent
 				showCloseButton
-				className="sm:max-w-3xl max-h-[90vh] overflow-y-auto no-scrollbar"
+				className="sm:max-w-5xl max-h-[90vh] overflow-y-auto no-scrollbar"
 			>
 				<DialogHeader>
 					<DialogTitle>Tạo mới bài tập</DialogTitle>
@@ -230,15 +276,52 @@ export function ParaphraseCreateDialog({
 							/>
 						</div>
 
-						<ParaphraseEditSentenceTable
-							label="Các câu hỏi"
-							sentences={sentences}
+						<Controller
+							name="scenario"
+							control={form.control}
+							render={({ field, fieldState }) => (
+								<Field data-invalid={fieldState.invalid}>
+									<FieldLabel htmlFor={field.name}>Bối cảnh</FieldLabel>
+									<Textarea
+										{...field}
+										id={field.name}
+										placeholder="Mô tả bối cảnh hội thoại"
+										disabled={isPending}
+										rows={3}
+										aria-invalid={fieldState.invalid}
+									/>
+									{fieldState.invalid && (
+										<FieldError errors={[fieldState.error]} />
+									)}
+								</Field>
+							)}
+						/>
+
+						<ConversationSpeakerFields
+							control={form.control}
+							errors={form.formState.errors}
 							disabled={isPending}
-							invalid={!!sentencesError}
-							error={sentencesError ? { message: sentencesError } : undefined}
-							onAdd={addSentence}
-							onUpdateTargetSentence={updateTargetSentence}
-							onRemove={removeSentence}
+						/>
+
+						<ConversationMessagesEditor
+							messages={messages}
+							disabled={isPending}
+							invalid={!!messagesError}
+							error={messagesError ? { message: messagesError } : undefined}
+							onAdd={addMessages}
+							onUpdateText={updateMessageText}
+							onRemove={removeMessage}
+						/>
+
+						<ConversationSlangTable
+							rows={slangRows}
+							messageCount={messages.length}
+							disabled={isPending}
+							invalid={!!slangError}
+							error={slangError ? { message: slangError } : undefined}
+							onAdd={addSlang}
+							onUpdate={updateSlang}
+							onRemove={removeSlang}
 						/>
 					</FieldGroup>
 

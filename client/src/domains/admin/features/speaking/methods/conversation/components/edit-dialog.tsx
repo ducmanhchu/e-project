@@ -6,13 +6,10 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading02Icon } from "@hugeicons/core-free-icons";
 
 import {
-	fetchAdminParaphraseExercise,
-	updateParaphraseExercise,
-} from "@shared/api/paraphrase";
-import type {
-	AdminParaphraseListItem,
-	UpdateParaphraseExercisePayload,
-} from "@shared/types/paraphrase";
+	fetchAdminConversation,
+	updateAdminConversation,
+} from "@shared/api/conversation";
+import type { AdminConversationDetail } from "@shared/types/conversation";
 import { baseFilterSections } from "@shared/lib/utils";
 import { Button } from "@shared/components/ui/button";
 import {
@@ -37,23 +34,31 @@ import {
 	SelectValue,
 } from "@shared/components/ui/select";
 import { Skeleton } from "@shared/components/ui/skeleton";
+import { Textarea } from "@shared/components/ui/textarea";
 import { toast } from "sonner";
 
-import { ParaphraseEditSentenceTable } from "@admin/features/writing/methods/paraphrase/components/edit-sentence-table";
+import { ConversationMessagesEditor } from "@admin/features/speaking/methods/conversation/components/messages-editor";
+import { ConversationSlangTable } from "@admin/features/speaking/methods/conversation/components/slang-table";
+import { ConversationSpeakerFields } from "@admin/features/speaking/methods/conversation/components/speaker-fields";
 import {
-	ADMIN_PARAPHRASE_LIST_QUERY_KEY,
-	adminParaphraseExerciseQueryKey,
-} from "@admin/features/writing/methods/paraphrase/components/form-options";
+	ADMIN_CONVERSATION_LIST_QUERY_KEY,
+	adminConversationExerciseQueryKey,
+} from "@admin/features/speaking/methods/conversation/components/form-options";
 import {
-	createEmptyEditableSentence,
-	exerciseToEditableSentences,
+	appendMessage,
+	conversationEditFormSchema,
+	createEmptySlang,
+	exerciseToEditableMessages,
+	exerciseToEditableSlang,
 	exerciseToFormValues,
 	getApiErrorMessage,
-	paraphraseEditFormSchema,
-	toSentencesUpdatePayload,
-	type ParaphraseEditFormValues,
-	type ParaphraseEditableSentence,
-} from "@admin/features/writing/methods/paraphrase/components/paraphrase-form-utils";
+	toConversationPayload,
+	validateMessages,
+	validateSlangRows,
+	type ConversationEditFormValues,
+	type EditableMessage,
+	type EditableSlang,
+} from "@admin/features/speaking/methods/conversation/components/conversation-form-utils";
 
 const levelSection = baseFilterSections.find((s) => s.id === "level")!;
 const topicSection = baseFilterSections.find((s) => s.id === "topic")!;
@@ -65,51 +70,50 @@ function getOptionLabel(
 	return section.options.find((o) => o.id === value)?.label;
 }
 
-type ParaphraseEditDialogProps = {
+type ConversationEditDialogProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	exerciseId: string;
 };
 
-type ParaphraseEditFormProps = {
-	exercise: AdminParaphraseListItem;
+type ConversationEditFormProps = {
+	detail: AdminConversationDetail;
 	exerciseId: string;
 	onOpenChange: (open: boolean) => void;
 };
 
-function ParaphraseEditForm({
-	exercise,
+function ConversationEditForm({
+	detail,
 	exerciseId,
 	onOpenChange,
-}: ParaphraseEditFormProps) {
+}: ConversationEditFormProps) {
 	const queryClient = useQueryClient();
-	const [sentences, setSentences] = useState<ParaphraseEditableSentence[]>(() =>
-		exerciseToEditableSentences(exercise),
+	const [messages, setMessages] = useState<EditableMessage[]>(() =>
+		exerciseToEditableMessages(detail),
 	);
-	const [sentencesError, setSentencesError] = useState<string | null>(null);
+	const [slangRows, setSlangRows] = useState<EditableSlang[]>(() =>
+		exerciseToEditableSlang(detail),
+	);
+	const [messagesError, setMessagesError] = useState<string | null>(null);
+	const [slangError, setSlangError] = useState<string | null>(null);
 
-	const form = useForm<ParaphraseEditFormValues>({
-		resolver: zodResolver(paraphraseEditFormSchema),
-		defaultValues: exerciseToFormValues(exercise),
+	const form = useForm<ConversationEditFormValues>({
+		resolver: zodResolver(conversationEditFormSchema),
+		defaultValues: exerciseToFormValues(detail),
 	});
 
 	const updateMutation = useMutation({
-		mutationFn: async (values: ParaphraseEditFormValues) => {
-			const payload: UpdateParaphraseExercisePayload = {
-				title: values.title.trim(),
-				level: values.level,
-				topic: values.topic,
-				sentences: toSentencesUpdatePayload(sentences),
-			};
-
-			return updateParaphraseExercise(exerciseId, payload);
-		},
+		mutationFn: (values: ConversationEditFormValues) =>
+			updateAdminConversation(
+				exerciseId,
+				toConversationPayload(values, messages, slangRows),
+			),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({
-				queryKey: ADMIN_PARAPHRASE_LIST_QUERY_KEY,
+				queryKey: ADMIN_CONVERSATION_LIST_QUERY_KEY,
 			});
 			await queryClient.invalidateQueries({
-				queryKey: adminParaphraseExerciseQueryKey(exerciseId),
+				queryKey: adminConversationExerciseQueryKey(exerciseId),
 			});
 			toast.success("Cập nhật bài tập thành công");
 			onOpenChange(false);
@@ -124,35 +128,72 @@ function ParaphraseEditForm({
 		},
 	});
 
-	const updateTargetSentence = useCallback(
-		(index: number, targetSentence: string) => {
-			setSentences((prev) =>
-				prev.map((sentence, i) =>
-					i === index ? { ...sentence, targetSentence } : sentence,
-				),
+	const addMessages = useCallback(() => {
+		setMessages((prev) => appendMessage(prev));
+		setMessagesError(null);
+	}, []);
+
+	const updateMessageText = useCallback((index: number, text: string) => {
+		setMessages((prev) =>
+			prev.map((msg, i) => (i === index ? { ...msg, text } : msg)),
+		);
+		setMessagesError(null);
+	}, []);
+
+	const removeMessage = useCallback((index: number) => {
+		setMessages((prev) => {
+			const next = prev.filter((_, i) => i !== index);
+			setSlangRows((slang) =>
+				slang.map((row) => ({
+					...row,
+					messageIndex: Math.min(
+						row.messageIndex,
+						Math.max(0, next.length - 1),
+					),
+				})),
 			);
-			setSentencesError(null);
+			return next;
+		});
+		setMessagesError(null);
+	}, []);
+
+	const addSlang = useCallback(() => {
+		setSlangRows((prev) => [...prev, createEmptySlang(messages.length)]);
+		setSlangError(null);
+	}, [messages.length]);
+
+	const updateSlang = useCallback(
+		(
+			index: number,
+			patch: Partial<Pick<EditableSlang, "messageIndex" | "term" | "meaning">>,
+		) => {
+			setSlangRows((prev) =>
+				prev.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+			);
+			setSlangError(null);
 		},
 		[],
 	);
 
-	const addSentence = useCallback(() => {
-		setSentences((prev) => [...prev, createEmptyEditableSentence(prev)]);
-		setSentencesError(null);
-	}, []);
-
-	const removeSentence = useCallback((index: number) => {
-		setSentences((prev) => prev.filter((_, i) => i !== index));
+	const removeSlang = useCallback((index: number) => {
+		setSlangRows((prev) => prev.filter((_, i) => i !== index));
+		setSlangError(null);
 	}, []);
 
 	const onSubmit = form.handleSubmit((values) => {
-		const payload = toSentencesUpdatePayload(sentences);
-		if (payload.length === 0) {
-			setSentencesError("Vui lòng nhập ít nhất một câu hỏi");
+		const msgErr = validateMessages(messages);
+		if (msgErr) {
+			setMessagesError(msgErr);
+			return;
+		}
+		const slangErr = validateSlangRows(slangRows, messages.length);
+		if (slangErr) {
+			setSlangError(slangErr);
 			return;
 		}
 
-		setSentencesError(null);
+		setMessagesError(null);
+		setSlangError(null);
 		updateMutation.mutate(values);
 	});
 
@@ -242,14 +283,49 @@ function ParaphraseEditForm({
 					/>
 				</div>
 
-				<ParaphraseEditSentenceTable
-					sentences={sentences}
+				<Controller
+					name="scenario"
+					control={form.control}
+					render={({ field, fieldState }) => (
+						<Field data-invalid={fieldState.invalid}>
+							<FieldLabel htmlFor={field.name}>Bối cảnh</FieldLabel>
+							<Textarea
+								{...field}
+								id={field.name}
+								disabled={isPending}
+								rows={3}
+								aria-invalid={fieldState.invalid}
+							/>
+							{fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+						</Field>
+					)}
+				/>
+
+				<ConversationSpeakerFields
+					control={form.control}
+					errors={form.formState.errors}
 					disabled={isPending}
-					invalid={!!sentencesError}
-					error={sentencesError ? { message: sentencesError } : undefined}
-					onAdd={addSentence}
-					onUpdateTargetSentence={updateTargetSentence}
-					onRemove={removeSentence}
+				/>
+
+				<ConversationMessagesEditor
+					messages={messages}
+					disabled={isPending}
+					invalid={!!messagesError}
+					error={messagesError ? { message: messagesError } : undefined}
+					onAdd={addMessages}
+					onUpdateText={updateMessageText}
+					onRemove={removeMessage}
+				/>
+
+				<ConversationSlangTable
+					rows={slangRows}
+					messageCount={messages.length}
+					disabled={isPending}
+					invalid={!!slangError}
+					error={slangError ? { message: slangError } : undefined}
+					onAdd={addSlang}
+					onUpdate={updateSlang}
+					onRemove={removeSlang}
 				/>
 			</FieldGroup>
 
@@ -276,29 +352,29 @@ function ParaphraseEditForm({
 	);
 }
 
-export function ParaphraseEditDialog({
+export function ConversationEditDialog({
 	open,
 	onOpenChange,
 	exerciseId,
-}: ParaphraseEditDialogProps) {
+}: ConversationEditDialogProps) {
 	const {
-		data: exerciseRes,
+		data: detailRes,
 		isLoading,
 		isError,
 	} = useQuery({
-		queryKey: adminParaphraseExerciseQueryKey(exerciseId),
-		queryFn: () => fetchAdminParaphraseExercise(exerciseId),
+		queryKey: adminConversationExerciseQueryKey(exerciseId),
+		queryFn: () => fetchAdminConversation(exerciseId),
 		enabled: open && !!exerciseId,
 	});
 
-	const exercise = exerciseRes?.data;
-	const showForm = !isLoading && !isError && !!exercise;
+	const detail = detailRes?.data;
+	const showForm = !isLoading && !isError && !!detail;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
 				showCloseButton
-				className="sm:max-w-3xl max-h-[90vh] overflow-y-auto no-scrollbar"
+				className="sm:max-w-5xl max-h-[90vh] overflow-y-auto no-scrollbar"
 				aria-describedby={undefined}
 			>
 				<DialogHeader>
@@ -321,9 +397,9 @@ export function ParaphraseEditDialog({
 				)}
 
 				{showForm && (
-					<ParaphraseEditForm
+					<ConversationEditForm
 						key={exerciseId}
-						exercise={exercise}
+						detail={detail}
 						exerciseId={exerciseId}
 						onOpenChange={onOpenChange}
 					/>

@@ -1,4 +1,8 @@
-import type { SAWAdminExercise } from "@shared/types/see-and-write";
+import { memo } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, Delete01Icon } from "@hugeicons/core-free-icons";
+
+import { Button } from "@shared/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@shared/components/ui/field";
 import { Input } from "@shared/components/ui/input";
 import {
@@ -10,94 +14,143 @@ import {
 	TableRow,
 } from "@shared/components/ui/table";
 
-type WordPoolEntry = SAWAdminExercise["wordPool"][number];
+import type { SAWEditableWord } from "@admin/features/writing/methods/see-and-write/components/word-pool-utils";
 
-type SAWWordPoolSectionProps = {
+/** Ô chỉ đọc — hiển thị metadata từ DB, không cho sửa */
+function WordReadOnlyCell({ value }: { value: string }) {
+	const display = value.trim() || "—";
+	return (
+		<TableCell
+			className="max-w-40 truncate text-sm text-muted-foreground"
+			title={value.trim() || undefined}
+		>
+			{display}
+		</TableCell>
+	);
+}
+
+type WordRowProps = {
+	row: SAWEditableWord;
+	index: number;
+	disabled: boolean;
+	onUpdateWord: (index: number, word: string) => void;
+	onRemove: (index: number) => void;
+};
+
+const WordRow = memo(function WordRow({
+	row,
+	index,
+	disabled,
+	onUpdateWord,
+	onRemove,
+}: WordRowProps) {
+	return (
+		<TableRow>
+			<TableCell>
+				<Input
+					value={row.word}
+					onChange={(e) => onUpdateWord(index, e.target.value)}
+					disabled={disabled}
+					className="h-8"
+					placeholder="Nhập từ khóa"
+					aria-label="Từ khóa"
+				/>
+			</TableCell>
+			<WordReadOnlyCell value={row.ipa} />
+			<WordReadOnlyCell value={row.partOfSpeech} />
+			<WordReadOnlyCell value={row.meaning} />
+			<TableCell className="w-12">
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon-sm"
+					disabled={disabled}
+					onClick={() => onRemove(index)}
+					aria-label="Xóa từ khóa"
+				>
+					<HugeiconsIcon icon={Delete01Icon} className="size-4" />
+				</Button>
+			</TableCell>
+		</TableRow>
+	);
+});
+
+type SAWEditWordPoolTableProps = {
 	label: string;
-	words: WordPoolEntry[];
-	updateFieldName: string;
-	updateValue: string;
-	onUpdateChange: (value: string) => void;
-	placeholder: string;
+	words: SAWEditableWord[];
 	disabled?: boolean;
 	invalid?: boolean;
 	error?: { message?: string };
+	onAdd: () => void;
+	onUpdateWord: (index: number, word: string) => void;
+	onRemove: (index: number) => void;
 };
 
-export function SAWWordPoolSection({
+/** Bảng từ khóa cho form sửa bài — chỉnh sửa trực tiếp cột Từ, thêm/xóa dòng */
+export const SAWEditWordPoolTable = memo(function SAWEditWordPoolTable({
 	label,
 	words,
-	updateFieldName,
-	updateValue,
-	onUpdateChange,
-	placeholder,
 	disabled,
 	invalid,
 	error,
-}: SAWWordPoolSectionProps) {
+	onAdd,
+	onUpdateWord,
+	onRemove,
+}: SAWEditWordPoolTableProps) {
 	return (
 		<Field data-invalid={invalid}>
-			<FieldLabel>{label}</FieldLabel>
+			<div className="space-y-2">
+				<div className="flex items-center justify-between">
+					<FieldLabel>{label}</FieldLabel>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						disabled={disabled}
+						onClick={onAdd}
+					>
+						<HugeiconsIcon icon={Add01Icon} className="size-4" />
+						Thêm từ
+					</Button>
+				</div>
 
-			<div className="rounded-lg border">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Từ</TableHead>
-							<TableHead>IPA</TableHead>
-							<TableHead>Loại từ</TableHead>
-							<TableHead>Nghĩa</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{words.length === 0 ? (
-							<TableRow>
-								<TableCell
-									colSpan={4}
-									className="text-center text-muted-foreground"
-								>
-									Chưa có từ khóa
-								</TableCell>
-							</TableRow>
-						) : (
-							words.map((entry) => (
-								<TableRow key={entry.id}>
-									<TableCell className="font-medium">{entry.word}</TableCell>
-									<TableCell className="text-muted-foreground">
-										{entry.ipa || "—"}
-									</TableCell>
-									<TableCell className="text-muted-foreground">
-										{entry.partOfSpeech || "—"}
-									</TableCell>
-									<TableCell className="text-muted-foreground">
-										{entry.meaning || "—"}
-									</TableCell>
+				{words.length === 0 ? (
+					<p className="text-sm text-muted-foreground">
+						Chưa có từ khóa. Bấm &quot;Thêm từ&quot; để bổ sung.
+					</p>
+				) : (
+					<div
+						className="rounded-md border max-h-64 overflow-auto"
+						style={{ contentVisibility: "auto" }}
+					>
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead className="min-w-28">Từ</TableHead>
+									<TableHead className="min-w-24">IPA</TableHead>
+									<TableHead className="min-w-24">Loại từ</TableHead>
+									<TableHead className="min-w-32">Nghĩa</TableHead>
+									<TableHead className="w-12" />
 								</TableRow>
-							))
-						)}
-					</TableBody>
-				</Table>
-			</div>
-
-			<div className="flex flex-col gap-1.5">
-				<FieldLabel htmlFor={updateFieldName} className="text-muted-foreground">
-					Cập nhật
-				</FieldLabel>
-				<Input
-					id={updateFieldName}
-					value={updateValue}
-					onChange={(e) => onUpdateChange(e.target.value)}
-					placeholder={placeholder}
-					disabled={disabled}
-					aria-invalid={invalid}
-				/>
-				<p className="text-xs text-muted-foreground">
-					Cập nhật sẽ ghi đè toàn bộ từ trước đó. Nhập các từ khóa, ngăn cách
-					bởi dấu phẩy
-				</p>
+							</TableHeader>
+							<TableBody>
+								{words.map((row, index) => (
+									<WordRow
+										key={row._key}
+										row={row}
+										index={index}
+										disabled={!!disabled}
+										onUpdateWord={onUpdateWord}
+										onRemove={onRemove}
+									/>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+				)}
 			</div>
 
 			{invalid && error && <FieldError errors={[error]} />}
 		</Field>
 	);
-}
+});

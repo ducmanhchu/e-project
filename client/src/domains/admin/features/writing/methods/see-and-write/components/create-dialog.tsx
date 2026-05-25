@@ -259,7 +259,7 @@ export function SAWCreateDialog({ open, onOpenChange }: SAWCreateDialogProps) {
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
 				showCloseButton
-				className="sm:max-w-xl max-h-[90vh] overflow-y-auto no-scrollbar"
+				className="sm:max-w-3xl max-h-[90vh] overflow-y-auto no-scrollbar"
 				aria-describedby={undefined}
 			>
 				<DialogHeader>
@@ -550,7 +550,7 @@ export function SAWCreateDialog({ open, onOpenChange }: SAWCreateDialogProps) {
 									className="size-4 animate-spin"
 								/>
 							)}
-							Tạo bài tập
+							Tạo
 						</Button>
 					</DialogFooter>
 				</form>

@@ -194,6 +194,10 @@ export type RTUpdatePayload = {
 		vietnameseText: string;
 		referenceAnswer: string;
 	}[];
+	vocabulary: {
+		sentenceIndex: number;
+		word: string;
+	}[];
 };
 
 export type RTUpdateLessonData = {
