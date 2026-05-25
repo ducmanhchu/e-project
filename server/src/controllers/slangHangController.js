@@ -44,13 +44,23 @@ export async function updateDialogue(req, res, next) {
  */
 export async function adminListDialogues(req, res, next) {
 	try {
-		const { level, topic, search, page = 1, limit = 12 } = req.query;
+		const {
+			level,
+			topic,
+			search,
+			sortBy,
+			order,
+			page = 1,
+			limit = 12,
+		} = req.query;
 		const p = Math.max(1, +page);
 		const l = Math.min(Math.max(1, +limit), 50);
 		const result = await slangHangService.adminListDialogues({
 			level: parseQueryList(level),
 			topic: parseQueryList(topic),
 			search,
+			sortBy,
+			order,
 			page: p,
 			limit: l,
 		});
