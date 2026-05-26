@@ -51,7 +51,15 @@ export function LoginForm({
 		mutationFn: signIn,
 		onSuccess: (data: SignInResponse) => {
 			setAccessToken(data.accessToken);
+
 			queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+			queryClient.invalidateQueries({
+				queryKey: ["reverse-translate", "list"],
+			});
+			queryClient.invalidateQueries({ queryKey: ["see-and-write", "list"] });
+			queryClient.invalidateQueries({ queryKey: ["paraphrase", "list"] });
+			queryClient.invalidateQueries({ queryKey: ["conversation", "list"] });
+
 			navigate("/", { replace: true });
 		},
 		onError: (error) => {

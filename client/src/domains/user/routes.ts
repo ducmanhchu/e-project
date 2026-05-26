@@ -81,6 +81,7 @@ export const userRoutes: RouteObject[] = [
 			{
 				path: "vocabulary",
 				Component: Vocabulary,
+				loader: requireAuthLoader,
 			},
 		],
 	},
