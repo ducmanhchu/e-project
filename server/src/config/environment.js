@@ -27,7 +27,7 @@ export const env = {
   AZURE_SPEECH_KEY: process.env.AZURE_SPEECH_KEY,
   AZURE_SPEECH_REGION: process.env.AZURE_SPEECH_REGION,
 
-  // Active payment provider for new checkouts: "sepay" | "momo"
+  // Active payment provider for new checkouts: "sepay" | "zalopay"
   PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER || "sepay",
 
   // Sepay (bank transfer via VietQR)
@@ -36,15 +36,11 @@ export const env = {
   SEPAY_BANK_CODE: process.env.SEPAY_BANK_CODE,        // e.g. "MB", "VCB", "TCB"
   SEPAY_ORDER_PREFIX: process.env.SEPAY_ORDER_PREFIX || "WW", // prefix for QR memo
 
-  // MoMo (Capture Wallet — hosted checkout + IPN webhook)
-  MOMO_PARTNER_CODE: process.env.MOMO_PARTNER_CODE,
-  MOMO_ACCESS_KEY: process.env.MOMO_ACCESS_KEY,
-  MOMO_SECRET_KEY: process.env.MOMO_SECRET_KEY,
-  // Test: https://test-payment.momo.vn  | Prod: https://payment.momo.vn
-  MOMO_ENDPOINT: process.env.MOMO_ENDPOINT || "https://test-payment.momo.vn",
-  MOMO_REDIRECT_URL:
-    process.env.MOMO_REDIRECT_URL ||
-    `${process.env.FRONTEND_URL || "http://localhost:5173"}/wallet`,
-  // IPN: server URL MoMo posts result to (use tunnel URL in dev)
-  MOMO_IPN_URL: process.env.MOMO_IPN_URL,
+  // ZaloPay (Gateway — hosted page + QR + IPN webhook)
+  ZALOPAY_APP_ID: process.env.ZALOPAY_APP_ID,
+  ZALOPAY_KEY1: process.env.ZALOPAY_KEY1,              // request MAC
+  ZALOPAY_KEY2: process.env.ZALOPAY_KEY2,              // callback MAC
+  ZALOPAY_ENDPOINT:
+    process.env.ZALOPAY_ENDPOINT || "https://sb-openapi.zalopay.vn",
+  ZALOPAY_CALLBACK_URL: process.env.ZALOPAY_CALLBACK_URL,
 };

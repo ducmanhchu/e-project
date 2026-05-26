@@ -1,4 +1,5 @@
 import * as paymentService from "@server/services/payment/paymentService";
+import { getProvider } from "@server/services/payment/providerSelector";
 import { ApiError } from "@server/helpers/ApiError";
 
 export async function listPacks(_req, res, next) {
@@ -24,11 +25,28 @@ export async function webhook(req, res, next) {
   try {
     const providerKey = req.params.provider;
     if (!providerKey) throw ApiError.badRequest("provider param required");
-    const out = await paymentService.handleWebhook(
-      providerKey,
-      req.body,
-      req.headers,
-    );
+
+    let out;
+    let handlerError = null;
+    try {
+      out = await paymentService.handleWebhook(
+        providerKey,
+        req.body,
+        req.headers,
+      );
+    } catch (err) {
+      handlerError = err;
+    }
+
+    // Provider may map our standard result into its required response shape
+    // (e.g., ZaloPay requires { return_code, return_message }).
+    const provider = getProvider(providerKey);
+    if (provider.formatWebhookResponse) {
+      return res
+        .status(200)
+        .json(provider.formatWebhookResponse(out, handlerError));
+    }
+    if (handlerError) throw handlerError;
     res.status(200).json(out);
   } catch (e) {
     next(e);

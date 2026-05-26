@@ -106,8 +106,7 @@ export async function handleWebhook(providerKey, payload, headers) {
 
   const parsed = provider.parseWebhook(payload);
   if (!Number.isFinite(parsed.orderCode) || parsed.orderCode <= 0) {
-    // Common for: provider test pings, bank transfers without our memo prefix.
-    // Return 200 so the provider doesn't retry indefinitely.
+    // Return 200 — provider test pings + memo-less transfers shouldn't trigger retries.
     console.warn(
       `[webhook:${providerKey}] no orderCode in payload, ignoring. Raw:`,
       JSON.stringify(payload).slice(0, 300),
@@ -128,15 +127,14 @@ export async function handleWebhook(providerKey, payload, headers) {
       { _id: order._id },
       { $set: { webhookRaw: payload } },
     );
-    // Self-heal: if a prior delivery flipped status to PAID but crashed before
-    // grantPack, this retry will complete the grant.
+    // Self-heal: covers prior delivery that flipped PAID but crashed before grant.
     await ensureCreditsGranted(order._id);
     return { success: true, alreadyProcessed: true };
   }
 
+  // Filter status:PENDING on writes below so a late callback can't overwrite a
+  // successful PAID set by a concurrent webhook.
   if (!parsed.isPaid) {
-    // Filter status: PENDING so a late "cancel" webhook can't overwrite a
-    // successful PAID from a concurrent webhook.
     const cancelled = await Order.findOneAndUpdate(
       { _id: order._id, status: PAYMENT_STATUS.PENDING },
       { $set: { status: PAYMENT_STATUS.CANCELLED, webhookRaw: payload } },
@@ -145,7 +143,6 @@ export async function handleWebhook(providerKey, payload, headers) {
     return { success: true };
   }
 
-  // Amount validation — catches Sepay underpayment + any provider mismatch.
   const expectedAmount = order.packSnapshot.price;
   if (
     typeof parsed.amount === "number" &&
@@ -165,7 +162,7 @@ export async function handleWebhook(providerKey, payload, headers) {
     };
   }
 
-  // Atomic CAS: only the request that transitions pending → paid grants.
+  // CAS pending → paid; only the winning request grants.
   const claimed = await Order.findOneAndUpdate(
     { _id: order._id, status: PAYMENT_STATUS.PENDING },
     {
@@ -177,19 +174,15 @@ export async function handleWebhook(providerKey, payload, headers) {
     },
     { new: true },
   );
-  if (!claimed) {
-    return { success: true, alreadyProcessed: true };
-  }
+  if (!claimed) return { success: true, alreadyProcessed: true };
 
   await ensureCreditsGranted(claimed._id);
   return { success: true };
 }
 
 /**
- * Claim the right to grant credits for a PAID order, then call walletService.
- * Atomic CAS on `creditsGranted` prevents double-grant across concurrent webhook
- * retries. If grantPack throws, rolls back the claim so a subsequent retry can
- * recover. Idempotent: safe to call multiple times on the same order.
+ * CAS on `creditsGranted` to claim grant exactly once across concurrent retries.
+ * Rolls back the flag on failure so subsequent retries can recover.
  */
 async function ensureCreditsGranted(orderId) {
   const claimed = await Order.findOneAndUpdate(
@@ -223,8 +216,7 @@ export async function getOrderStatus(userId, orderCode) {
   if (!order) throw ApiError.notFound("ORDER_NOT_FOUND");
 
   if (order.status === PAYMENT_STATUS.PENDING && order.expiresAt < new Date()) {
-    // Filter status: PENDING so a webhook racing this read can't have PAID
-    // overwritten with EXPIRED. Re-read if CAS missed to get the real state.
+    // Filter status:PENDING so a racing webhook can't have PAID overwritten.
     const expired = await Order.findOneAndUpdate(
       { _id: order._id, status: PAYMENT_STATUS.PENDING },
       { $set: { status: PAYMENT_STATUS.EXPIRED } },
@@ -239,5 +231,7 @@ export async function getOrderStatus(userId, orderCode) {
     packSnapshot: order.packSnapshot,
     paidAt: order.paidAt,
     expiresAt: order.expiresAt,
+    checkoutUrl: order.checkoutUrl,
+    qrCode: order.qrCode,
   };
 }

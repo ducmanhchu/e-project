@@ -25,5 +25,5 @@ export const PAYMENT_STATUS = {
 
 export const PAYMENT_PROVIDER = {
   SEPAY: "sepay",
-  MOMO: "momo",
+  ZALOPAY: "zalopay",
 };

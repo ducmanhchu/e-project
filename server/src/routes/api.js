@@ -22,7 +22,7 @@ import {
 const router = express.Router();
 
 // Payment provider webhooks (public, signature-verified inside handler).
-// Provider key in URL: "sepay" | "momo".
+// Provider key in URL: "sepay".
 router.post("/payments/webhook/:provider", paymentController.webhook);
 
 // auth routes
