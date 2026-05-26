@@ -12,33 +12,58 @@ export const topicValues = topicSection.options.map((o) => o.id) as [
 	...WritingExerciseTopic[],
 ];
 
-export function parseSemicolonSentences(raw: string): string[] {
-	return raw
-		.split(";")
-		.map((s) => s.trim())
-		.filter(Boolean);
+/** Câu hỏi chỉnh sửa trong form tạo/sửa bài */
+export type ParaphraseEditableSentence = {
+	_key: string;
+	order: number;
+	targetSentence: string;
+};
+
+/** Map câu hỏi hiện có sang state chỉnh sửa */
+export function exerciseToEditableSentences(
+	exercise: AdminParaphraseListItem,
+): ParaphraseEditableSentence[] {
+	return [...exercise.sentences]
+		.sort((a, b) => a.order - b.order)
+		.map((sentence, index) => ({
+			_key: `sentence-${sentence.order}-${index}`,
+			order: sentence.order,
+			targetSentence: sentence.targetSentence,
+		}));
 }
 
-const sentencesRawField = z.string().superRefine((raw, ctx) => {
-	const parsed = parseSemicolonSentences(raw);
-	if (parsed.length === 0) {
-		ctx.addIssue({
-			code: "custom",
-			message: "Vui lòng nhập ít nhất một câu hỏi",
-		});
-	}
-});
+/** Tạo dòng trống với STT cao nhất + 1 */
+export function createEmptyEditableSentence(
+	sentences: ParaphraseEditableSentence[],
+): ParaphraseEditableSentence {
+	const maxOrder = sentences.reduce(
+		(max, sentence) => Math.max(max, sentence.order),
+		0,
+	);
 
-const sentencesRawOptionalField = z.string().superRefine((raw, ctx) => {
-	if (!raw.trim()) return;
-	const parsed = parseSemicolonSentences(raw);
-	if (parsed.length === 0) {
-		ctx.addIssue({
-			code: "custom",
-			message: "Vui lòng nhập ít nhất một câu hỏi hợp lệ",
-		});
-	}
-});
+	return {
+		_key: `sentence-manual-${crypto.randomUUID()}`,
+		order: maxOrder + 1,
+		targetSentence: "",
+	};
+}
+
+/** State mặc định khi tạo bài — một dòng trống STT 1 */
+export function createInitialEditableSentences(): ParaphraseEditableSentence[] {
+	return [createEmptyEditableSentence([])];
+}
+
+/** Chuyển state chỉnh sửa sang payload API (bỏ dòng trống, giữ thứ tự STT) */
+export function toSentencesUpdatePayload(
+	sentences: ParaphraseEditableSentence[],
+) {
+	return [...sentences]
+		.sort((a, b) => a.order - b.order)
+		.filter((sentence) => sentence.targetSentence.trim())
+		.map((sentence) => ({
+			targetSentence: sentence.targetSentence.trim(),
+		}));
+}
 
 export const paraphraseBaseFormSchema = z.object({
 	title: z.string().trim().min(1, "Vui lòng nhập tiêu đề"),
@@ -46,13 +71,9 @@ export const paraphraseBaseFormSchema = z.object({
 	topic: z.enum(topicValues),
 });
 
-export const paraphraseCreateFormSchema = paraphraseBaseFormSchema.extend({
-	sentencesRaw: sentencesRawField,
-});
+export const paraphraseCreateFormSchema = paraphraseBaseFormSchema;
 
-export const paraphraseEditFormSchema = paraphraseBaseFormSchema.extend({
-	sentencesRaw: sentencesRawOptionalField,
-});
+export const paraphraseEditFormSchema = paraphraseBaseFormSchema;
 
 export type ParaphraseCreateFormValues = z.infer<
 	typeof paraphraseCreateFormSchema
@@ -63,7 +84,6 @@ export const paraphraseCreateDefaultValues: ParaphraseCreateFormValues = {
 	title: "",
 	level: "beginner",
 	topic: "personal_communication",
-	sentencesRaw: "",
 };
 
 export function exerciseToFormValues(
@@ -73,7 +93,6 @@ export function exerciseToFormValues(
 		title: exercise.title,
 		level: exercise.level,
 		topic: exercise.topic,
-		sentencesRaw: "",
 	};
 }
 
@@ -83,10 +102,4 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
 		if (typeof msg === "string" && msg.trim()) return msg;
 	}
 	return fallback;
-}
-
-export function buildSentencesPayload(raw: string) {
-	return parseSemicolonSentences(raw).map((targetSentence) => ({
-		targetSentence,
-	}));
 }

@@ -148,3 +148,65 @@ export type ConversationSubmitResponse = APIResponse<{
 	}[];
 	completedAt: string | null;
 }>;
+
+// ADMIN
+export type AdminConversationListItem = {
+	id: string;
+	title: string;
+	level: ExerciseLevel;
+	topic: WritingExerciseTopic;
+	scenario: string;
+	messageCount: number;
+	createdAt: string;
+};
+
+export type AdminConversationListParams = {
+	level?: string;
+	topic?: string;
+	search?: string;
+	sortBy?: "level" | "createdAt";
+	order?: "asc" | "desc";
+	page?: number;
+	limit?: number;
+};
+
+export type AdminConversationSpeaker = {
+	key: "A" | "B";
+	name: string;
+	persona: string;
+};
+
+export type AdminConversationSlang = {
+	term: string;
+	meaning: string;
+	partOfSpeech?: string;
+	example?: string;
+	register?: string;
+};
+
+export type AdminConversationMessage = {
+	order: number;
+	speakerKey: "A" | "B";
+	text: string;
+	slang: AdminConversationSlang[];
+};
+
+export type AdminConversationDetail = {
+	id: string;
+	title: string;
+	level: ExerciseLevel;
+	topic: WritingExerciseTopic;
+	mode: "single_role" | "both_roles";
+	scenario: string;
+	speakers: AdminConversationSpeaker[];
+	messages: AdminConversationMessage[];
+	createdAt: string;
+};
+
+export type CreateAdminConversationPayload = Omit<
+	AdminConversationDetail,
+	"id" | "createdAt"
+>;
+
+export type UpdateAdminConversationPayload =
+	Partial<CreateAdminConversationPayload>;

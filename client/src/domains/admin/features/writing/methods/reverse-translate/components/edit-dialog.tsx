@@ -31,14 +31,18 @@ import {
 } from "@admin/features/writing/methods/reverse-translate/components/form-options";
 import { RTMetadataFields } from "@admin/features/writing/methods/reverse-translate/components/metadata-fields";
 import { RTCreateSentenceList } from "@admin/features/writing/methods/reverse-translate/components/create-sentence-list";
+import { RTCreateVocabularyTable } from "@admin/features/writing/methods/reverse-translate/components/create-vocabulary-table";
 import {
 	buildUpdatePayload,
+	createManualVocabEntry,
 	exerciseToEditFormValues,
 	exerciseToSentences,
+	exerciseToVocabulary,
 	getApiErrorMessage,
 	rtEditFormSchema,
 	validateStep2BeforeSave,
 	type RTEditFormValues,
+	type RTEditableVocab,
 } from "@admin/features/writing/methods/reverse-translate/components/form-utils";
 
 type RTEditDialogProps = {
@@ -59,6 +63,9 @@ function RTEditForm({ exercise, exerciseId, onOpenChange }: RTEditFormProps) {
 	const [sentences, setSentences] = useState<RTPreviewSentence[]>(() =>
 		exerciseToSentences(exercise),
 	);
+	const [vocabulary, setVocabulary] = useState<RTEditableVocab[]>(() =>
+		exerciseToVocabulary(exercise),
+	);
 
 	const form = useForm<RTEditFormValues>({
 		resolver: zodResolver(rtEditFormSchema),
@@ -70,10 +77,10 @@ function RTEditForm({ exercise, exerciseId, onOpenChange }: RTEditFormProps) {
 			const validationError = validateStep2BeforeSave(sentences);
 			if (validationError) throw new Error(validationError);
 
-			// Gửi toàn bộ câu — backend ghi đè mảng sentences khi cập nhật
+			// Gửi toàn bộ câu và từ vựng — backend ghi đè khi cập nhật
 			return updateAdminRTExercise(
 				exerciseId,
-				buildUpdatePayload(values, sentences),
+				buildUpdatePayload(values, sentences, vocabulary),
 			);
 		},
 		onSuccess: async () => {
@@ -115,6 +122,29 @@ function RTEditForm({ exercise, exerciseId, onOpenChange }: RTEditFormProps) {
 		[],
 	);
 
+	const updateVocabSentenceIndex = useCallback(
+		(index: number, sentenceIndex: number) => {
+			setVocabulary((prev) =>
+				prev.map((v, i) => (i === index ? { ...v, sentenceIndex } : v)),
+			);
+		},
+		[],
+	);
+
+	const updateVocabWord = useCallback((index: number, word: string) => {
+		setVocabulary((prev) =>
+			prev.map((v, i) => (i === index ? { ...v, word } : v)),
+		);
+	}, []);
+
+	const addVocabRow = useCallback(() => {
+		setVocabulary((prev) => [...prev, createManualVocabEntry(1)]);
+	}, []);
+
+	const removeVocabRow = useCallback((index: number) => {
+		setVocabulary((prev) => prev.filter((_, i) => i !== index));
+	}, []);
+
 	const onSubmit = form.handleSubmit((values) => {
 		updateMutation.mutate(values);
 	});
@@ -127,6 +157,16 @@ function RTEditForm({ exercise, exerciseId, onOpenChange }: RTEditFormProps) {
 				sentences={sentences}
 				disabled={isPending}
 				onUpdateSentence={updateSentence}
+			/>
+
+			<RTCreateVocabularyTable
+				vocabulary={vocabulary}
+				sentenceCount={sentences.length}
+				disabled={isPending}
+				onAdd={addVocabRow}
+				onUpdateSentenceIndex={updateVocabSentenceIndex}
+				onUpdateWord={updateVocabWord}
+				onRemove={removeVocabRow}
 			/>
 
 			<DialogFooter>
@@ -145,7 +185,7 @@ function RTEditForm({ exercise, exerciseId, onOpenChange }: RTEditFormProps) {
 							className="size-4 animate-spin"
 						/>
 					) : null}
-					Lưu thay đổi
+					Cập nhật
 				</Button>
 			</DialogFooter>
 		</form>
@@ -174,7 +214,7 @@ export function RTEditDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
 				showCloseButton
-				className="sm:max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar"
+				className="sm:max-w-5xl max-h-[90vh] overflow-y-auto no-scrollbar"
 				aria-describedby={undefined}
 			>
 				<DialogHeader>

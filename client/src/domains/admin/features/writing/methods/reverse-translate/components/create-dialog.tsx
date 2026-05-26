@@ -49,9 +49,9 @@ type RTCreateDialogProps = {
 };
 
 const DIALOG_CLASS_STEP1 =
-	"sm:max-w-xl max-h-[90vh] overflow-y-auto no-scrollbar";
+	"sm:max-w-3xl max-h-[90vh] overflow-y-auto no-scrollbar";
 const DIALOG_CLASS_STEP2 =
-	"sm:max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar";
+	"sm:max-w-5xl max-h-[90vh] overflow-y-auto no-scrollbar";
 
 /**
  * Dialog tạo bài dịch ngược — 2 bước: preview AI → review & lưu (create + dictionary).
@@ -281,7 +281,6 @@ export function RTCreateDialog({ open, onOpenChange }: RTCreateDialogProps) {
 						/>
 
 						<div className="space-y-2">
-							<p className="text-sm font-medium">Từ vựng</p>
 							<RTCreateVocabularyTable
 								vocabulary={vocabulary}
 								sentenceCount={sentences.length}

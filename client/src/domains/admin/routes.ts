@@ -5,7 +5,7 @@ import { Login } from "@admin/features/auth/pages/login";
 import { ReverseTranslate } from "@/domains/admin/features/writing/methods/reverse-translate/pages";
 import { SeeAndWrite } from "@/domains/admin/features/writing/methods/see-and-write/pages";
 import { Paraphrase } from "@/domains/admin/features/writing/methods/paraphrase/pages";
-import { Conversation } from "@admin/features/speaking/methods/conversation/pages/conversation";
+import { Conversation } from "@/domains/admin/features/speaking/methods/conversation/pages";
 import { requireAdminLoader } from "@shared/lib/auth-loaders";
 
 export const adminRoutes: RouteObject[] = [
