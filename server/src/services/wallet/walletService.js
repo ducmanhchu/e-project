@@ -5,7 +5,9 @@ import {
   TRANSACTION_TYPE,
   SUBMIT_COST,
   SIGNUP_BONUS_CREDITS,
+  DAILY_CHECKIN_CREDITS,
 } from "@server/const/payment";
+import { startOfDayVN, checkinDateVN } from "@server/helpers/dateVN";
 
 export async function getBalance(userId) {
   const user = await User.findById(userId).select("credits");
@@ -152,6 +154,105 @@ export async function grantPack(userId, order) {
     if (err?.code === 11000) return CreditTransaction.findOne(lookup);
     throw err;
   }
+}
+
+/**
+ * Grant +1 credit if user hasn't checked in today (VN time).
+ * Two-layer idempotency: atomic CAS on User.lastCheckinAt + unique partial index
+ * on CreditTransaction(userId, type, checkinDate).
+ */
+export async function grantDailyCheckin(userId) {
+  // Capture `now` once so the day-boundary math and the audit checkinDate
+  // are derived from the same instant. Recomputing per-helper could disagree
+  // by a few ms across the VN midnight boundary and produce a tx row whose
+  // checkinDate belongs to tomorrow — blocking tomorrow's grant via the
+  // unique partial index.
+  const now = new Date();
+  const startToday = startOfDayVN(now);
+
+  const updated = await User.findOneAndUpdate(
+    {
+      _id: userId,
+      $or: [
+        { lastCheckinAt: null },
+        { lastCheckinAt: { $lt: startToday } },
+      ],
+    },
+    {
+      $set: { lastCheckinAt: now },
+      $inc: { credits: DAILY_CHECKIN_CREDITS },
+    },
+    { new: true },
+  );
+
+  if (!updated) {
+    const user = await User.findById(userId).select("credits lastCheckinAt");
+    if (!user) throw ApiError.notFound("User not found");
+    return {
+      alreadyCheckedIn: true,
+      credits: user.credits,
+      lastCheckinAt: user.lastCheckinAt,
+    };
+  }
+
+  try {
+    await CreditTransaction.create({
+      userId,
+      type: TRANSACTION_TYPE.DAILY_CHECKIN,
+      amount: DAILY_CHECKIN_CREDITS,
+      reason: "daily checkin",
+      checkinDate: checkinDateVN(now),
+      balanceAfter: updated.credits,
+    });
+  } catch (err) {
+    await User.updateOne(
+      { _id: userId },
+      { $inc: { credits: -DAILY_CHECKIN_CREDITS } },
+    ).catch((rbErr) =>
+      console.error(
+        `[grantDailyCheckin] rollback failed for user ${userId}: ${rbErr.message}. Original: ${err.message}`,
+      ),
+    );
+    if (err?.code === 11000) {
+      return {
+        alreadyCheckedIn: true,
+        credits: updated.credits - DAILY_CHECKIN_CREDITS,
+        lastCheckinAt: updated.lastCheckinAt,
+      };
+    }
+    throw err;
+  }
+
+  return {
+    alreadyCheckedIn: false,
+    grantedCredits: DAILY_CHECKIN_CREDITS,
+    credits: updated.credits,
+    lastCheckinAt: updated.lastCheckinAt,
+  };
+}
+
+/**
+ * Read-only: lets FE query whether the user has checked in today.
+ * `nextAvailableAt` is null when checkin is available now — avoids returning
+ * a past timestamp that would break FE countdown logic.
+ */
+export async function getCheckinStatus(userId) {
+  const user = await User.findById(userId).select("lastCheckinAt");
+  if (!user) throw ApiError.notFound("User not found");
+
+  const startToday = startOfDayVN();
+  const hasCheckedInToday =
+    user.lastCheckinAt instanceof Date && user.lastCheckinAt >= startToday;
+
+  const nextAvailableAt = hasCheckedInToday
+    ? new Date(startToday.getTime() + 24 * 60 * 60 * 1000)
+    : null;
+
+  return {
+    hasCheckedInToday,
+    lastCheckinAt: user.lastCheckinAt,
+    nextAvailableAt,
+  };
 }
 
 export async function listTransactions(

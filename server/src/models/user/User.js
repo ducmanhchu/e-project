@@ -41,6 +41,9 @@ const userSchema = new mongoose.Schema(
 
     // Credit wallet (only permanent balance; subscriptions removed)
     credits: { type: Number, default: 0, min: 0 },
+
+    // Daily checkin tracking — null until first checkin. CAS target in walletService.grantDailyCheckin.
+    lastCheckinAt: { type: Date, default: null },
   },
   {
     timestamps: true,

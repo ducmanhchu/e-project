@@ -74,6 +74,8 @@ router.post("/auth/change-password", authController.changePassword);
 // ── Credits ─────────────────────────────────────────────
 router.get("/me/credits", walletController.getCredits);
 router.get("/me/credits/transactions", walletController.listTransactions);
+router.post("/me/checkin", walletController.checkin);
+router.get("/me/checkin/status", walletController.getCheckinStatus);
 
 // ── Payments ────────────────────────────────────────────
 router.get("/payments/packs", paymentController.listPacks);

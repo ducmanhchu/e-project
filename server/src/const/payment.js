@@ -1,5 +1,6 @@
 export const SUBMIT_COST = 1;
 export const SIGNUP_BONUS_CREDITS = 20;
+export const DAILY_CHECKIN_CREDITS = 1;
 export const PAYMENT_ORDER_EXPIRY_MINUTES = 15;
 
 export const PACK_DEFINITIONS = [
@@ -14,6 +15,7 @@ export const TRANSACTION_TYPE = {
   PURCHASE_PACK: "purchase_pack",
   CHARGE_SUBMIT: "charge_submit",
   REFUND_AI_FAIL: "refund_ai_fail",
+  DAILY_CHECKIN: "daily_checkin",
 };
 
 export const PAYMENT_STATUS = {

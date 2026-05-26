@@ -24,6 +24,8 @@ const creditTransactionSchema = new mongoose.Schema(
     referenceId: { type: mongoose.Schema.Types.ObjectId, default: null },
     // CAS target in walletService.refund — null → now flips claim ownership.
     refundedAt: { type: Date, default: null },
+    // "YYYY-MM-DD" in +07 — only set for DAILY_CHECKIN tx type. Key for the unique partial index below.
+    checkinDate: { type: String, default: null },
   },
   { timestamps: true, versionKey: false },
 );
@@ -47,6 +49,15 @@ creditTransactionSchema.index(
   {
     unique: true,
     partialFilterExpression: { type: TRANSACTION_TYPE.SIGNUP_BONUS },
+  },
+);
+
+// DB-level idempotency for daily check-in: 1 tx per (userId, calendar day +07).
+creditTransactionSchema.index(
+  { userId: 1, type: 1, checkinDate: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { type: TRANSACTION_TYPE.DAILY_CHECKIN },
   },
 );
 

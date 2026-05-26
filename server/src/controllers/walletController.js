@@ -27,3 +27,21 @@ export async function listTransactions(req, res, next) {
     next(e);
   }
 }
+
+export async function checkin(req, res, next) {
+  try {
+    const out = await walletService.grantDailyCheckin(req.user.id);
+    res.status(200).json({ success: true, data: out });
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function getCheckinStatus(req, res, next) {
+  try {
+    const out = await walletService.getCheckinStatus(req.user.id);
+    res.status(200).json({ success: true, data: out });
+  } catch (e) {
+    next(e);
+  }
+}
