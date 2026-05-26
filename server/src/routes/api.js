@@ -81,6 +81,7 @@ router.get("/me/checkin/status", walletController.getCheckinStatus);
 // ── Payments ────────────────────────────────────────────
 router.get("/payments/packs", paymentController.listPacks);
 router.post("/payments/checkout", paymentController.checkout);
+router.post("/payments/checkout/custom", paymentController.customCheckout);
 router.get("/payments/orders/:orderCode", paymentController.getOrder);
 
 // ── Reverse Translation ─────────────────────────────────

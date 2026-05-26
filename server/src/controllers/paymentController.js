@@ -21,6 +21,19 @@ export async function checkout(req, res, next) {
   }
 }
 
+export async function customCheckout(req, res, next) {
+  try {
+    const { amount } = req.body || {};
+    if (amount === undefined || amount === null) {
+      throw ApiError.badRequest("amount is required");
+    }
+    const out = await paymentService.createCustomCheckout(req.user.id, amount);
+    res.status(201).json({ success: true, data: out });
+  } catch (e) {
+    next(e);
+  }
+}
+
 export async function webhook(req, res, next) {
   try {
     const providerKey = req.params.provider;

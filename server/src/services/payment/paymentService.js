@@ -9,6 +9,8 @@ import {
   PACK_DEFINITIONS,
   PAYMENT_ORDER_EXPIRY_MINUTES,
   PAYMENT_STATUS,
+  VND_PER_CREDIT,
+  CUSTOM_AMOUNT_LIMITS,
 } from "@server/const/payment";
 
 export function listPacks() {
@@ -21,7 +23,29 @@ export function listPacks() {
   return {
     packs,
     activeProvider: getActiveProviderKey(),
+    custom: {
+      vndPerCredit: VND_PER_CREDIT,
+      minAmount: CUSTOM_AMOUNT_LIMITS.min,
+      maxAmount: CUSTOM_AMOUNT_LIMITS.max,
+    },
   };
+}
+
+/**
+ * Bracket-based bonus lookup for custom amounts. Uses PACK_DEFINITIONS as the
+ * threshold ladder so custom matches pack bonuses at the same price points.
+ */
+export function bonusPctForAmount(amount) {
+  return PACK_DEFINITIONS.filter((p) => amount >= p.price).reduce(
+    (max, p) => Math.max(max, p.bonusPct),
+    0,
+  );
+}
+
+export function computeCustomCredits(amount) {
+  const base = amount / VND_PER_CREDIT;
+  const bonusPct = bonusPctForAmount(amount);
+  return Math.round(base * (1 + bonusPct / 100));
 }
 
 function generateOrderCode() {
@@ -86,6 +110,56 @@ export async function createCheckout(userId, packId) {
   const link = await persistAndCreateLink(order, {
     amount: pack.price,
     description: `Pack ${pack.id}`,
+  });
+
+  return { ...link, expiresAt };
+}
+
+/**
+ * Custom top-up: user nhập VND tự do trong [min, max], được tính credit theo
+ * VND_PER_CREDIT + bonus theo bracket khớp PACK_DEFINITIONS.
+ */
+export async function createCustomCheckout(userId, amount) {
+  if (
+    typeof amount !== "number" ||
+    !Number.isFinite(amount) ||
+    !Number.isInteger(amount) ||
+    amount <= 0
+  ) {
+    throw new ApiError(422, "INVALID_AMOUNT: must be a positive integer");
+  }
+  if (
+    amount < CUSTOM_AMOUNT_LIMITS.min ||
+    amount > CUSTOM_AMOUNT_LIMITS.max
+  ) {
+    throw new ApiError(
+      422,
+      `AMOUNT_OUT_OF_RANGE: must be between ${CUSTOM_AMOUNT_LIMITS.min} and ${CUSTOM_AMOUNT_LIMITS.max}`,
+    );
+  }
+
+  const providerKey = getActiveProviderKey();
+  const expiresAt = new Date(Date.now() + PAYMENT_ORDER_EXPIRY_MINUTES * 60_000);
+  const bonusPct = bonusPctForAmount(amount);
+  const baseCredits = amount / VND_PER_CREDIT;
+
+  const order = await createOrderWithRetry({
+    userId,
+    orderCode: generateOrderCode(),
+    provider: providerKey,
+    packSnapshot: {
+      packId: "custom",
+      price: amount,
+      baseCredits,
+      bonusPct,
+    },
+    status: PAYMENT_STATUS.PENDING,
+    expiresAt,
+  });
+
+  const link = await persistAndCreateLink(order, {
+    amount,
+    description: `Custom top-up ${amount}`,
   });
 
   return { ...link, expiresAt };
