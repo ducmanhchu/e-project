@@ -22,11 +22,7 @@ export async function createPaymentLink({ orderCode, amount }) {
     `&bank=${encodeURIComponent(env.SEPAY_BANK_CODE)}` +
     `&amount=${encodeURIComponent(amount)}` +
     `&des=${encodeURIComponent(memo)}`;
-  return {
-    paymentLinkId: memo,
-    checkoutUrl: qrUrl,
-    qrCode: qrUrl,
-  };
+  return { checkoutUrl: qrUrl, qrCode: qrUrl };
 }
 
 export function verifyWebhookSignature(_payload, headers) {

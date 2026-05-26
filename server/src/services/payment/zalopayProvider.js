@@ -72,11 +72,7 @@ export async function createPaymentLink({ orderCode, amount, description }) {
     );
   }
 
-  return {
-    paymentLinkId: appTransId,
-    checkoutUrl: data.order_url,
-    qrCode: data.qr_code, // raw EMVCo QR data string
-  };
+  return { checkoutUrl: data.order_url, qrCode: data.qr_code };
 }
 
 export function verifyWebhookSignature(payload, _headers) {

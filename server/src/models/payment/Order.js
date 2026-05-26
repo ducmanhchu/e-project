@@ -37,7 +37,6 @@ const orderSchema = new mongoose.Schema(
       enum: Object.values(PAYMENT_PROVIDER),
       required: true,
     },
-    paymentLinkId: String,
     checkoutUrl: String,
     qrCode: String,
     webhookRaw: { type: mongoose.Schema.Types.Mixed, default: null },

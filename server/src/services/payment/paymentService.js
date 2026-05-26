@@ -52,13 +52,7 @@ async function persistAndCreateLink(order, { amount, description }) {
   });
   await Order.findOneAndUpdate(
     { _id: order._id },
-    {
-      $set: {
-        paymentLinkId: link.paymentLinkId,
-        checkoutUrl: link.checkoutUrl,
-        qrCode: link.qrCode,
-      },
-    },
+    { $set: { checkoutUrl: link.checkoutUrl, qrCode: link.qrCode } },
   );
   return {
     orderCode: order.orderCode,
@@ -194,7 +188,7 @@ async function ensureCreditsGranted(orderId) {
     { $set: { creditsGranted: true } },
     { new: true },
   );
-  if (!claimed) return; // already granted, or order not PAID yet
+  if (!claimed) return;
 
   try {
     await walletService.grantPack(claimed.userId, claimed);

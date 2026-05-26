@@ -11,9 +11,8 @@ async function main() {
   });
   console.log("  orderCode    :", orderCode);
   console.log("ZaloPay createPaymentLink OK:");
-  console.log("  paymentLinkId:", out.paymentLinkId);
-  console.log("  checkoutUrl  :", out.checkoutUrl);
-  console.log("  qrCode       :", String(out.qrCode).slice(0, 80), "...");
+  console.log("  checkoutUrl :", out.checkoutUrl);
+  console.log("  qrCode      :", String(out.qrCode).slice(0, 80), "...");
 }
 
 main().catch((err) => {

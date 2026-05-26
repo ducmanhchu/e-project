@@ -9,15 +9,18 @@ export async function getCredits(req, res, next) {
   }
 }
 
+function parseIntInRange(raw, fallback, min, max) {
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
 export async function listTransactions(req, res, next) {
   try {
-    const page = Math.max(1, parseInt(req.query.page || "1", 10));
-    const limit = Math.min(100, parseInt(req.query.limit || "20", 10));
-    const type = req.query.type;
     const out = await walletService.listTransactions(req.user.id, {
-      page,
-      limit,
-      type,
+      page: parseIntInRange(req.query.page, 1, 1, Number.MAX_SAFE_INTEGER),
+      limit: parseIntInRange(req.query.limit, 20, 1, 100),
+      type: req.query.type,
     });
     res.status(200).json({ success: true, data: out });
   } catch (e) {
