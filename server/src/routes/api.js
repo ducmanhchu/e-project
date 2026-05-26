@@ -158,10 +158,6 @@ router.post("/me/cards", deckController.addCardManual);
 router.post("/me/cards/from-vocab", deckController.addCardsFromVocab);
 router.patch("/me/cards/:cardId", deckController.updateCard);
 router.delete("/me/cards/:cardId", deckController.deleteCard);
-router.post("/me/cards/:cardId/rate", deckController.rateCard);
-
-// ── Study (shuffled cards of a deck) ─────────────────
-router.get("/me/study", deckController.getStudyCards);
 
 // ── User upload (image for flashcards) ───────────────
 router.post(
