@@ -14,6 +14,7 @@ import {
 	buildLessonsListPromise,
 	resolveSort,
 } from "@server/helpers/writing/listLessonsQuery";
+import { chargeForSubmit } from "@server/helpers/chargeForSubmit";
 
 /** Projection dùng khi admin list có sort (aggregate hoặc find). */
 const DIALOGUE_LIST_PROJECTION = Object.freeze({
@@ -530,6 +531,7 @@ export async function bulkDeleteDialogues(ids) {
 }
 
 export async function retry({ userId, dialogueId }) {
+	// Retry only deletes the existing attempt (no AI call) → free of charge.
 	await DialogueAttempt.deleteOne({ userId, dialogueId });
 }
 
@@ -635,6 +637,23 @@ export async function recordMessageAttempt({
 		attemptedAt: new Date(),
 	};
 
+	return chargeForSubmit(
+		{
+			userId,
+			reason: `submit slang_hang ${dialogueId}/${messageOrder}`,
+			referenceType: "DialogueAttempt",
+			referenceId: dialogueId,
+		},
+		() => recordWithRetry(userId, dialogueId, newAttempt, totalLearnerMessages),
+	);
+}
+
+async function recordWithRetry(
+	userId,
+	dialogueId,
+	newAttempt,
+	totalLearnerMessages,
+) {
 	for (let i = 0; i < MAX_SAVE_RETRIES; i++) {
 		try {
 			const saved = await buildAndSaveAttempt({

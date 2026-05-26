@@ -12,12 +12,18 @@ import * as deckController from "@server/controllers/deckController";
 import * as folderController from "@server/controllers/folderController";
 import * as communityController from "@server/controllers/communityController";
 import * as uploadController from "@server/controllers/uploadController";
+import * as walletController from "@server/controllers/walletController";
+import * as paymentController from "@server/controllers/paymentController";
 import { mediaUpload } from "@server/middlewares/upload";
 import {
 	protectedRoute,
 	optionalAuth,
 } from "@server/middlewares/authMiddleware";
 const router = express.Router();
+
+// Payment provider webhooks (public, signature-verified inside handler).
+// Provider key in URL: "sepay".
+router.post("/payments/webhook/:provider", paymentController.webhook);
 
 // auth routes
 router.post("/auth/signup", authController.signUp);
@@ -65,6 +71,18 @@ router.get(
 router.use(protectedRoute);
 router.get("/me", userController.authMe);
 router.post("/auth/change-password", authController.changePassword);
+
+// ── Credits ─────────────────────────────────────────────
+router.get("/me/credits", walletController.getCredits);
+router.get("/me/credits/transactions", walletController.listTransactions);
+router.post("/me/checkin", walletController.checkin);
+router.get("/me/checkin/status", walletController.getCheckinStatus);
+
+// ── Payments ────────────────────────────────────────────
+router.get("/payments/packs", paymentController.listPacks);
+router.post("/payments/checkout", paymentController.checkout);
+router.post("/payments/checkout/custom", paymentController.customCheckout);
+router.get("/payments/orders/:orderCode", paymentController.getOrder);
 
 // ── Reverse Translation ─────────────────────────────────
 router.get(

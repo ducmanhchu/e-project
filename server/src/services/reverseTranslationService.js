@@ -2,6 +2,7 @@ import { ReverseTranslation } from "@server/models/writing/ReverseTranslation";
 import { Attempt } from "@server/models/attempt/Attempt";
 import { Submission } from "@server/models/attempt/Submission";
 import { ApiError } from "@server/helpers/ApiError";
+import { chargeForSubmit } from "@server/helpers/chargeForSubmit";
 import { aiGradeAnswer } from "@server/services/ai/gradingProvider";
 import {
 	findOrCreateAttempt,
@@ -203,42 +204,52 @@ export async function submitAnswer(
 	if (!sentence)
 		throw ApiError.badRequest(`Sentence order ${sentenceOrder} not found`);
 
-	const { result: grading, provider } = await aiGradeAnswer(
-		userAnswer,
-		sentence.referenceAnswer,
-		sentence.vietnameseText,
-		lesson.level,
-		lesson.contentType,
-	);
-
-	const score = Math.min(100, Math.max(0, Math.round(grading.score)));
-
-	const attempt = await findOrCreateAttempt(
-		userId,
-		lessonId,
-		"ReverseTranslation",
-	);
-	const { submission, progress } = await submitAndUpdateProgress(attempt, {
-		sentenceOrder,
-		userAnswer,
-		score,
-		gradedBy: provider,
-		feedback: {
-			suggestion: grading.suggestion || "",
-			improvements: grading.improvements || [],
-			comment: grading.comment || "",
+	return chargeForSubmit(
+		{
+			userId,
+			reason: `submit reverse_translation ${lessonId}/${sentenceOrder}`,
+			referenceType: "Attempt",
+			referenceId: lessonId,
 		},
-		isCompleted: score >= COMPLETION_THRESHOLD,
-		totalSentences: lesson.totalSentences,
-		keepOnlyLast: true,
-	});
+		async () => {
+			const { result: grading, provider } = await aiGradeAnswer(
+				userAnswer,
+				sentence.referenceAnswer,
+				sentence.vietnameseText,
+				lesson.level,
+				lesson.contentType,
+			);
 
-	return {
-		score,
-		feedback: submission.feedback,
-		gradedBy: provider,
-		isCompleted: score >= COMPLETION_THRESHOLD,
-	};
+			const score = Math.min(100, Math.max(0, Math.round(grading.score)));
+
+			const attempt = await findOrCreateAttempt(
+				userId,
+				lessonId,
+				"ReverseTranslation",
+			);
+			const { submission } = await submitAndUpdateProgress(attempt, {
+				sentenceOrder,
+				userAnswer,
+				score,
+				gradedBy: provider,
+				feedback: {
+					suggestion: grading.suggestion || "",
+					improvements: grading.improvements || [],
+					comment: grading.comment || "",
+				},
+				isCompleted: score >= COMPLETION_THRESHOLD,
+				totalSentences: lesson.totalSentences,
+				keepOnlyLast: true,
+			});
+
+			return {
+				score,
+				feedback: submission.feedback,
+				gradedBy: provider,
+				isCompleted: score >= COMPLETION_THRESHOLD,
+			};
+		},
+	);
 }
 
 /**
@@ -400,3 +411,4 @@ export async function adminGetLesson(lessonId) {
 		updatedAt: lesson.updatedAt,
 	};
 }
+

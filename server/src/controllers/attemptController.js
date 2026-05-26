@@ -59,6 +59,7 @@ export async function updateAttempt(req, res, next) {
     if (!attempt) throw ApiError.notFound("No attempt found");
 
     if (action === "retry") {
+      // Retry only resets DB state (no AI call) → free of charge.
       await resetAttempt(attempt);
       const getter = LESSON_GETTERS[attempt.lessonType];
       const data = await getter(attempt.lessonId, req.user._id);
