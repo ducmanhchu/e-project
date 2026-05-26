@@ -72,6 +72,13 @@ const wordChainGameSchema = new mongoose.Schema(
 
 wordChainGameSchema.index({ userId: 1, status: 1, createdAt: -1 });
 wordChainGameSchema.index({ userId: 1, level: 1, finalScore: -1 });
+wordChainGameSchema.index(
+  { userId: 1, status: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: WORD_CHAIN_STATUS.ACTIVE },
+  },
+);
 
 export const WordChainGame = mongoose.model(
   "WordChainGame",

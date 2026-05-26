@@ -49,39 +49,56 @@ function toResponse(game) {
   };
 }
 
+async function withVersionRetry(fn) {
+  for (let attempt = 0; attempt < MAX_SAVE_RETRIES; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isVersionConflict = err?.name === "VersionError";
+      if (!isVersionConflict || attempt === MAX_SAVE_RETRIES - 1) throw err;
+    }
+  }
+}
+
 export async function startGame({ userId, level }) {
   validateLevel(level);
 
-  await WordChainGame.updateMany(
-    { userId, status: WORD_CHAIN_STATUS.ACTIVE },
-    {
-      $set: {
-        status: WORD_CHAIN_STATUS.ENDED,
-        failReason: WORD_CHAIN_FAIL_REASON.ABANDONED,
-        endedAt: new Date(),
-      },
-    },
-  );
-
-  const seed = await botPicker.pickSeedWord({ level });
-  const now = new Date();
-
-  const game = await WordChainGame.create({
-    userId,
-    level,
-    status: WORD_CHAIN_STATUS.ACTIVE,
-    words: [
+  for (let attempt = 0; attempt < MAX_SAVE_RETRIES; attempt++) {
+    await WordChainGame.updateMany(
+      { userId, status: WORD_CHAIN_STATUS.ACTIVE },
       {
-        word: seed.word,
-        by: WORD_CHAIN_SPEAKER.BOT,
-        source: seed.source,
-        at: now,
+        $set: {
+          status: WORD_CHAIN_STATUS.ENDED,
+          failReason: WORD_CHAIN_FAIL_REASON.ABANDONED,
+          endedAt: new Date(),
+        },
       },
-    ],
-    turnStartedAt: now,
-  });
+    );
 
-  return toResponse(game);
+    const seed = await botPicker.pickSeedWord({ level });
+    const now = new Date();
+
+    try {
+      const game = await WordChainGame.create({
+        userId,
+        level,
+        status: WORD_CHAIN_STATUS.ACTIVE,
+        words: [
+          {
+            word: seed.word,
+            by: WORD_CHAIN_SPEAKER.BOT,
+            source: seed.source,
+            at: now,
+          },
+        ],
+        turnStartedAt: now,
+      });
+      return toResponse(game);
+    } catch (err) {
+      const isDuplicateKey = err?.code === 11000;
+      if (!isDuplicateKey || attempt === MAX_SAVE_RETRIES - 1) throw err;
+    }
+  }
 }
 
 export async function submitWord({ userId, gameId, word }) {
@@ -89,15 +106,7 @@ export async function submitWord({ userId, gameId, word }) {
     throw ApiError.badRequest("word is required");
   }
   const trimmed = word.trim().toLowerCase();
-
-  for (let attempt = 0; attempt < MAX_SAVE_RETRIES; attempt++) {
-    try {
-      return await submitOnce({ userId, gameId, word: trimmed });
-    } catch (err) {
-      const isVersionConflict = err?.name === "VersionError";
-      if (!isVersionConflict || attempt === MAX_SAVE_RETRIES - 1) throw err;
-    }
-  }
+  return withVersionRetry(() => submitOnce({ userId, gameId, word: trimmed }));
 }
 
 async function submitOnce({ userId, gameId, word }) {
@@ -166,26 +175,30 @@ async function endGame(game, failReason, now) {
 }
 
 export async function giveUp({ userId, gameId }) {
-  const game = await WordChainGame.findOne({ _id: gameId, userId });
-  if (!game) throw ApiError.notFound("Game not found");
-  if (game.status !== WORD_CHAIN_STATUS.ACTIVE) {
-    throw ApiError.badRequest("Game already ended");
-  }
-  return endGame(game, WORD_CHAIN_FAIL_REASON.GAVE_UP, new Date());
+  return withVersionRetry(async () => {
+    const game = await WordChainGame.findOne({ _id: gameId, userId });
+    if (!game) throw ApiError.notFound("Game not found");
+    if (game.status !== WORD_CHAIN_STATUS.ACTIVE) {
+      throw ApiError.badRequest("Game already ended");
+    }
+    return endGame(game, WORD_CHAIN_FAIL_REASON.GAVE_UP, new Date());
+  });
 }
 
 export async function getActive({ userId }) {
-  const game = await WordChainGame.findOne({
-    userId,
-    status: WORD_CHAIN_STATUS.ACTIVE,
-  });
-  if (!game) return null;
+  return withVersionRetry(async () => {
+    const game = await WordChainGame.findOne({
+      userId,
+      status: WORD_CHAIN_STATUS.ACTIVE,
+    }).sort({ createdAt: -1 });
+    if (!game) return null;
 
-  const timeLimit = TIME_LIMIT_PER_LEVEL_MS[game.level];
-  if (Date.now() - game.turnStartedAt > timeLimit) {
-    return endGame(game, WORD_CHAIN_FAIL_REASON.TIMEOUT, new Date());
-  }
-  return toResponse(game);
+    const timeLimit = TIME_LIMIT_PER_LEVEL_MS[game.level];
+    if (Date.now() - game.turnStartedAt > timeLimit) {
+      return endGame(game, WORD_CHAIN_FAIL_REASON.TIMEOUT, new Date());
+    }
+    return toResponse(game);
+  });
 }
 
 export async function getMyGame({ userId, gameId }) {

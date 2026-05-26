@@ -41,6 +41,7 @@ const vocabularySchema = new mongoose.Schema(
 );
 
 vocabularySchema.index({ word: 1 }, { unique: true });
+vocabularySchema.index({ "definitions.definitionCefrLevel": 1, word: 1 });
 
 export const Vocabulary = mongoose.model(
   "Vocabulary",
