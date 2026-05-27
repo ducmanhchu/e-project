@@ -6,16 +6,26 @@ import {
 	lazy,
 	Suspense,
 } from "react";
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
+import { Link, Navigate, useParams } from "react-router";
+import {
+	keepPreviousData,
+	useInfiniteQuery,
+	useQuery,
+} from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 
-import { fetchFolderList, fetchDeckList } from "@shared/api/vocab";
+import { fetchDeckList, fetchFolderDetail } from "@shared/api/vocab";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "@shared/components/ui/breadcrumb";
 import { Skeleton } from "@shared/components/ui/skeleton";
-import { Button } from "@shared/components/ui/button";
-import { GooeyInput } from "@shared/components/ui/gooey-input";
 
-import { VocabFolder } from "@user/features/vocabulary/components/folder";
 import { VocabDeck } from "@user/features/vocabulary/components/deck";
 import {
 	VOCAB_PAGE_SIZE,
@@ -26,68 +36,53 @@ import {
 	useVocabSearch,
 	vocabSearchParams,
 } from "@user/features/vocabulary/utils/helpers";
+import { GooeyInput } from "@shared/components/ui/gooey-input";
+import { Button } from "@shared/components/ui/button";
 
-const VocabCreateDialog = lazy(() =>
-	import("@user/features/vocabulary/components/create-dialog").then((m) => ({
-		default: m.VocabCreateDialog,
-	})),
+const VocabDeckCreateDialog = lazy(() =>
+	import("@user/features/vocabulary/components/deck-create-dialog").then(
+		(m) => ({ default: m.VocabDeckCreateDialog }),
+	),
 );
-
 /**
- * Trang kho gốc: danh sách thư mục và học phần không thuộc folder.
+ * Trang nội dung trong một thư mục: breadcrumb + danh sách học phần.
  */
-export function Vocabulary() {
+export function VocabularyFolder() {
+	const { folderId } = useParams<{ folderId: string }>();
 	const [createOpen, setCreateOpen] = useState(false);
 	const loadMoreRef = useRef<HTMLDivElement>(null);
 	const { searchInput, setSearchInput, deferredSearch } = useVocabSearch();
 
-	const foldersQuery = useInfiniteQuery({
-		queryKey: ["folder", "list", deferredSearch],
-		queryFn: ({ pageParam }) =>
-			fetchFolderList({
-				page: pageParam,
-				limit: VOCAB_PAGE_SIZE,
-				...vocabSearchParams(deferredSearch),
-			}),
-		initialPageParam: 1,
-		getNextPageParam,
-		placeholderData: keepPreviousData,
+	const folderQuery = useQuery({
+		queryKey: ["folder", "detail", folderId],
+		queryFn: () => fetchFolderDetail(folderId!),
+		enabled: !!folderId,
 	});
 
 	const decksQuery = useInfiniteQuery({
-		queryKey: ["deck", "list", "root", deferredSearch],
+		queryKey: ["deck", "list", folderId, deferredSearch],
 		queryFn: ({ pageParam }) =>
 			fetchDeckList({
-				folderId: "null",
+				folderId: folderId!,
 				page: pageParam,
 				limit: VOCAB_PAGE_SIZE,
 				...vocabSearchParams(deferredSearch),
 			}),
 		initialPageParam: 1,
 		getNextPageParam,
+		enabled: !!folderId,
 		placeholderData: keepPreviousData,
 	});
 
-	const folders = foldersQuery.data?.pages.flatMap((p) => p.data) ?? [];
 	const decks = decksQuery.data?.pages.flatMap((p) => p.data) ?? [];
-	const isInitialLoading = foldersQuery.isLoading || decksQuery.isLoading;
-	const isFetchingMore =
-		foldersQuery.isFetchingNextPage || decksQuery.isFetchingNextPage;
-	const hasMore =
-		foldersQuery.hasNextPage === true || decksQuery.hasNextPage === true;
-	const isEmpty =
-		!isInitialLoading && folders.length === 0 && decks.length === 0;
+	const isInitialLoading = folderQuery.isLoading || decksQuery.isLoading;
+	const isFetchingMore = decksQuery.isFetchingNextPage;
+	const hasMore = decksQuery.hasNextPage === true;
 
 	const loadMore = useCallback(() => {
-		if (isFetchingMore) return;
-		if (foldersQuery.hasNextPage) {
-			void foldersQuery.fetchNextPage();
-			return;
-		}
-		if (decksQuery.hasNextPage) {
-			void decksQuery.fetchNextPage();
-		}
-	}, [isFetchingMore, foldersQuery, decksQuery]);
+		if (isFetchingMore || !decksQuery.hasNextPage) return;
+		void decksQuery.fetchNextPage();
+	}, [isFetchingMore, decksQuery]);
 
 	useEffect(() => {
 		const el = loadMoreRef.current;
@@ -103,9 +98,33 @@ export function Vocabulary() {
 		return () => observer.disconnect();
 	}, [hasMore, loadMore]);
 
+	if (folderQuery.isError) {
+		return <Navigate to={VOCAB_ROUTES.root} replace />;
+	}
+
+	const folderName = folderQuery.data?.data.name ?? "";
+
 	return (
-		<div className="flex flex-col gap-8">
-			<h1 className="text-4xl font-black">Từ vựng của tôi</h1>
+		<div className="flex flex-col gap-6">
+			<Breadcrumb>
+				<BreadcrumbList>
+					<BreadcrumbItem>
+						<BreadcrumbLink asChild>
+							<Link to={VOCAB_ROUTES.root}>Từ vựng của tôi</Link>
+						</BreadcrumbLink>
+					</BreadcrumbItem>
+					<BreadcrumbSeparator />
+					<BreadcrumbItem>
+						<BreadcrumbPage>
+							{folderQuery.isLoading ? (
+								<Skeleton className="h-4 w-32 inline-block" />
+							) : (
+								folderName
+							)}
+						</BreadcrumbPage>
+					</BreadcrumbItem>
+				</BreadcrumbList>
+			</Breadcrumb>
 			<div className="flex gap-3">
 				<Button variant="blackHover" onClick={() => setCreateOpen(true)}>
 					<HugeiconsIcon icon={PlusSignIcon} />
@@ -120,9 +139,13 @@ export function Vocabulary() {
 					onValueChange={setSearchInput}
 				/>
 			</div>
-			{createOpen && (
+			{folderId && (
 				<Suspense fallback={null}>
-					<VocabCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
+					<VocabDeckCreateDialog
+						open={createOpen}
+						onOpenChange={setCreateOpen}
+						folderId={folderId}
+					/>
 				</Suspense>
 			)}
 			<div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-y-6 place-items-center">
@@ -133,30 +156,14 @@ export function Vocabulary() {
 							className="w-[160px] h-[125px] lg:w-[180px] lg:h-[150px] rounded-2xl"
 						/>
 					))}
-				{!isInitialLoading && !isEmpty && (
-					<>
-						{folders.map((folder) => (
-							<VocabFolder
-								key={folder._id}
-								folderId={folder._id}
-								to={VOCAB_ROUTES.folder(folder._id)}
-								folderName={folder.name}
-								cardNumber={folder.deckCount ?? 0}
-							/>
-						))}
-						{decks.map((deck) => (
-							<VocabDeck key={deck._id} deck={deck} />
-						))}
-					</>
-				)}
-				{isEmpty && (
-					<p className="text-sm text-muted-foreground place-self-start">
-						{deferredSearch
-							? "Không tìm thấy mục phù hợp."
-							: "Kho từ vựng trống."}
-					</p>
-				)}
+				{!isInitialLoading &&
+					decks.map((deck) => <VocabDeck key={deck._id} deck={deck} />)}
 			</div>
+			{!isInitialLoading && decks.length === 0 && (
+				<p className="text-sm text-muted-foreground">
+					{deferredSearch ? "Không tìm thấy mục phù hợp." : "Thư mục trống."}
+				</p>
+			)}
 			{hasMore && <div ref={loadMoreRef} className="h-1 w-full" aria-hidden />}
 			{isFetchingMore && (
 				<div className="flex justify-center py-4">

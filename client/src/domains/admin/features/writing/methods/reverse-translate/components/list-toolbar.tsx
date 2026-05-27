@@ -61,6 +61,7 @@ export const RTListToolbar = memo(function RTListToolbar({
 					placeholder="Tìm kiếm"
 					value={searchInput}
 					onValueChange={onSearchChange}
+					theme="light"
 				/>
 			</div>
 

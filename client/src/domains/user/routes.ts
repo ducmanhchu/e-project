@@ -25,6 +25,8 @@ import { ConversationList } from "@user/features/speaking/methods/conversation/p
 import { ConversationExercise } from "@user/features/speaking/methods/conversation/pages/exercise";
 
 import { Vocabulary } from "@user/features/vocabulary/pages";
+import { VocabularyFolder } from "@user/features/vocabulary/pages/folder";
+import { VocabularyLayout } from "@user/features/vocabulary/layout/vocabulary-layout";
 
 import { requireAuthLoader } from "@shared/lib/auth-loaders";
 
@@ -80,8 +82,18 @@ export const userRoutes: RouteObject[] = [
 			},
 			{
 				path: "vocabulary",
-				Component: Vocabulary,
+				Component: VocabularyLayout,
 				loader: requireAuthLoader,
+				children: [
+					{
+						index: true,
+						Component: Vocabulary,
+					},
+					{
+						path: "folders/:folderId",
+						Component: VocabularyFolder,
+					},
+				],
 			},
 		],
 	},

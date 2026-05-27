@@ -55,6 +55,7 @@ export const SAWListToolbar = memo(function SAWListToolbar({
 					placeholder="Tìm kiếm"
 					value={searchInput}
 					onValueChange={onSearchChange}
+					theme="light"
 				/>
 			</div>
 

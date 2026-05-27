@@ -55,6 +55,7 @@ export const ParaphraseListToolbar = memo(function ParaphraseListToolbar({
 					placeholder="Tìm kiếm"
 					value={searchInput}
 					onValueChange={onSearchChange}
+					theme="light"
 				/>
 			</div>
 

@@ -55,6 +55,7 @@ export const ConversationListToolbar = memo(function ConversationListToolbar({
 					placeholder="Tìm kiếm"
 					value={searchInput}
 					onValueChange={onSearchChange}
+					theme="light"
 				/>
 			</div>
 
