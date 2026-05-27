@@ -4,7 +4,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import type { ReverseTranslateQueryParams } from "@shared/types/reverse-translate";
 import { Separator } from "@shared/components/ui/separator";
 import { Skeleton } from "@shared/components/ui/skeleton";
-import { FilterSection } from "@user/features/writing/components/filter-section";
+import { FilterSection } from "@/domains/user/components/filter-section";
 import { ReverseTranslateCard } from "@user/features/writing/methods/reverse-translate/components/card";
 import {
 	Pagination,

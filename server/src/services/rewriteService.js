@@ -2,6 +2,7 @@ import { Rewrite } from "@server/models/writing/Rewrite";
 import { Attempt } from "@server/models/attempt/Attempt";
 import { Submission } from "@server/models/attempt/Submission";
 import { ApiError } from "@server/helpers/ApiError";
+import { chargeForSubmit } from "@server/helpers/chargeForSubmit";
 import { aiGradeRewrite } from "@server/services/ai/gradingProvider";
 import {
   findOrCreateAttempt,
@@ -148,36 +149,46 @@ export async function submitAnswer(userId, lessonId, sentenceOrder, userAnswer) 
   const sentence = (lesson.sentences || []).find((s) => s.order === sentenceOrder);
   if (!sentence) throw ApiError.badRequest(`Sentence order ${sentenceOrder} not found`);
 
-  const { result: grading, provider } = await aiGradeRewrite(
-    userAnswer,
-    sentence.targetSentence,
-    lesson.level,
-  );
-
-  const score = Math.min(100, Math.max(0, Math.round(grading.score)));
-
-  const attempt = await findOrCreateAttempt(userId, lessonId, "Rewrite");
-  const { submission } = await submitAndUpdateProgress(attempt, {
-    sentenceOrder,
-    userAnswer,
-    score,
-    gradedBy: provider,
-    feedback: {
-      suggestion: grading.suggestion || "",
-      improvements: grading.improvements || [],
-      comment: grading.comment || "",
-      modelAnswer: grading.modelAnswer || null,
+  return chargeForSubmit(
+    {
+      userId,
+      reason: `submit rewrite ${lessonId}/${sentenceOrder}`,
+      referenceType: "Attempt",
+      referenceId: lessonId,
     },
-    isCompleted: score >= COMPLETION_THRESHOLD,
-    totalSentences: lesson.totalSentences,
-  });
+    async () => {
+      const { result: grading, provider } = await aiGradeRewrite(
+        userAnswer,
+        sentence.targetSentence,
+        lesson.level,
+      );
 
-  return {
-    score,
-    feedback: submission.feedback,
-    gradedBy: provider,
-    isCompleted: score >= COMPLETION_THRESHOLD,
-  };
+      const score = Math.min(100, Math.max(0, Math.round(grading.score)));
+
+      const attempt = await findOrCreateAttempt(userId, lessonId, "Rewrite");
+      const { submission } = await submitAndUpdateProgress(attempt, {
+        sentenceOrder,
+        userAnswer,
+        score,
+        gradedBy: provider,
+        feedback: {
+          suggestion: grading.suggestion || "",
+          improvements: grading.improvements || [],
+          comment: grading.comment || "",
+          modelAnswer: grading.modelAnswer || null,
+        },
+        isCompleted: score >= COMPLETION_THRESHOLD,
+        totalSentences: lesson.totalSentences,
+      });
+
+      return {
+        score,
+        feedback: submission.feedback,
+        gradedBy: provider,
+        isCompleted: score >= COMPLETION_THRESHOLD,
+      };
+    },
+  );
 }
 
 /**
@@ -358,3 +369,4 @@ export async function updateLesson(lessonId, body) {
     updatedAt: updated.updatedAt,
   };
 }
+

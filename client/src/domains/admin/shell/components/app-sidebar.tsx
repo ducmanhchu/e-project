@@ -2,10 +2,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	ArrowDown01Icon,
 	LogoutCircle01Icon,
-	Moon02Icon,
 	Mic02Icon,
 	TextFontIcon,
-	Sun01Icon,
 } from "@hugeicons/core-free-icons";
 import { Link } from "react-router";
 import { useNavigate } from "react-router";
@@ -35,7 +33,6 @@ import {
 	AvatarFallback,
 	AvatarImage,
 } from "@/shared/components/ui/avatar";
-import { useTheme } from "@shared/hooks/use-theme";
 import { useAuthStore } from "@shared/store/use-auth-store";
 import { signOut } from "@shared/api/auth";
 import { useFetchMe } from "@shared/hooks/use-fetch-me";
@@ -47,10 +44,10 @@ const features = [
 		children: [
 			{
 				title: "Dịch ngược",
-				href: "/admin/back-translate",
+				href: "/admin/reverse-translate",
 			},
-			{ title: "Nhìn và viết", href: "/admin/see-and-write" },
-			{ title: "Diễn đạt câu", href: "/admin/paraphrase" },
+			{ title: "Quan sát và viết", href: "/admin/see-and-write" },
+			{ title: "Viết lại câu", href: "/admin/paraphrase" },
 		],
 	},
 	{
@@ -65,7 +62,6 @@ export function AppSidebar() {
 	const queryClient = useQueryClient();
 
 	const { data: me } = useFetchMe();
-	const { theme, toggleTheme } = useTheme();
 	const clearAuth = useAuthStore((s) => s.clearAuth);
 
 	const logout = useMutation({
@@ -151,21 +147,10 @@ export function AppSidebar() {
 
 			<SidebarFooter>
 				<SidebarMenu>
-					<SidebarMenuItem className="flex items-center gap-2">
+					<SidebarMenuItem>
 						<SidebarMenuButton
-							onClick={toggleTheme}
-							className="w-auto shrink-0 rounded-full"
-						>
-							{theme === "light" ? (
-								<HugeiconsIcon icon={Moon02Icon} />
-							) : (
-								<HugeiconsIcon icon={Sun01Icon} />
-							)}
-							<span className="sr-only">Chuyển đổi giao diện</span>
-						</SidebarMenuButton>
-						<SidebarMenuButton
+							className="text-red-400 rounded-full hover:text-red-500"
 							onClick={() => logout.mutate()}
-							className="flex-1 rounded-full"
 						>
 							<HugeiconsIcon icon={LogoutCircle01Icon} />
 							Đăng xuất

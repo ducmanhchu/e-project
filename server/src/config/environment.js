@@ -26,4 +26,21 @@ export const env = {
 
   AZURE_SPEECH_KEY: process.env.AZURE_SPEECH_KEY,
   AZURE_SPEECH_REGION: process.env.AZURE_SPEECH_REGION,
+
+  // Active payment provider for new checkouts: "sepay" | "zalopay"
+  PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER || "sepay",
+
+  // Sepay (bank transfer via VietQR)
+  SEPAY_API_KEY: process.env.SEPAY_API_KEY,            // for webhook auth header
+  SEPAY_ACCOUNT_NUMBER: process.env.SEPAY_ACCOUNT_NUMBER, // receiving bank account
+  SEPAY_BANK_CODE: process.env.SEPAY_BANK_CODE,        // e.g. "MB", "VCB", "TCB"
+  SEPAY_ORDER_PREFIX: process.env.SEPAY_ORDER_PREFIX || "WW", // prefix for QR memo
+
+  // ZaloPay (Gateway — hosted page + QR + IPN webhook)
+  ZALOPAY_APP_ID: process.env.ZALOPAY_APP_ID,
+  ZALOPAY_KEY1: process.env.ZALOPAY_KEY1,              // request MAC
+  ZALOPAY_KEY2: process.env.ZALOPAY_KEY2,              // callback MAC
+  ZALOPAY_ENDPOINT:
+    process.env.ZALOPAY_ENDPOINT || "https://sb-openapi.zalopay.vn",
+  ZALOPAY_CALLBACK_URL: process.env.ZALOPAY_CALLBACK_URL,
 };

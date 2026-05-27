@@ -1,11 +1,11 @@
 import type { RouteObject } from "react-router";
 
-import { AdminLayout } from "@/domains/admin/shell/admin-layout";
-import { Login } from "@/domains/admin/features/auth/pages/login";
-import { ReverseTranslate } from "@/domains/admin/features/writing/pages/reverse-translate";
-import { SeeAndWrite } from "@/domains/admin/features/writing/pages/see-and-write";
-import { Paraphrase } from "@/domains/admin/features/writing/pages/paraphrase";
-import { Conversation } from "@/domains/admin/features/speaking/pages/conversation";
+import { AdminLayout } from "@admin/shell/admin-layout";
+import { Login } from "@admin/features/auth/pages/login";
+import { ReverseTranslate } from "@/domains/admin/features/writing/methods/reverse-translate/pages";
+import { SeeAndWrite } from "@/domains/admin/features/writing/methods/see-and-write/pages";
+import { Paraphrase } from "@/domains/admin/features/writing/methods/paraphrase/pages";
+import { Conversation } from "@/domains/admin/features/speaking/methods/conversation/pages";
 import { requireAdminLoader } from "@shared/lib/auth-loaders";
 
 export const adminRoutes: RouteObject[] = [

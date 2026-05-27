@@ -65,3 +65,51 @@ export type ParaphraseSubmitResponse = APIResponse<{
 	};
 	isCompleted: boolean;
 }>;
+
+// ADMIN
+export type AdminParaphraseListItem = {
+	id: string;
+	title: string;
+	level: ExerciseLevel;
+	topic: WritingExerciseTopic;
+	totalSentences: number;
+	sentences: {
+		order: number;
+		targetSentence: string;
+	}[];
+	createdAt?: string;
+	updatedAt?: string;
+};
+
+export type AdminParaphraseExerciseResponse =
+	APIResponse<AdminParaphraseListItem>;
+
+export type AdminParaphraseListQueryParams = {
+	level?: string;
+	topic?: string;
+	page?: number;
+	limit?: number;
+	search?: string;
+	sortBy?: "level" | "createdAt";
+	order?: "asc" | "desc";
+};
+
+export type CreateParaphraseExercisePayload = {
+	title: string;
+	level: ExerciseLevel;
+	topic: WritingExerciseTopic;
+	sentences: {
+		targetSentence: string;
+	}[];
+};
+export type CreateParaphraseExerciseResponse =
+	APIResponse<AdminParaphraseListItem>;
+
+export type UpdateParaphraseExercisePayload = Omit<
+	CreateParaphraseExercisePayload,
+	"sentences"
+> & {
+	sentences?: CreateParaphraseExercisePayload["sentences"];
+};
+export type UpdateParaphraseExerciseResponse =
+	APIResponse<AdminParaphraseListItem>;

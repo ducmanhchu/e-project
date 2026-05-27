@@ -7,7 +7,10 @@ import * as uploadController from "@server/controllers/uploadController";
 import * as vocabularyController from "@server/controllers/vocabularyController";
 import * as slangHangController from "@server/controllers/slangHangController";
 import { mediaUpload } from "@server/middlewares/upload";
-import { protectedRoute, authorizeRoles } from "@server/middlewares/authMiddleware";
+import {
+	protectedRoute,
+	authorizeRoles,
+} from "@server/middlewares/authMiddleware";
 import { USER_ROLE } from "@server/const/user";
 
 const adminRouter = express.Router();
@@ -17,47 +20,50 @@ adminRouter.use(authorizeRoles(USER_ROLE.ADMIN));
 
 // ── Reverse Translation ───────────────────────────────
 adminRouter.get(
-  "/writing/reverse-translation",
-  reverseTranslationController.adminListLessons,
+	"/writing/reverse-translation",
+	reverseTranslationController.adminListLessons,
 );
 adminRouter.post(
-  "/writing/reverse-translation",
-  reverseTranslationController.createLesson,
+	"/writing/reverse-translation",
+	reverseTranslationController.createLesson,
 );
 adminRouter.delete(
-  "/writing/reverse-translation",
-  reverseTranslationController.bulkDelete,
+	"/writing/reverse-translation",
+	reverseTranslationController.bulkDelete,
 );
 adminRouter.post(
-  "/writing/reverse-translation/preview",
-  reverseTranslationController.previewWriting,
+	"/writing/reverse-translation/preview",
+	reverseTranslationController.previewWriting,
 );
 adminRouter.get(
-  "/writing/reverse-translation/:id",
-  reverseTranslationController.adminGetLesson,
+	"/writing/reverse-translation/:id",
+	reverseTranslationController.adminGetLesson,
 );
 adminRouter.put(
-  "/writing/reverse-translation/:id",
-  reverseTranslationController.updateLesson,
+	"/writing/reverse-translation/:id",
+	reverseTranslationController.updateLesson,
 );
 adminRouter.delete(
-  "/writing/reverse-translation/:id",
-  reverseTranslationController.deleteLesson,
+	"/writing/reverse-translation/:id",
+	reverseTranslationController.deleteLesson,
 );
 adminRouter.post(
-  "/writing/reverse-translation/:id/dictionary",
-  reverseTranslationController.saveDictionary,
+	"/writing/reverse-translation/:id/dictionary",
+	reverseTranslationController.saveDictionary,
 );
 
 // ── See & Write ───────────────────────────────────────
 adminRouter.get("/writing/see-and-write", seeWriteController.adminListLessons);
 adminRouter.post("/writing/see-and-write", seeWriteController.createLesson);
 adminRouter.delete("/writing/see-and-write", seeWriteController.bulkDelete);
-adminRouter.get("/writing/see-and-write/:id", seeWriteController.adminGetLesson);
+adminRouter.get(
+	"/writing/see-and-write/:id",
+	seeWriteController.adminGetLesson,
+);
 adminRouter.put("/writing/see-and-write/:id", seeWriteController.updateLesson);
 adminRouter.delete(
-  "/writing/see-and-write/:id",
-  seeWriteController.deleteLesson,
+	"/writing/see-and-write/:id",
+	seeWriteController.deleteLesson,
 );
 
 // ── Rewrite ───────────────────────────────────────────
@@ -83,20 +89,27 @@ adminRouter.delete("/vocabulary/:id", vocabularyController.deleteVocabulary);
 
 // ── Slang Hang ────────────────────────────────────────
 adminRouter.post("/slang-hang/generate", slangHangController.generate);
-adminRouter.delete(
-  "/slang-hang/dialogues",
-  slangHangController.bulkDelete,
+adminRouter.get(
+	"/slang-hang/dialogues",
+	slangHangController.adminListDialogues,
 );
-adminRouter.delete(
-  "/slang-hang/dialogues/:id",
-  slangHangController.remove,
+adminRouter.get(
+	"/slang-hang/dialogues/:id",
+	slangHangController.adminGetDialogue,
 );
+adminRouter.post("/slang-hang/dialogues", slangHangController.createDialogue);
+adminRouter.put(
+	"/slang-hang/dialogues/:id",
+	slangHangController.updateDialogue,
+);
+adminRouter.delete("/slang-hang/dialogues", slangHangController.bulkDelete);
+adminRouter.delete("/slang-hang/dialogues/:id", slangHangController.remove);
 
 // ── Upload ────────────────────────────────────────────
 adminRouter.post(
-  "/upload",
-  mediaUpload.single("file"),
-  uploadController.uploadMedia,
+	"/upload",
+	mediaUpload.single("file"),
+	uploadController.uploadMedia,
 );
 
 export default adminRouter;

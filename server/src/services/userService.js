@@ -2,6 +2,7 @@ import { ApiError } from "@server/helpers/ApiError";
 import { validateFields } from "@server/helpers/validateFields";
 import User from "@server/models/user/User";
 import * as emailVerificationService from "@server/services/emailVerificationService";
+import * as walletService from "@server/services/wallet/walletService";
 import bcrypt from "bcrypt";
 
 export async function createUser(data) {
@@ -17,6 +18,12 @@ export async function createUser(data) {
     password: hashedPassword,
     fullName: fullName.trim(),
   });
+
+  walletService
+    .grantSignupBonus(user._id)
+    .catch((err) =>
+      console.error("[signup] grantSignupBonus failed:", err.message),
+    );
 
   emailVerificationService.createAndSendToken(user).catch((err) =>
     console.error("[signup] createAndSendToken failed:", err.message),

@@ -12,8 +12,8 @@ export function AdminLayout() {
 		<SidebarProvider>
 			<AppSidebar />
 			<SidebarInset>
-				<main className="p-4">
-					<SidebarTrigger />
+				<SidebarTrigger className="mt-2 ms-4" />
+				<main className="px-6 py-4">
 					<Outlet />
 				</main>
 			</SidebarInset>

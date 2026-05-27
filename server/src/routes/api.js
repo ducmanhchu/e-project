@@ -13,12 +13,18 @@ import * as folderController from "@server/controllers/folderController";
 import * as communityController from "@server/controllers/communityController";
 import * as uploadController from "@server/controllers/uploadController";
 import * as wordChainController from "@server/controllers/wordChainController";
+import * as walletController from "@server/controllers/walletController";
+import * as paymentController from "@server/controllers/paymentController";
 import { mediaUpload } from "@server/middlewares/upload";
 import {
-  protectedRoute,
-  optionalAuth,
+	protectedRoute,
+	optionalAuth,
 } from "@server/middlewares/authMiddleware";
 const router = express.Router();
+
+// Payment provider webhooks (public, signature-verified inside handler).
+// Provider key in URL: "sepay".
+router.post("/payments/webhook/:provider", paymentController.webhook);
 
 // auth routes
 router.post("/auth/signup", authController.signUp);
@@ -33,53 +39,70 @@ router.post("/auth/reset-password", authController.resetPassword);
 
 // ── Public catalog (optional auth: guest sees defaults, logged-in sees attempt summary)
 router.get(
-  "/writing/reverse-translation",
-  optionalAuth,
-  reverseTranslationController.listLessons,
+	"/writing/reverse-translation",
+	optionalAuth,
+	reverseTranslationController.listLessons,
 );
 router.get(
-  "/writing/see-and-write",
-  optionalAuth,
-  seeWriteController.listLessons,
+	"/writing/see-and-write",
+	optionalAuth,
+	seeWriteController.listLessons,
 );
 router.get("/writing/rewrite", optionalAuth, rewriteController.listLessons);
 router.get("/writing/exam", optionalAuth, examController.listExams);
+router.get("/slang-hang/dialogues", optionalAuth, slangHangController.list);
 
 // ── Community (public decks; anonymous-friendly) ──────────
-router.get("/community/decks", optionalAuth, communityController.listPublicDecks);
 router.get(
-  "/community/decks/:deckId",
-  optionalAuth,
-  communityController.getPublicDeck,
+	"/community/decks",
+	optionalAuth,
+	communityController.listPublicDecks,
 );
 router.get(
-  "/community/decks/:deckId/cards",
-  optionalAuth,
-  communityController.listPublicDeckCards,
+	"/community/decks/:deckId",
+	optionalAuth,
+	communityController.getPublicDeck,
+);
+router.get(
+	"/community/decks/:deckId/cards",
+	optionalAuth,
+	communityController.listPublicDeckCards,
 );
 
 router.use(protectedRoute);
 router.get("/me", userController.authMe);
 router.post("/auth/change-password", authController.changePassword);
 
+// ── Credits ─────────────────────────────────────────────
+router.get("/me/credits", walletController.getCredits);
+router.get("/me/credits/transactions", walletController.listTransactions);
+router.post("/me/checkin", walletController.checkin);
+router.get("/me/checkin/status", walletController.getCheckinStatus);
+
+// ── Payments ────────────────────────────────────────────
+router.get("/payments/packs", paymentController.listPacks);
+router.post("/payments/checkout", paymentController.checkout);
+router.post("/payments/checkout/custom", paymentController.customCheckout);
+router.get("/payments/orders/:orderCode", paymentController.getOrder);
+
 // ── Reverse Translation ─────────────────────────────────
 router.get(
-  "/writing/reverse-translation/:id",
-  reverseTranslationController.getLesson,
+	"/writing/reverse-translation/:id",
+	reverseTranslationController.getLesson,
 );
 router.post(
-  "/writing/reverse-translation/:id/submit",
-  reverseTranslationController.submitAnswer,
+	"/writing/reverse-translation/:id/submit",
+	reverseTranslationController.submitAnswer,
 );
 // ── See & Write ──────────────────────────────────────────
 router.get("/writing/see-and-write/:id", seeWriteController.getLesson);
 router.post(
-  "/writing/see-and-write/:id/check-keywords",
-  seeWriteController.checkKeywords,
+	"/writing/see-and-write/:id/check-keywords",
+	seeWriteController.checkKeywords,
 );
 router.post(
-  "/writing/see-and-write/:id/submit",
-  seeWriteController.submitAnswer,
+	"/writing/see-and-write/:id/submit",
+	seeWriteController.submitAnswer,
 );
 router.get("/writing/see-and-write/:id/history", seeWriteController.getHistory);
 
@@ -107,17 +130,13 @@ router.get("/me/vocabulary/:id", vocabularyController.getMyVocabularyById);
 router.delete("/me/vocabulary/:id", vocabularyController.deleteWord);
 
 // ── Slang Hang ──────────────────────────────────────────
-router.get("/slang-hang/dialogues", slangHangController.list);
 router.get("/slang-hang/dialogues/:id", slangHangController.getOne);
 router.get("/slang-hang/azure-token", slangHangController.azureToken);
 router.post(
-  "/slang-hang/dialogues/:id/submit",
-  slangHangController.submitMessageAttempt,
+	"/slang-hang/dialogues/:id/submit",
+	slangHangController.submitMessageAttempt,
 );
-router.post(
-  "/slang-hang/dialogues/:id/retry",
-  slangHangController.retry,
-);
+router.post("/slang-hang/dialogues/:id/retry", slangHangController.retry);
 
 // ── Word Chain ──────────────────────────────────────────
 router.post("/word-chain/games", wordChainController.startGame);
@@ -149,16 +168,12 @@ router.post("/me/cards", deckController.addCardManual);
 router.post("/me/cards/from-vocab", deckController.addCardsFromVocab);
 router.patch("/me/cards/:cardId", deckController.updateCard);
 router.delete("/me/cards/:cardId", deckController.deleteCard);
-router.post("/me/cards/:cardId/rate", deckController.rateCard);
-
-// ── Study (shuffled cards of a deck) ─────────────────
-router.get("/me/study", deckController.getStudyCards);
 
 // ── User upload (image for flashcards) ───────────────
 router.post(
-  "/me/upload/image",
-  mediaUpload.single("file"),
-  uploadController.uploadImage,
+	"/me/upload/image",
+	mediaUpload.single("file"),
+	uploadController.uploadImage,
 );
 
 export default router;
