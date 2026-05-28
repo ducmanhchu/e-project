@@ -1,6 +1,5 @@
 import { Deck } from "@server/models/deck/Deck";
 import { Card } from "@server/models/deck/Card";
-import { UserVocabulary } from "@server/models/userVocabulary/UserVocabulary";
 import { ApiError } from "@server/helpers/ApiError";
 import {
 	normalizeImageFields,
@@ -291,6 +290,12 @@ export async function deleteCard(userId, cardId) {
 	return { deleted: true };
 }
 
+/**
+ * Thêm flashcard vào deck từ từ điển global (collection vocabularies).
+ * @param {import("mongoose").Types.ObjectId} userId
+ * @param {import("mongoose").Types.ObjectId} deckId
+ * @param {string[]} userVocabularyIds — `_id` từ collection vocabularies (giữ tên field API)
+ */
 export async function addCardsFromVocab(userId, deckId, userVocabularyIds) {
 	if (!Array.isArray(userVocabularyIds) || userVocabularyIds.length === 0) {
 		throw ApiError.badRequest("userVocabularyIds must be a non-empty array");
@@ -302,22 +307,17 @@ export async function addCardsFromVocab(userId, deckId, userVocabularyIds) {
 	}
 	await _assertDeckOwnership(userId, deckId);
 
-	const userVocabs = await UserVocabulary.find({
-		_id: { $in: userVocabularyIds },
-		userId,
-	}).lean();
-
-	if (userVocabs.length !== userVocabularyIds.length) {
-		throw ApiError.badRequest("Some IDs invalid or not yours");
+	const uniqueIds = [...new Set(userVocabularyIds.map(String))];
+	const vocabs = await vocabularyService.getDictionaryByIds(uniqueIds);
+	if (vocabs.length !== uniqueIds.length) {
+		throw ApiError.badRequest("Some vocabulary IDs are invalid");
 	}
 
-	const vocabIds = userVocabs.map((uv) => uv.vocabularyId);
-	const vocabs = await vocabularyService.getDictionaryByIds(vocabIds);
 	const vocabById = new Map(vocabs.map((v) => [String(v._id), v]));
 
-	const payloads = userVocabs
-		.map((uv) => {
-			const v = vocabById.get(String(uv.vocabularyId));
+	const payloads = userVocabularyIds
+		.map((id) => {
+			const v = vocabById.get(String(id));
 			if (!v) return null;
 			const def = v.definitions?.[0];
 			const meaning = def?.viDef || "";

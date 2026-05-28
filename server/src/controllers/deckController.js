@@ -188,6 +188,12 @@ export async function addCardsFromVocab(req, res, next) {
 		const { deckId, userVocabularyIds } = req.body || {};
 		if (!deckId) throw ApiError.badRequest("deckId is required");
 		validateObjectId(deckId, "deckId");
+		if (!Array.isArray(userVocabularyIds) || userVocabularyIds.length === 0) {
+			throw ApiError.badRequest("userVocabularyIds must be a non-empty array");
+		}
+		for (const id of userVocabularyIds) {
+			validateObjectId(id, "userVocabularyIds item");
+		}
 		const data = await deckService.addCardsFromVocab(
 			req.user._id,
 			deckId,
