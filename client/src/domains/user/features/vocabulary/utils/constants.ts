@@ -12,3 +12,14 @@ export const VOCAB_ROUTES = {
 	folder: (folderId: string) => `/vocabulary/folder/${folderId}`,
 	deck: (deckId: string) => `/vocabulary/deck/${deckId}`,
 } as const;
+
+export type FlashcardStatusFilter = "all" | "known" | "unknown";
+
+export const FLASHCARD_STATUS_FILTER_OPTIONS = [
+	{ value: "all", label: "Toàn bộ từ" },
+	{ value: "unknown", label: "Từ đang học" },
+	{ value: "known", label: "Từ thành thạo" },
+] as const satisfies ReadonlyArray<{
+	value: FlashcardStatusFilter;
+	label: string;
+}>;

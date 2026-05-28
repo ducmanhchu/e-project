@@ -119,8 +119,6 @@ export const createFlashcard = async (payload: CreateFlashcardPayload): Promise<
 };
 
 export const updateFlashcardStatus = async (cardId: string, payload: { status: "known" | "unknown" }): Promise<APIResponse<Flashcard>> => {
-	const { data } = await axiosPrivate.patch<APIResponse<Flashcard>>(`/me/cards/${cardId}`, {
-		payload,
-	});
+	const { data } = await axiosPrivate.patch<APIResponse<Flashcard>>(`/me/cards/${cardId}`, payload);
 	return data;
 };

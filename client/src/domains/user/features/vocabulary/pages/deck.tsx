@@ -19,13 +19,26 @@ import {
 import {
 	keepPreviousData,
 	useInfiniteQuery,
+	useMutation,
 	useQuery,
+	type InfiniteData,
 } from "@tanstack/react-query";
-import { fetchDeckDetail, fetchFlashcardList } from "@shared/api/vocab";
+import { toast } from "sonner";
+
+import {
+	fetchDeckDetail,
+	fetchFlashcardList,
+	updateFlashcardStatus,
+} from "@shared/api/vocab";
+import { queryClient } from "@shared/lib/query-client";
+import type { APIResponse } from "@shared/types/utils";
+import type { Flashcard } from "@shared/types/vocab";
 
 import {
 	FLASHCARD_PAGE_SIZE,
 	FLASHCARD_PREFETCH_THRESHOLD,
+	FLASHCARD_STATUS_FILTER_OPTIONS,
+	type FlashcardStatusFilter,
 } from "@user/features/vocabulary/utils/constants";
 import {
 	getDateString,
@@ -40,6 +53,13 @@ import {
 } from "@shared/components/ui/tooltip";
 import { Skeleton } from "@shared/components/ui/skeleton";
 import { Toggle } from "@shared/components/ui/toggle";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@shared/components/ui/select";
 import { FlashcardCarousel } from "@/domains/user/features/vocabulary/components/flashcard-carousel";
 
 /** Skeleton khớp kích thước FlashCard khi đang tải danh sách thẻ. */
@@ -79,6 +99,19 @@ export function VocabularyDeck() {
 	const [updateOpen, setUpdateOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [shuffled, setShuffled] = useState(false);
+	const [trackProgress, setTrackProgress] = useState(false);
+	const [statusFilter, setStatusFilter] =
+		useState<FlashcardStatusFilter>("all");
+
+	const flashcardsListFilter: FlashcardStatusFilter = trackProgress
+		? statusFilter
+		: "all";
+
+	const flashcardsQueryKey = useMemo(
+		() =>
+			["flashcards", "list", deckId, shuffled, flashcardsListFilter] as const,
+		[deckId, shuffled, flashcardsListFilter],
+	);
 
 	const deckQuery = useQuery({
 		queryKey: ["deck", "detail", deckId],
@@ -87,18 +120,80 @@ export function VocabularyDeck() {
 	});
 
 	const flashcardsQuery = useInfiniteQuery({
-		queryKey: ["flashcards", "list", deckId, shuffled],
+		queryKey: flashcardsQueryKey,
 		queryFn: ({ pageParam }) =>
 			fetchFlashcardList({
 				deckId: deckId as string,
 				page: pageParam,
 				limit: FLASHCARD_PAGE_SIZE,
 				shuffle: shuffled,
+				...(trackProgress && statusFilter !== "all"
+					? { status: statusFilter }
+					: {}),
 			}),
 		initialPageParam: 1,
 		getNextPageParam,
 		enabled: !!deckId,
 		placeholderData: keepPreviousData,
+	});
+
+	const statusMutation = useMutation({
+		mutationFn: ({
+			cardId,
+			status,
+		}: {
+			cardId: string;
+			status: "known" | "unknown";
+		}) => updateFlashcardStatus(cardId, { status }),
+		onSuccess: (_response, { cardId, status }) => {
+			queryClient.setQueryData<InfiniteData<APIResponse<Flashcard[]>>>(
+				flashcardsQueryKey,
+				(old) => {
+					if (!old) return old;
+
+					const shouldRemove =
+						trackProgress && statusFilter !== "all" && statusFilter !== status;
+
+					if (shouldRemove) {
+						let removed = false;
+						const pages = old.pages.map((page, pageIndex) => {
+							const filtered = page.data.filter((card) => card._id !== cardId);
+							if (filtered.length !== page.data.length) removed = true;
+							return {
+								...page,
+								data: filtered,
+								pagination:
+									pageIndex === 0 && page.pagination
+										? {
+												...page.pagination,
+												total: Math.max(0, page.pagination.total - 1),
+											}
+										: page.pagination,
+							};
+						});
+						return removed ? { ...old, pages } : old;
+					}
+
+					const pages = old.pages.map((page) => ({
+						...page,
+						data: page.data.map((card) =>
+							card._id === cardId ? { ...card, status } : card,
+						),
+					}));
+					return { ...old, pages };
+				},
+			);
+
+			// Các bộ lọc khác dùng cache riêng — đánh dấu stale để refetch khi chuyển chế độ
+			void queryClient.invalidateQueries({
+				queryKey: ["flashcards", "list", deckId],
+				predicate: (query) => query.queryKey[3] !== shuffled,
+				refetchType: "none",
+			});
+		},
+		onError: () => {
+			toast.error("Không thể cập nhật tiến trình");
+		},
 	});
 
 	const { isFetchingNextPage, hasNextPage, fetchNextPage } = flashcardsQuery;
@@ -141,6 +236,25 @@ export function VocabularyDeck() {
 			setShuffled(pressed);
 		});
 	}, []);
+
+	const handleTrackProgressChange = useCallback((checked: boolean) => {
+		setTrackProgress(checked);
+		if (!checked) {
+			setStatusFilter("all");
+		}
+	}, []);
+
+	const handleStatusUpdate = useCallback(
+		async (cardId: string, status: "known" | "unknown") => {
+			await statusMutation.mutateAsync({ cardId, status });
+		},
+		[statusMutation],
+	);
+
+	const emptyFlashcardsMessage =
+		trackProgress && statusFilter !== "all"
+			? "Không có từ trong nhóm này"
+			: "Học phần trống";
 
 	return (
 		<div className="flex min-h-[calc(100svh-6.5rem)] flex-col gap-6">
@@ -223,17 +337,46 @@ export function VocabularyDeck() {
 			<div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 self-center w-full">
 				{showFlashcardSkeleton ? (
 					<FlashCardSkeleton />
-				) : flashcards.length > 0 ? (
-					<FlashcardCarousel
-						flashcards={flashcards}
-						totalCards={totalCards}
-						shuffled={shuffled}
-						onPrefetchNearEnd={prefetchIfNearEnd}
-					/>
 				) : (
-					<p className="text-muted-foreground text-sm self-center">
-						Học phần trống
-					</p>
+					<div className="flex w-full max-w-4xl flex-col items-center gap-4">
+						{trackProgress ? (
+							<Select
+								value={statusFilter}
+								onValueChange={(value) =>
+									setStatusFilter(value as FlashcardStatusFilter)
+								}
+							>
+								<SelectTrigger className="w-full max-w-3xs bg-neutral-50 self-end">
+									<SelectValue placeholder="Lọc theo trạng thái" />
+								</SelectTrigger>
+								<SelectContent position="popper">
+									{FLASHCARD_STATUS_FILTER_OPTIONS.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						) : null}
+
+						{flashcards.length > 0 ? (
+							<FlashcardCarousel
+								flashcards={flashcards}
+								totalCards={totalCards}
+								shuffled={shuffled}
+								statusFilter={statusFilter}
+								trackProgress={trackProgress}
+								onTrackProgressChange={handleTrackProgressChange}
+								onStatusUpdate={handleStatusUpdate}
+								isUpdatingStatus={statusMutation.isPending}
+								onPrefetchNearEnd={prefetchIfNearEnd}
+							/>
+						) : (
+							<p className="text-muted-foreground h-[min(62vh,500px)] text-sm self-center">
+								{emptyFlashcardsMessage}
+							</p>
+						)}
+					</div>
 				)}
 			</div>
 
