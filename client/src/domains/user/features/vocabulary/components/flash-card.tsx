@@ -1,4 +1,4 @@
-import { type MouseEvent } from "react";
+import { memo, type MouseEvent } from "react";
 import { motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PauseIcon, VolumeHighIcon } from "@hugeicons/core-free-icons";
@@ -23,7 +23,7 @@ type FlashCardProps = {
 	onToggleFlip: () => void;
 };
 
-export function FlashCard({
+export const FlashCard = memo(function FlashCard({
 	flashcard,
 	isActive,
 	isFlipped,
@@ -48,7 +48,7 @@ export function FlashCard({
 			<motion.div
 				animate={{ rotateX: isFlipped ? 180 : 0 }}
 				transition={{ duration: 0.5, ease: "easeInOut" }}
-				className="relative h-[min(62vh,520px)] w-full cursor-pointer transform-3d"
+				className="relative h-[min(62vh,500px)] w-full cursor-pointer transform-3d"
 				onClick={handleFlip}
 			>
 				<div
@@ -112,4 +112,4 @@ export function FlashCard({
 			</motion.div>
 		</div>
 	);
-}
+});
