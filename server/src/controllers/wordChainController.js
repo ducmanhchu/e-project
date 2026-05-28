@@ -71,15 +71,27 @@ export async function getActive(req, res, next) {
 
 export async function listMyGames(req, res, next) {
   try {
-    const page = Math.max(1, parseInt(req.query.page || "1", 10));
-    const limit = Math.min(50, parseInt(req.query.limit || "20", 10));
-    const out = await wordChainService.listMyGames({
+    const page = Math.max(1, parseInt(req.query.page || "1", 10) || 1);
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(req.query.limit || "20", 10) || 20),
+    );
+    const { items, total } = await wordChainService.listMyGames({
       userId: req.user.id,
       level: req.query.level,
       page,
       limit,
     });
-    res.status(200).json({ success: true, data: out });
+    res.status(200).json({
+      success: true,
+      data: items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (e) {
     next(e);
   }

@@ -244,8 +244,6 @@ export async function listMyGames({ userId, level, page = 1, limit = 20 }) {
       endedAt: g.endedAt,
     })),
     total,
-    page: p,
-    limit: l,
   };
 }
 

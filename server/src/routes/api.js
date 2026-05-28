@@ -150,7 +150,6 @@ router.post("/word-chain/games/:gameId/give-up", wordChainController.giveUp);
 
 // ── Progress ─────────────────────────────────────────────
 router.get("/me/progress/summary", progressController.getSummary);
-router.get("/me/progress/scores/recent", progressController.getRecentScores);
 router.get(
 	"/me/progress/history/attempts",
 	progressController.getAttemptHistory,

@@ -1,5 +1,4 @@
 import * as progressService from "@server/services/progress/progressService";
-import * as recentScoresService from "@server/services/progress/recentScoresService";
 import * as attemptHistoryService from "@server/services/progress/attemptHistoryService";
 
 export async function getSummary(req, res, next) {
@@ -11,27 +10,30 @@ export async function getSummary(req, res, next) {
   }
 }
 
-export async function getRecentScores(req, res, next) {
-  try {
-    const data = await recentScoresService.getRecentScores({
-      userId: req.user._id,
-      n: req.query.n,
-    });
-    res.status(200).json({ success: true, data });
-  } catch (e) {
-    next(e);
-  }
-}
-
 export async function getAttemptHistory(req, res, next) {
   try {
-    const data = await attemptHistoryService.getAttemptHistory({
+    const page = Math.max(1, parseInt(req.query.page || "1", 10) || 1);
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(req.query.limit || "20", 10) || 20),
+    );
+    const { items, total } = await attemptHistoryService.getAttemptHistory({
       userId: req.user._id,
       feature: req.query.feature,
-      page: req.query.page,
-      limit: req.query.limit,
+      lessonType: req.query.lessonType,
+      page,
+      limit,
     });
-    res.status(200).json({ success: true, data });
+    res.status(200).json({
+      success: true,
+      data: items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (e) {
     next(e);
   }

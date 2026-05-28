@@ -8,6 +8,23 @@ import { resolveLessonTitles } from "@server/services/progress/lessonTitleResolv
 const FEATURE_ALL = "all";
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const WRITING_LESSON_TYPES = new Set([
+  "ReverseTranslation",
+  "SeeWrite",
+  "Rewrite",
+  "Exam",
+]);
+
+function round1(n) {
+  return Math.round(n * 10) / 10;
+}
+
+function attemptAvgScore(attempt) {
+  const sp = attempt.sentenceProgress;
+  if (!sp?.length) return 0;
+  const sum = sp.reduce((a, s) => a + (s.bestScore || 0), 0);
+  return round1(sum / sp.length);
+}
 
 async function mapWriting(docs) {
   const refs = docs.map((a) => ({
@@ -19,6 +36,7 @@ async function mapWriting(docs) {
     id: String(a.lessonId),
     title: titleMap.get(`${a.lessonType}:${a.lessonId}`) ?? null,
     kind: a.lessonType,
+    score: attemptAvgScore(a),
     completedAt: a.completedAt,
   }));
 }
@@ -28,6 +46,7 @@ function mapWordchain(docs) {
     id: String(g._id),
     title: `Word Chain - ${g.level}`,
     kind: "WordChain",
+    score: null,
     completedAt: g.endedAt,
   }));
 }
@@ -37,6 +56,7 @@ function mapSlang(docs) {
     id: d.dialogueId ? String(d.dialogueId._id ?? d.dialogueId) : null,
     title: d.dialogueId?.title ?? null,
     kind: "SlangHang",
+    score: null,
     completedAt: d.completedAt,
   }));
 }
@@ -47,7 +67,11 @@ const SOURCES = {
     sortKey: "completedAt",
     populate: null,
     mapper: mapWriting,
-    filterFor: (userId) => ({ userId, status: "completed" }),
+    filterFor: (userId, opts) => ({
+      userId,
+      status: "completed",
+      ...(opts?.lessonType && { lessonType: opts.lessonType }),
+    }),
   },
   [PROGRESS_FEATURE.WORDCHAIN]: {
     model: WordChainGame,
@@ -70,8 +94,8 @@ const SOURCES = {
 };
 const VALID_FEATURES = new Set([FEATURE_ALL, ...Object.keys(SOURCES)]);
 
-async function fetchSource(source, userId, { skip, limit }) {
-  const filter = source.filterFor(userId);
+async function fetchSource(source, userId, { skip, limit, filterOpts }) {
+  const filter = source.filterFor(userId, filterOpts);
   let query = source.model.find(filter).sort({ [source.sortKey]: -1 });
   if (source.populate) query = query.populate(source.populate);
   if (skip) query = query.skip(skip);
@@ -86,11 +110,20 @@ async function fetchSource(source, userId, { skip, limit }) {
 export async function getAttemptHistory({
   userId,
   feature = FEATURE_ALL,
+  lessonType,
   page = 1,
   limit = DEFAULT_LIMIT,
 }) {
   if (!VALID_FEATURES.has(feature)) {
     throw ApiError.badRequest("Invalid feature");
+  }
+  if (lessonType) {
+    if (feature !== PROGRESS_FEATURE.WRITING) {
+      throw ApiError.badRequest("lessonType requires feature=writing");
+    }
+    if (!WRITING_LESSON_TYPES.has(lessonType)) {
+      throw ApiError.badRequest("Invalid lessonType");
+    }
   }
   const p = Math.max(1, Number(page) || 1);
   const l = Math.min(Math.max(1, Number(limit) || DEFAULT_LIMIT), MAX_LIMIT);
@@ -98,8 +131,12 @@ export async function getAttemptHistory({
 
   if (feature !== FEATURE_ALL) {
     const source = SOURCES[feature];
-    const { docs, total } = await fetchSource(source, userId, { skip, limit: l });
-    return { items: await source.mapper(docs), total, page: p, limit: l };
+    const { docs, total } = await fetchSource(source, userId, {
+      skip,
+      limit: l,
+      filterOpts: { lessonType },
+    });
+    return { items: await source.mapper(docs), total };
   }
 
   // "all" — fetch top p*l from each source, merge sorted, slice.
@@ -120,5 +157,5 @@ export async function getAttemptHistory({
   const total = results.reduce((sum, r) => sum + r.total, 0);
   const items = merged.slice(skip, skip + l);
 
-  return { items, total, page: p, limit: l };
+  return { items, total };
 }
