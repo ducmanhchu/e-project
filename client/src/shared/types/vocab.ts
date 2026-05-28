@@ -32,7 +32,7 @@ export type WordListQueryParams = {
 
 // My vocabulary
 export type Flashcard = {
-	_id: string;
+	_id?: string;
 	deckId: string;
 	userId: string;
 	word: string;
@@ -45,6 +45,7 @@ export type Flashcard = {
 	status: "known" | "unknown";
 	createdAt: string;
 	updatedAt?: string | null;
+	id?: string;
 }
 
 export type Deck = {

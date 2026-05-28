@@ -113,6 +113,20 @@ export const fetchFlashcardList = async (params?: CardListParams): Promise<APIRe
 	return data;
 };
 
+export const addFlashcardFromVocab = async (payload: {
+	deckId: string;
+	userVocabularyIds: string[];
+}): Promise<APIResponse<{
+	created: number;
+	cards: Flashcard[]
+}>> => {
+	const { data } = await axiosPrivate.post<APIResponse<{
+		created: number;
+		cards: Flashcard[]
+	}>>("/me/cards/from-vocab", payload);
+	return data;
+};
+
 export const createFlashcard = async (payload: CreateFlashcardPayload): Promise<APIResponse<Flashcard>> => {
 	const { data } = await axiosPrivate.post<APIResponse<Flashcard>>("/me/cards", payload);
 	return data;
@@ -120,5 +134,27 @@ export const createFlashcard = async (payload: CreateFlashcardPayload): Promise<
 
 export const updateFlashcardStatus = async (cardId: string, payload: { status: "known" | "unknown" }): Promise<APIResponse<Flashcard>> => {
 	const { data } = await axiosPrivate.patch<APIResponse<Flashcard>>(`/me/cards/${cardId}`, payload);
+	return data;
+};
+
+export const updateFlashcard = async (cardId: string, payload: {
+	word?: string;
+	meaning?: string;
+	ipa?: string;
+	partOfSpeech?: string;
+	enExample?: string;
+	viExample?: string;
+	audio?: string;
+}): Promise<APIResponse<Flashcard>> => {
+	const { data } = await axiosPrivate.patch<APIResponse<Flashcard>>(`/me/cards/${cardId}`, payload);
+	return data;
+};
+
+export const deleteFlashcard = async (cardId: string): Promise<APIResponse<{
+	deleted: boolean;
+}>> => {
+	const { data } = await axiosPrivate.delete<APIResponse<{
+		deleted: boolean;
+	}>>(`/me/cards/${cardId}`);
 	return data;
 };

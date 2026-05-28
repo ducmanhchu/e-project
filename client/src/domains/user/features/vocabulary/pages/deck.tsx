@@ -14,6 +14,7 @@ import {
 	Delete01Icon,
 	TaskDaily01Icon,
 	ShuffleIcon,
+	PlusSignIcon,
 } from "@hugeicons/core-free-icons";
 
 import {
@@ -38,6 +39,7 @@ import {
 	FLASHCARD_PAGE_SIZE,
 	FLASHCARD_PREFETCH_THRESHOLD,
 	FLASHCARD_STATUS_FILTER_OPTIONS,
+	FLASHCARD_TABLE_QUERY_KEY,
 	type FlashcardStatusFilter,
 } from "@user/features/vocabulary/utils/constants";
 import {
@@ -60,7 +62,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@shared/components/ui/select";
+import { Separator } from "@shared/components/ui/separator";
 import { FlashcardCarousel } from "@/domains/user/features/vocabulary/components/flashcard-carousel";
+import { UnknownWordTable } from "@/domains/user/features/vocabulary/components/unknown-word-table";
+import { KnownWordTable } from "@/domains/user/features/vocabulary/components/known-word-table";
 
 /** Skeleton khớp kích thước FlashCard khi đang tải danh sách thẻ. */
 function FlashCardSkeleton() {
@@ -91,6 +96,14 @@ const VocabDeckDeleteDialog = lazy(() =>
 	),
 );
 
+const VocabDeckAddWordDialog = lazy(() =>
+	import("@user/features/vocabulary/components/deck-add-word-dialog").then(
+		(m) => ({
+			default: m.VocabDeckAddWordDialog,
+		}),
+	),
+);
+
 export function VocabularyDeck() {
 	const navigate = useNavigate();
 
@@ -98,6 +111,7 @@ export function VocabularyDeck() {
 
 	const [updateOpen, setUpdateOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const [addWordOpen, setAddWordOpen] = useState(false);
 	const [shuffled, setShuffled] = useState(false);
 	const [trackProgress, setTrackProgress] = useState(false);
 	const [statusFilter, setStatusFilter] =
@@ -190,6 +204,10 @@ export function VocabularyDeck() {
 				predicate: (query) => query.queryKey[3] !== shuffled,
 				refetchType: "none",
 			});
+
+			void queryClient.invalidateQueries({
+				queryKey: ["flashcards", FLASHCARD_TABLE_QUERY_KEY, deckId],
+			});
 		},
 		onError: () => {
 			toast.error("Không thể cập nhật tiến trình");
@@ -257,7 +275,7 @@ export function VocabularyDeck() {
 			: "Học phần trống";
 
 	return (
-		<div className="flex min-h-[calc(100svh-6.5rem)] flex-col gap-6">
+		<div className="flex min-h-[calc(100svh-6.5rem)] flex-col gap-4">
 			<div className="flex justify-between items-center">
 				<Button
 					variant="outline"
@@ -274,11 +292,25 @@ export function VocabularyDeck() {
 				{isDeckLoading ? (
 					<Skeleton className="h-8 w-48 max-w-[50vw]" />
 				) : (
-					<p className="text-2xl font-bold">{deckQuery.data?.data?.name}</p>
+					<p className="text-xl font-medium">{deckQuery.data?.data?.name}</p>
 				)}
 
 				<div className="flex items-center">
-					{}
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={() => setAddWordOpen(true)}
+							>
+								<HugeiconsIcon icon={PlusSignIcon} />
+							</Button>
+						</TooltipTrigger>
+
+						<TooltipContent>
+							<p>Thêm từ</p>
+						</TooltipContent>
+					</Tooltip>
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<Toggle
@@ -380,7 +412,9 @@ export function VocabularyDeck() {
 				)}
 			</div>
 
-			<div className="flex justify-between items-center">
+			<Separator className="mt-16" />
+
+			<div className="flex justify-between items-center mb-14">
 				<div className="flex flex-col gap-1.5">
 					{isDeckLoading ? (
 						<>
@@ -401,15 +435,22 @@ export function VocabularyDeck() {
 					)}
 				</div>
 
-				{!showFlashcardSkeleton && flashcards.length > 0 ? (
+				{/* {!showFlashcardSkeleton && flashcards.length > 0 ? (
 					<Button variant="blackHover">
 						<HugeiconsIcon icon={TaskDaily01Icon} />
 						Kiểm tra
 					</Button>
-				) : null}
+				) : null} */}
 			</div>
 
-			{updateOpen || deleteOpen ? (
+			{deckId ? (
+				<div className="flex flex-col gap-8 mb-18">
+					<UnknownWordTable deckId={deckId} />
+					<KnownWordTable deckId={deckId} />
+				</div>
+			) : null}
+
+			{updateOpen || deleteOpen || addWordOpen ? (
 				<Suspense fallback={null}>
 					{updateOpen ? (
 						<VocabDeckUpdateDialog
@@ -427,6 +468,14 @@ export function VocabularyDeck() {
 							onOpenChange={setDeleteOpen}
 							deckId={deckId as string}
 							deckName={deckQuery.data?.data?.name ?? ""}
+						/>
+					) : null}
+
+					{addWordOpen && deckId ? (
+						<VocabDeckAddWordDialog
+							open={addWordOpen}
+							onOpenChange={setAddWordOpen}
+							deckId={deckId}
 						/>
 					) : null}
 				</Suspense>
