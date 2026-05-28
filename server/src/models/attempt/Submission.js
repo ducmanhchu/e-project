@@ -7,6 +7,11 @@ const submissionSchema = new mongoose.Schema(
       ref: "Attempt",
       required: true,
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     sentenceOrder: { type: Number, required: true },
     userAnswer: { type: String, required: true },
     score: { type: Number, min: 0, max: 100, required: true },
@@ -27,6 +32,7 @@ const submissionSchema = new mongoose.Schema(
 
 submissionSchema.index({ attemptId: 1, sentenceOrder: 1, createdAt: -1 });
 submissionSchema.index({ attemptId: 1, createdAt: -1 });
+submissionSchema.index({ userId: 1, createdAt: -1 });
 
 export const Submission = mongoose.model(
   "Submission",

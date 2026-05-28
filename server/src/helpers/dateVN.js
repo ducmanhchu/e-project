@@ -23,3 +23,14 @@ export function checkinDateVN(date = new Date()) {
   const vnTime = new Date(date.getTime() + VN_OFFSET_MS);
   return vnTime.toISOString().slice(0, 10);
 }
+
+/**
+ * Returns "YYYY-MM-DD" of the day immediately before `dateStr` (VN calendar).
+ * Used by streakService to walk consecutive-day chains.
+ */
+export function subtractDayVN(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const utcMidnight = Date.UTC(y, m - 1, d);
+  const prev = new Date(utcMidnight - 86400_000);
+  return prev.toISOString().slice(0, 10);
+}

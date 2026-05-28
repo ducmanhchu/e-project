@@ -87,7 +87,15 @@ export async function submitAndUpdateProgress(attempt, {
   totalSentences,
   keepOnlyLast = false,
 }) {
-  const submissionData = { attemptId: attempt._id, sentenceOrder, userAnswer, score, gradedBy, feedback };
+  const submissionData = {
+    attemptId: attempt._id,
+    userId: attempt.userId,
+    sentenceOrder,
+    userAnswer,
+    score,
+    gradedBy,
+    feedback,
+  };
   const submission = keepOnlyLast
     ? await Submission.findOneAndUpdate(
         { attemptId: attempt._id, sentenceOrder },
