@@ -104,69 +104,87 @@ export function Vocabulary() {
 	}, [hasMore, loadMore]);
 
 	return (
-		<div className="flex flex-col gap-8">
-			<h1 className="text-4xl font-black">Từ vựng của tôi</h1>
-			<div className="flex gap-3">
-				<Button variant="blackHover" onClick={() => setCreateOpen(true)}>
-					<HugeiconsIcon icon={PlusSignIcon} />
-					Tạo
-				</Button>
-				<GooeyInput
-					placeholder="Tìm kiếm"
-					collapsedWidth={140}
-					expandedWidth={220}
-					theme="light"
-					value={searchInput}
-					onValueChange={setSearchInput}
-				/>
-			</div>
-			{createOpen && (
-				<Suspense fallback={null}>
-					<VocabCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
-				</Suspense>
-			)}
-			<div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-y-6 place-items-center">
-				{isInitialLoading &&
-					Array.from({ length: 5 }).map((_, i) => (
-						<Skeleton
-							key={i}
-							className="w-[160px] h-[125px] lg:w-[180px] lg:h-[150px] rounded-2xl"
+		<div className="grid grid-cols-1 gap-10 md:gap-6 md:grid-cols-4">
+			<div className="col-span-3 flex flex-col gap-12">
+				<div className="flex flex-col gap-8">
+					<h1 className="text-4xl font-black">Từ vựng của tôi</h1>
+					<div className="flex gap-3">
+						<Button variant="blackHover" onClick={() => setCreateOpen(true)}>
+							<HugeiconsIcon icon={PlusSignIcon} />
+							Tạo
+						</Button>
+						<GooeyInput
+							placeholder="Tìm kiếm"
+							collapsedWidth={140}
+							expandedWidth={220}
+							theme="light"
+							value={searchInput}
+							onValueChange={setSearchInput}
 						/>
-					))}
-				{!isInitialLoading && !isEmpty && (
-					<>
-						{folders.map((folder) => (
-							<VocabFolder
-								key={folder._id}
-								folderId={folder._id}
-								to={VOCAB_ROUTES.folder(folder._id)}
-								folderName={folder.name}
-								cardNumber={folder.deckCount ?? 0}
+					</div>
+					{createOpen && (
+						<Suspense fallback={null}>
+							<VocabCreateDialog
+								open={createOpen}
+								onOpenChange={setCreateOpen}
 							/>
-						))}
-						{decks.map((deck) => (
-							<VocabDeck key={deck._id} deck={deck} />
-						))}
-					</>
-				)}
-				{isEmpty && (
-					<p className="text-sm text-muted-foreground place-self-start">
-						{deferredSearch
-							? "Không tìm thấy mục phù hợp."
-							: "Kho từ vựng trống."}
-					</p>
-				)}
-			</div>
-			{hasMore && <div ref={loadMoreRef} className="h-1 w-full" aria-hidden />}
-			{isFetchingMore && (
-				<div className="flex justify-center py-4">
-					<HugeiconsIcon
-						icon={Loading03Icon}
-						className="size-6 animate-spin text-muted-foreground"
-						strokeWidth={2}
-					/>
+						</Suspense>
+					)}
+					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-y-6 place-items-center">
+						{isInitialLoading &&
+							Array.from({ length: 5 }).map((_, i) => (
+								<Skeleton
+									key={i}
+									className="w-[160px] h-[125px] lg:w-[180px] lg:h-[150px] rounded-2xl"
+								/>
+							))}
+						{!isInitialLoading && !isEmpty && (
+							<>
+								{folders.map((folder) => (
+									<VocabFolder
+										key={folder._id}
+										folderId={folder._id}
+										to={VOCAB_ROUTES.folder(folder._id)}
+										folderName={folder.name}
+										cardNumber={folder.deckCount ?? 0}
+									/>
+								))}
+								{decks.map((deck) => (
+									<VocabDeck
+										key={deck._id}
+										deck={deck}
+										to={VOCAB_ROUTES.deck(deck._id)}
+									/>
+								))}
+							</>
+						)}
+						{isEmpty && (
+							<p className="text-sm text-muted-foreground place-self-start">
+								{deferredSearch
+									? "Không tìm thấy mục phù hợp."
+									: "Kho từ vựng trống."}
+							</p>
+						)}
+					</div>
+					{hasMore && (
+						<div ref={loadMoreRef} className="h-1 w-full" aria-hidden />
+					)}
+					{isFetchingMore && (
+						<div className="flex justify-center py-4">
+							<HugeiconsIcon
+								icon={Loading03Icon}
+								className="size-6 animate-spin text-muted-foreground"
+								strokeWidth={2}
+							/>
+						</div>
+					)}
 				</div>
-			)}
+			</div>
+			<div className="flex flex-col gap-4 order-first md:order-last">
+				<div className="flex border border-primary rounded-4xl p-4">
+					<p className="text-lg font-bold">Nối từ</p>
+				</div>
+			</div>
 		</div>
 	);
 }

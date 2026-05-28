@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useState, useRef } from "react";
+import { Link } from "react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cards02Icon } from "@hugeicons/core-free-icons";
@@ -34,16 +35,18 @@ const MOVE_FOLDER_LIMIT = 100;
 
 type VocabDeckProps = {
 	deck: Deck;
+	to: string;
 };
 
 /**
  * Thẻ học phần: menu chuột phải chuyển thư mục, cập nhật, xóa.
  * @param props.deck — dữ liệu học phần hiển thị
  */
-export function VocabDeck({ deck }: VocabDeckProps) {
+export function VocabDeck({ deck, to }: VocabDeckProps) {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [updateOpen, setUpdateOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const blockNavRef = useRef(false);
 
 	const foldersQuery = useQuery({
 		queryKey: ["folder", "list", "deck-move"],
@@ -53,7 +56,8 @@ export function VocabDeck({ deck }: VocabDeckProps) {
 	});
 
 	const moveMutation = useMutation({
-		mutationFn: (folderId: string) => moveDeckToFolder(deck._id, folderId),
+		mutationFn: (folderId: string | null) =>
+			moveDeckToFolder(deck._id, folderId),
 		onSuccess: () => {
 			void queryClient.invalidateQueries({ queryKey: ["deck"] });
 			void queryClient.invalidateQueries({ queryKey: ["folder"] });
@@ -71,13 +75,14 @@ export function VocabDeck({ deck }: VocabDeckProps) {
 	 * Mở dialog từ context menu.
 	 */
 	const openDialogFromMenu = (openDialog: () => void) => {
+		blockNavRef.current = true;
 		openDialog();
 	};
 
 	/**
 	 * Chuyển học phần sang thư mục đích.
 	 */
-	const handleMoveToFolder = (folderId: string) => {
+	const handleMoveToFolder = (folderId: string | null) => {
 		if (moveMutation.isPending) return;
 		moveMutation.mutate(folderId);
 	};
@@ -86,45 +91,58 @@ export function VocabDeck({ deck }: VocabDeckProps) {
 		<>
 			<ContextMenu onOpenChange={setMenuOpen}>
 				<ContextMenuTrigger asChild>
-					<div className="relative w-[160px] h-[125px] lg:w-[180px] lg:h-[150px] group cursor-pointer">
-						<div
-							aria-hidden
-							className="absolute bottom-0 left-1/2 -translate-x-1/2 z-1 border h-full w-[144px] lg:w-[164px] rounded-2xl bg-neutral-100 group-hover:scale-y-75 transition-transform duration-500 ease-in-out"
-						/>
-						<div
-							aria-hidden
-							className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2 border w-[152px] h-[120px] lg:h-[145px] lg:w-[172px] rounded-2xl bg-neutral-100 group-hover:scale-y-85 transition-transform duration-400 ease-in-out"
-						/>
+					<Link
+						to={to}
+						onClick={(e) => {
+							if (blockNavRef.current) {
+								e.preventDefault();
+								blockNavRef.current = false;
+							}
+						}}
+					>
+						<div className="relative w-[160px] h-[125px] lg:w-[180px] lg:h-[150px] group cursor-pointer">
+							<div
+								aria-hidden
+								className="absolute bottom-0 left-1/2 -translate-x-1/2 z-1 border h-full w-[144px] lg:w-[164px] rounded-2xl bg-neutral-100 group-hover:scale-y-75 transition-transform duration-500 ease-in-out"
+							/>
+							<div
+								aria-hidden
+								className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2 border w-[152px] h-[120px] lg:h-[145px] lg:w-[172px] rounded-2xl bg-neutral-100 group-hover:scale-y-85 transition-transform duration-400 ease-in-out"
+							/>
 
-						<div className="absolute bottom-0 z-10 w-[160px] h-[115px] lg:w-[180px] lg:h-[140px] p-3 rounded-2xl bg-neutral-50 border flex flex-col justify-between group-hover:-translate-y-2 transition-transform duration-300 ease-in-out">
-							<div className="flex gap-1">
-								<HugeiconsIcon
-									icon={Cards02Icon}
-									className="size-3.5 text-muted-foreground"
-								/>
-								<p className="text-xs text-muted-foreground">
-									{deck.cardCount} từ
-								</p>
-							</div>
-							<div className="flex flex-col">
-								<p className="text-sm line-clamp-2">{deck.name}</p>
-								<p className="text-xs text-muted-foreground line-clamp-1">
-									{deck.description}
-								</p>
+							<div className="absolute bottom-0 z-10 w-[160px] h-[115px] lg:w-[180px] lg:h-[140px] p-3 rounded-2xl bg-neutral-50 border flex flex-col justify-between group-hover:-translate-y-2 transition-transform duration-300 ease-in-out">
+								<div className="flex gap-1">
+									<HugeiconsIcon
+										icon={Cards02Icon}
+										className="size-3.5 text-muted-foreground"
+									/>
+									<p className="text-xs text-muted-foreground">
+										{deck.cardCount} từ
+									</p>
+								</div>
+								<div className="flex flex-col">
+									<p className="text-sm line-clamp-2">{deck.name}</p>
+									<p className="text-xs text-muted-foreground line-clamp-1">
+										{deck.description}
+									</p>
+								</div>
 							</div>
 						</div>
-					</div>
+					</Link>
 				</ContextMenuTrigger>
 				<ContextMenuContent>
 					<ContextMenuSub>
 						<ContextMenuSubTrigger>Chuyển tới</ContextMenuSubTrigger>
 						<ContextMenuSubContent>
+							<ContextMenuItem onSelect={() => handleMoveToFolder(null)}>
+								Kho từ vựng
+							</ContextMenuItem>
 							{foldersQuery.isLoading && (
 								<ContextMenuItem disabled>Đang tải...</ContextMenuItem>
 							)}
 							{foldersQuery.isError && (
 								<ContextMenuItem disabled>
-									Không tải được thư mục
+									Không tải được thư mục khác
 								</ContextMenuItem>
 							)}
 							{!foldersQuery.isLoading &&

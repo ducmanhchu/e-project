@@ -148,7 +148,7 @@ export function VocabularyFolder() {
 					/>
 				</Suspense>
 			)}
-			<div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-y-6 place-items-center">
+			<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-y-6 place-items-center">
 				{isInitialLoading &&
 					Array.from({ length: 5 }).map((_, i) => (
 						<Skeleton
@@ -157,7 +157,13 @@ export function VocabularyFolder() {
 						/>
 					))}
 				{!isInitialLoading &&
-					decks.map((deck) => <VocabDeck key={deck._id} deck={deck} />)}
+					decks.map((deck) => (
+						<VocabDeck
+							key={deck._id}
+							deck={deck}
+							to={VOCAB_ROUTES.deck(deck._id)}
+						/>
+					))}
 			</div>
 			{!isInitialLoading && decks.length === 0 && (
 				<p className="text-sm text-muted-foreground">

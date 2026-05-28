@@ -7,6 +7,7 @@ import type {
 	Deck,
 	CardListParams,
 	Flashcard,
+	CreateFlashcardPayload,
 } from "@shared/types/vocab";
 import { axiosPrivate } from "@shared/lib/axios-instances";
 import type { APIResponse } from "@shared/types/utils";
@@ -67,6 +68,11 @@ export const fetchDeckList = async (params?: DeckListParams): Promise<APIRespons
 	return data;
 };
 
+export const fetchDeckDetail = async (deckId: string): Promise<APIResponse<Deck>> => {
+	const { data } = await axiosPrivate.get<APIResponse<Deck>>(`/me/decks/${deckId}`);
+	return data;
+};
+
 export const createDeck = async (payload: {
 	name: string;
 	description?: string;
@@ -76,7 +82,7 @@ export const createDeck = async (payload: {
 	return data;
 };
 
-export const moveDeckToFolder = async (deckId: string, target: string): Promise<APIResponse<Deck>> => {
+export const moveDeckToFolder = async (deckId: string, target: string | null): Promise<APIResponse<Deck>> => {
 	const { data } = await axiosPrivate.patch<APIResponse<Deck>>(`/me/decks/${deckId}`, {
 		folderId: target,
 	});
@@ -103,6 +109,18 @@ export const deleteDeck = async (deckId: string): Promise<APIResponse<{
 export const fetchFlashcardList = async (params?: CardListParams): Promise<APIResponse<Flashcard[]>> => {
 	const { data } = await axiosPrivate.get<APIResponse<Flashcard[]>>("/me/cards", {
 		params,
+	});
+	return data;
+};
+
+export const createFlashcard = async (payload: CreateFlashcardPayload): Promise<APIResponse<Flashcard>> => {
+	const { data } = await axiosPrivate.post<APIResponse<Flashcard>>("/me/cards", payload);
+	return data;
+};
+
+export const updateFlashcardStatus = async (cardId: string, payload: { status: "known" | "unknown" }): Promise<APIResponse<Flashcard>> => {
+	const { data } = await axiosPrivate.patch<APIResponse<Flashcard>>(`/me/cards/${cardId}`, {
+		payload,
 	});
 	return data;
 };

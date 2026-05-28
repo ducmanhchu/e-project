@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading02Icon } from "@hugeicons/core-free-icons";
+import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 
 import { queryClient } from "@shared/lib/query-client";
@@ -35,6 +36,9 @@ export function VocabDeckDeleteDialog({
 	deckId,
 	deckName,
 }: VocabDeckDeleteDialogProps) {
+	const navigate = useNavigate();
+	const { deckId: currentDeckId } = useParams<{ deckId?: string }>();
+
 	const deleteMutation = useMutation({
 		mutationFn: () => deleteDeck(deckId),
 		onSuccess: () => {
@@ -42,6 +46,9 @@ export function VocabDeckDeleteDialog({
 			void queryClient.invalidateQueries({ queryKey: ["folder"] });
 			toast.success("Đã xóa học phần");
 			onOpenChange(false);
+			if (currentDeckId === deckId) {
+				navigate(-1);
+			}
 		},
 		onError: () => {
 			toast.error("Không thể xóa học phần");

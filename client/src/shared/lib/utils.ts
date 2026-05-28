@@ -75,6 +75,32 @@ const vietnameseLevels: Record<ExerciseLevel, string> = {
 	advanced: "Nâng cao",
 } as const;
 
+const vietnamesePartOfSpeech: {[key: string]: string} = {
+	phrasal_verb: "Cụm động từ",
+	verb: "Động từ",
+	numeral: "Số từ",
+	modal: "Động từ khuyết thiếu",
+	pronoun: "Đại từ",
+	interjection: "Thán từ",
+	verb_phrase: "Cụm động từ",
+	conjunction: "Liên từ",
+	adv_phrase: "Cụm trạng từ",
+	preposition: "Giới từ",
+	adverb: "Trạng từ",
+	number: "Số từ",
+	abbreviation: "Từ viết tắt",
+	adjective: "Tính từ",
+	noun_phrase: "Cụm danh từ",
+	determiner: "Mạo từ",
+	prep_phrase: "Cụm giới từ",
+	adj_phrase: "Cụm tính từ",
+	noun: "Danh từ",
+} as const;
+
+export function translatePartOfSpeech(partOfSpeech: string): string {
+	return vietnamesePartOfSpeech[partOfSpeech] || partOfSpeech;
+}
+
 export function translateLevel(level: ExerciseLevel) {
 	return vietnameseLevels[level];
 }

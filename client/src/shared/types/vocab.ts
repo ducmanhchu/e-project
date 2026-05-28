@@ -94,3 +94,14 @@ export type CardListParams = {
 	page?: number;
 	limit?: number;
 }
+
+export type CreateFlashcardPayload = {
+	deckId: string;
+	word: string;
+	meaning: string;
+	ipa?: string;
+	partOfSpeech?: string;
+	enExample?: string;
+	viExample?: string;
+	audio?: string;
+}
