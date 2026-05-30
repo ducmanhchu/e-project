@@ -204,6 +204,44 @@ export function useParaphrase(exerciseId: string) {
 		!isSubmitting &&
 		(!isViewingCompleted || isRetrying);
 
+	// Bao gồm feedback vừa nộp (trước khi refetch) để hiện nút câu tiếp ngay sau khi đạt điểm
+	const isViewingPassed = useMemo(() => {
+		if (isRetrying) return false;
+		if (isViewingCompleted) return true;
+		return (
+			viewingOrder !== null &&
+			currentFeedback?.order === viewingOrder &&
+			currentFeedback.score >= 70
+		);
+	}, [isViewingCompleted, isRetrying, viewingOrder, currentFeedback]);
+
+	// Feedback vừa nộp — dùng mở khóa câu kế trước khi refetch cập nhật maxSelectableOrder (hỗ trợ autofocus button tiếp theo khi chưa fetch xong)
+	const hasJustPassedCurrent = useMemo(() => {
+		if (isRetrying || viewingOrder === null) return false;
+		return (
+			currentFeedback?.order === viewingOrder && currentFeedback.score >= 70
+		);
+	}, [isRetrying, viewingOrder, currentFeedback]);
+
+	const canGoNext = useMemo(() => {
+		if (viewingOrder === null) return false;
+		const nextOrder = viewingOrder + 1;
+		if (nextOrder > sentences.length) return false;
+		return nextOrder <= maxSelectableOrder || hasJustPassedCurrent;
+	}, [
+		viewingOrder,
+		sentences.length,
+		maxSelectableOrder,
+		hasJustPassedCurrent,
+	]);
+
+	const shouldShowNextButton = isViewingPassed && canGoNext;
+
+	const handleNextSentence = useCallback(() => {
+		if (!canGoNext || viewingOrder === null) return;
+		handleChangeOrder(viewingOrder + 1);
+	}, [canGoNext, viewingOrder, handleChangeOrder]);
+
 	return {
 		exercise,
 		sentences,
@@ -220,9 +258,11 @@ export function useParaphrase(exerciseId: string) {
 		handleChangeOrder,
 		handleRedo,
 		handleSubmit,
+		handleNextSentence,
 		canSubmit,
 		isInputDisabled,
 		shouldShowRedoIcon,
+		shouldShowNextButton,
 		isLoading: exerciseQuery.isLoading,
 		isSubmitting,
 	};

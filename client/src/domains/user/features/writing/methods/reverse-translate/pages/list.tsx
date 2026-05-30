@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import type { ReverseTranslateQueryParams } from "@shared/types/reverse-translate";
 import { Separator } from "@shared/components/ui/separator";
 import { Skeleton } from "@shared/components/ui/skeleton";
+import { GooeyInput } from "@shared/components/ui/gooey-input";
 import { FilterSection } from "@/domains/user/components/filter-section";
 import { ReverseTranslateCard } from "@user/features/writing/methods/reverse-translate/components/card";
 import {
@@ -34,11 +35,14 @@ function extractFilterValues(
 function buildQueryParams(
 	selected: Record<string, boolean>,
 	page: number,
+	search: string,
 ): ReverseTranslateQueryParams {
 	const params: ReverseTranslateQueryParams = {
 		page,
 		limit: ITEMS_PER_PAGE,
 	};
+
+	if (search) params.search = search;
 
 	const statuses = extractFilterValues(selected, "status");
 	if (statuses.length > 0) params.status = statuses.join(",");
@@ -77,6 +81,15 @@ function generatePageNumbers(
 export function ReverseTranslateList() {
 	const [selected, setSelected] = useState<Record<string, boolean>>({});
 	const [page, setPage] = useState(1);
+	const [searchInput, setSearchInput] = useState("");
+	const deferredSearch = useDeferredValue(searchInput.trim());
+	const [prevDeferredSearch, setPrevDeferredSearch] = useState(deferredSearch);
+
+	// Reset trang khi giá trị search dùng cho API thay đổi (sau defer)
+	if (deferredSearch !== prevDeferredSearch) {
+		setPrevDeferredSearch(deferredSearch);
+		setPage(1);
+	}
 
 	const { data: me } = useFetchMe();
 	const isLoggedIn = !!me;
@@ -90,8 +103,8 @@ export function ReverseTranslateList() {
 	);
 
 	const queryParams = useMemo(
-		() => buildQueryParams(selected, page),
-		[selected, page],
+		() => buildQueryParams(selected, page, deferredSearch),
+		[selected, page, deferredSearch],
 	);
 
 	const { data, isLoading, isError } = useQuery({
@@ -117,11 +130,19 @@ export function ReverseTranslateList() {
 	);
 
 	return (
-		<div className="grid grid-cols-1 gap-10 lg:gap-0 lg:grid-cols-3">
+		<div className="grid grid-cols-1 gap-10 lg:gap-0 lg:grid-cols-3 md:mb-10">
 			<div className="flex w-full max-w-xs flex-col gap-4">
 				<h2 className="font-heading text-base text-foreground">Bộ lọc</h2>
 				<Separator />
-				<div className="flex flex-col gap-6">
+				<div className="flex flex-col items-start gap-4">
+					<GooeyInput
+						placeholder="Tìm kiếm"
+						theme="light"
+						collapsedWidth={140}
+						expandedWidth={260}
+						value={searchInput}
+						onValueChange={setSearchInput}
+					/>
 					{filterSections.map((section) => (
 						<FilterSection
 							key={section.id}

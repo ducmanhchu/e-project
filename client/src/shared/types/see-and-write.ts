@@ -91,6 +91,7 @@ export type SAWListQueryParams = {
 	level?: string;
 	topic?: string;
 	status?: string;
+	search?: string;
 	page?: number;
 	limit?: number;
 };

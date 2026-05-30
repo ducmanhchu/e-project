@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -66,6 +67,16 @@ export function ReverseTranslateExercise() {
 		isResetting,
 	} = useReverseTranslate(id as string);
 
+	const wasSubmittingRef = useRef(false);
+
+	// Focus lại input sau khi nộp bài xong để tiếp tục gõ câu tiếp theo
+	useEffect(() => {
+		if (wasSubmittingRef.current && !isSubmitting && !isAllCompleted) {
+			document.getElementById("rt-answer-input")?.focus();
+		}
+		wasSubmittingRef.current = isSubmitting;
+	}, [isSubmitting, isAllCompleted]);
+
 	const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		if (e.key === "Enter" && !e.nativeEvent.isComposing) {
 			e.preventDefault();
@@ -75,7 +86,7 @@ export function ReverseTranslateExercise() {
 
 	const handleBack = () => {
 		queryClient.invalidateQueries({ queryKey: ["reverse-translate", "list"] });
-		navigate(-1);
+		navigate("/writing/reverse-translate");
 	};
 
 	return (

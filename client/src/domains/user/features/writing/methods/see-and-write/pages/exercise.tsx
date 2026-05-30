@@ -44,7 +44,7 @@ export function SeeAndWriteExercise() {
 
 	const handleBack = () => {
 		queryClient.invalidateQueries({ queryKey: ["see-and-write", "list"] });
-		navigate(-1);
+		navigate("/writing/see-and-write");
 	};
 
 	return (

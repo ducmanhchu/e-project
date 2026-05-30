@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -6,6 +7,7 @@ import {
 	Loading03Icon,
 	HelpCircleIcon,
 	CoinbaseIcon,
+	ArrowRight02Icon,
 } from "@hugeicons/core-free-icons";
 
 import type { WritingExerciseTopic, ExerciseLevel } from "@shared/types/utils";
@@ -58,13 +60,49 @@ export function ParaphraseExercise() {
 		handleChangeOrder,
 		handleRedo,
 		handleSubmit,
+		handleNextSentence,
 		canSubmit,
 		isViewingCompleted,
 		isInputDisabled,
 		shouldShowRedoIcon,
+		shouldShowNextButton,
 		isLoading,
 		isSubmitting,
 	} = useParaphrase(id as string);
+
+	const inputRef = useRef<HTMLInputElement>(null);
+	const nextButtonRef = useRef<HTMLButtonElement>(null);
+	const wasSubmittingRef = useRef(false);
+	const pendingFocusRef = useRef<"next" | "input" | null>(null);
+
+	// Cập nhật trạng thái câu tiếp theo trước fetch để focus ngay khi nộp xong (trước khi nút tiếp theo mount)
+	useEffect(() => {
+		if (wasSubmittingRef.current && !isSubmitting && viewingFeedback) {
+			if (viewingFeedback.score >= 70 && shouldShowNextButton) {
+				pendingFocusRef.current = "next";
+			} else if (viewingFeedback.score < 70) {
+				pendingFocusRef.current = "input";
+			}
+		}
+		wasSubmittingRef.current = isSubmitting;
+	}, [isSubmitting, viewingFeedback, shouldShowNextButton]);
+
+	// Focus input khi không đạt điểm
+	useEffect(() => {
+		if (pendingFocusRef.current !== "input" || isInputDisabled) return;
+		inputRef.current?.focus();
+		pendingFocusRef.current = null;
+	}, [isInputDisabled, viewingFeedback]);
+
+	// Focus nút tiếp theo sau khi mount (đạt điểm + còn câu kế)
+	useEffect(() => {
+		if (pendingFocusRef.current !== "next" || !shouldShowNextButton) return;
+		const frameId = requestAnimationFrame(() => {
+			nextButtonRef.current?.focus();
+			pendingFocusRef.current = null;
+		});
+		return () => cancelAnimationFrame(frameId);
+	}, [shouldShowNextButton]);
 
 	const handleBack = () => {
 		queryClient.invalidateQueries({ queryKey: ["paraphrase", "list"] });
@@ -117,7 +155,7 @@ export function ParaphraseExercise() {
 					{isLoading ? (
 						<Skeleton className="h-6 w-64 mx-auto" />
 					) : (
-						<h1 className="text-xl font-medium flex-1 text-center">
+						<h1 className="text-xl font-medium flex-1 text-center md:ps-20">
 							{exerciseData?.title}
 						</h1>
 					)}
@@ -170,6 +208,8 @@ export function ParaphraseExercise() {
 				<div className="flex flex-col w-full gap-2">
 					<InputGroup className="bg-neutral-50 border-secondary-black rounded-full py-6 ps-4">
 						<InputGroupInput
+							ref={inputRef}
+							id="paraphrase-answer-input"
 							placeholder={
 								isAllCompleted
 									? "Bạn đã hoàn thành tất cả các câu!"
@@ -182,6 +222,25 @@ export function ParaphraseExercise() {
 							autoComplete="off"
 						/>
 						<InputGroupAddon align="inline-end">
+							{shouldShowNextButton && (
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<InputGroupButton
+											ref={nextButtonRef}
+											variant="blackHover"
+											size="sm"
+											onClick={handleNextSentence}
+											aria-label="Câu tiếp theo"
+										>
+											<HugeiconsIcon icon={ArrowRight02Icon} />
+											Tiếp theo
+										</InputGroupButton>
+									</TooltipTrigger>
+									<TooltipContent>
+										<p>Câu tiếp theo</p>
+									</TooltipContent>
+								</Tooltip>
+							)}
 							<Tooltip>
 								<TooltipTrigger asChild>
 									<InputGroupButton

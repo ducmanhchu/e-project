@@ -33,7 +33,10 @@ export function FilterSection({
 	const isTopicSection = sectionId === "topic";
 
 	return (
-		<Collapsible defaultOpen className="group/collapsible flex flex-col gap-3">
+		<Collapsible
+			defaultOpen
+			className="group/collapsible flex flex-col gap-3 w-full"
+		>
 			<CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2 text-left text-sm font-normal text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground">
 				<span>{label}</span>
 				<HugeiconsIcon

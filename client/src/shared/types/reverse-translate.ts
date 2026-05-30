@@ -39,6 +39,7 @@ export type ReverseTranslateQueryParams = {
 	contentType?: string;
 	topic?: string;
 	status?: string;
+	search?: string;
 	page?: number;
 	limit?: number;
 };
@@ -213,7 +214,16 @@ export type RTUpdateLessonData = {
 
 export type RTUpdateResponse = APIResponse<RTUpdateLessonData>;
 
-export type AdminRTExercise = Pick<RTItem, "id" | "title" | "level" | "topic" | "contentType" | "totalSentences" | "createdAt"> & {
+export type AdminRTExercise = Pick<
+	RTItem,
+	| "id"
+	| "title"
+	| "level"
+	| "topic"
+	| "contentType"
+	| "totalSentences"
+	| "createdAt"
+> & {
 	description: string;
 	vietnameseParagraph: string;
 	updatedAt: string;
@@ -240,4 +250,4 @@ export type AdminRTExercise = Pick<RTItem, "id" | "title" | "level" | "topic" | 
 		}[];
 		sentenceIndex: number | null;
 	}[];
-}
+};
