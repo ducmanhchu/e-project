@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUp02Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { CoinbaseIcon, Loading03Icon } from "@hugeicons/core-free-icons";
 
 import { ShimmerText } from "@user/components/shimmer-text";
 import { Button } from "@shared/components/ui/button";
@@ -9,6 +9,7 @@ import {
 	FieldLabel,
 } from "@shared/components/ui/field";
 import { Textarea } from "@shared/components/ui/textarea";
+import { MyWallet } from "@user/components/my-wallet";
 import { cn } from "@shared/lib/utils";
 
 type ParagraphValidation = {
@@ -80,30 +81,35 @@ export function ParagraphInput({
 					</span>
 				</div>
 			</Field>
-			<Button
-				variant="blackHover"
-				className="w-full"
-				onClick={onSubmit}
-				disabled={disabled}
-			>
-				{isSubmitting ? (
-					<div className="flex items-center gap-2">
-						<HugeiconsIcon
-							icon={Loading03Icon}
-							className="animate-spin shrink-0"
-						/>
-						<ShimmerText
-							className="min-h-0 min-w-0 flex-1 justify-start overflow-hidden"
-							textClassName="text-sm whitespace-nowrap [--base-color:var(--color-secondary-white)] [--shimmer-color:white]"
-						/>
-					</div>
-				) : (
-					<>
-						<HugeiconsIcon icon={ArrowUp02Icon} />
-						Đánh giá
-					</>
-				)}
-			</Button>
+			<div className="flex gap-1.5 w-full">
+				<Button
+					variant="blackHover"
+					className="grow"
+					onClick={onSubmit}
+					disabled={disabled}
+				>
+					{isSubmitting ? (
+						<div className="flex items-center gap-2">
+							<HugeiconsIcon
+								icon={Loading03Icon}
+								className="animate-spin shrink-0"
+							/>
+							<ShimmerText
+								className="min-h-0 min-w-0 flex-1 justify-start overflow-hidden"
+								textClassName="text-sm whitespace-nowrap [--base-color:var(--color-secondary-white)] [--shimmer-color:white]"
+							/>
+						</div>
+					) : (
+						<div className="flex items-center gap-1.5">
+							<span className="flex items-center gap-1">
+								<HugeiconsIcon icon={CoinbaseIcon} />1
+							</span>
+							-<span>Đánh giá</span>
+						</div>
+					)}
+				</Button>
+				<MyWallet className="py-0.5 ps-0.5 pe-2 bg-neutral-50" secondary />
+			</div>
 		</div>
 	);
 }

@@ -10,12 +10,12 @@ import type { ExerciseLevel, WritingExerciseTopic } from "@shared/types/utils";
 import { Button } from "@shared/components/ui/button";
 import { Skeleton } from "@shared/components/ui/skeleton";
 import { ExerciseLevelBadge } from "@user/components/exercise-level-badge";
-import { translateTopic } from "@shared/lib/utils";
-import { queryClient } from "@shared/lib/query-client";
-import { useSeeAndWrite } from "@user/features/writing/methods/see-and-write/hooks/use-see-and-write";
 import { KeywordPool } from "@user/features/writing/methods/see-and-write/components/keyword-pool";
 import { ParagraphInput } from "@user/features/writing/methods/see-and-write/components/paragraph-input";
 import { ParagraphFeedback } from "@user/features/writing/methods/see-and-write/components/paragraph-feedback";
+import { translateTopic } from "@shared/lib/utils";
+import { queryClient } from "@shared/lib/query-client";
+import { useSeeAndWrite } from "@user/features/writing/methods/see-and-write/hooks/use-see-and-write";
 
 export function SeeAndWriteExercise() {
 	const { id } = useParams<{ id: string }>();
@@ -25,7 +25,6 @@ export function SeeAndWriteExercise() {
 		exercise,
 		isLoading,
 		currentStep,
-
 		selectedKeywordIds,
 		toggleKeyword,
 		isKeywordDisabled,
@@ -33,14 +32,12 @@ export function SeeAndWriteExercise() {
 		isSubmittingKeywords,
 		handleSubmitKeywords,
 		getKeywordStatus,
-
 		paragraph,
 		setParagraph,
 		paragraphValidation,
 		isSubmittingParagraph,
 		handleSubmitParagraph,
 		paragraphResult,
-
 		handleRetry,
 		isResetting,
 	} = useSeeAndWrite(id as string);

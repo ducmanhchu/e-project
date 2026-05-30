@@ -4,17 +4,17 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 
 import type { ExerciseLevel, WritingExerciseTopic } from "@shared/types/utils";
-
-import { translateTopic } from "@shared/lib/utils";
-import { ExerciseLevelBadge } from "@user/components/exercise-level-badge";
-import { queryClient } from "@shared/lib/query-client";
-
 import { Button } from "@shared/components/ui/button";
 import { Skeleton } from "@shared/components/ui/skeleton";
 import { ConversationLine } from "@user/features/speaking/methods/conversation/components/line";
 import { ConversationRecorder } from "@user/features/speaking/methods/conversation/components/recorder";
 import { ConversationFeedbackPanel } from "@user/features/speaking/methods/conversation/components/feedback-panel";
+import { MyWallet } from "@user/components/my-wallet";
+
 import { useConversation } from "@/domains/user/features/speaking/methods/conversation/hooks/use-conversation";
+import { translateTopic } from "@shared/lib/utils";
+import { ExerciseLevelBadge } from "@user/components/exercise-level-badge";
+import { queryClient } from "@shared/lib/query-client";
 
 export function ConversationExercise() {
 	const navigate = useNavigate();
@@ -174,7 +174,7 @@ export function ConversationExercise() {
 
 				{/* Recorder */}
 				{visiblePairs.length > 0 && (
-					<div className="flex justify-center items-center w-full py-2">
+					<div className="md:relative flex flex-col gap-3 md:gap-0 md:flex-row justify-center items-center w-full py-2">
 						<ConversationRecorder
 							phase={phase}
 							playbackUrl={playbackUrl}
@@ -186,6 +186,10 @@ export function ConversationExercise() {
 							onSubmit={handleSubmit}
 							onNext={handleNext}
 							onRedo={handleRedo}
+						/>
+						<MyWallet
+							className="md:absolute md:right-0 md:top-2 py-0.5 ps-0.5 pe-2 bg-neutral-50"
+							secondary
 						/>
 					</div>
 				)}

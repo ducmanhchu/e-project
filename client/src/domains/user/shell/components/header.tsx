@@ -4,6 +4,7 @@ import {
 	Menu01Icon,
 	ResetPasswordIcon,
 	User03Icon,
+	Invoice01Icon,
 } from "@hugeicons/core-free-icons";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useRevalidator } from "react-router";
@@ -13,7 +14,6 @@ import { motion, useMotionValueEvent, useScroll } from "motion/react";
 
 import { Logo } from "@shared/components/logo";
 import { Button } from "@shared/components/ui/button";
-import { useFetchMe } from "@shared/hooks/use-fetch-me";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -29,9 +29,6 @@ import {
 	AvatarImage,
 } from "@shared/components/ui/avatar";
 import { Skeleton } from "@shared/components/ui/skeleton";
-import { signOut } from "@shared/api/auth";
-import { useAuthStore } from "@shared/store/use-auth-store";
-import { cn } from "@shared/lib/utils";
 import {
 	Sheet,
 	SheetClose,
@@ -42,6 +39,11 @@ import {
 } from "@shared/components/ui/sheet";
 import DefaultAvatar from "@shared/assets/avatar/avatar4.png";
 import type { HeaderContentProps } from "@shared/types/utils";
+import { signOut } from "@shared/api/auth";
+import { useAuthStore } from "@shared/store/use-auth-store";
+import { cn } from "@shared/lib/utils";
+import { useFetchMe } from "@shared/hooks/use-fetch-me";
+import { MyWallet } from "@/domains/user/components/my-wallet";
 
 const NAV_ITEMS = [
 	{ to: "/", label: "Trang chủ", end: true },
@@ -117,8 +119,8 @@ function MobileHeaderContent({ me, isLoading, onLogout }: HeaderContentProps) {
 	return (
 		<div className="relative flex h-full w-full items-center justify-between md:hidden">
 			<MobileNavSheet />
-			<Link to="/" className="absolute left-1/2 -translate-x-1/2">
-				<Logo className="h-14 w-32" />
+			<Link to="/" className="absolute left-12">
+				<Logo className="h-14 w-30" />
 			</Link>
 			<UserAction me={me} isLoading={isLoading} onLogout={onLogout} />
 		</div>
@@ -263,7 +265,8 @@ function MobileNavSheet() {
 function UserAction({ me, isLoading, onLogout }: HeaderContentProps) {
 	if (isLoading) {
 		return (
-			<div className="flex h-10 w-10 items-center justify-center">
+			<div className="flex h-10 w-10 items-center justify-center gap-2">
+				<Skeleton className="h-8 w-22 rounded-full" />
 				<Skeleton className="h-8 w-8 rounded-full" />
 			</div>
 		);
@@ -284,40 +287,48 @@ function UserAction({ me, isLoading, onLogout }: HeaderContentProps) {
 	}
 
 	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" size="icon" className="rounded-full">
-					<Avatar className="border border-primary">
-						<AvatarImage
-							src={me.avatarUrl ?? DefaultAvatar}
-							alt="User avatar"
-						/>
-						<AvatarFallback>User</AvatarFallback>
-					</Avatar>
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
-				<DropdownMenuGroup>
-					<DropdownMenuLabel>{me.fullName}</DropdownMenuLabel>
-					<DropdownMenuItem>
-						<HugeiconsIcon icon={User03Icon} />
-						Trang cá nhân
-					</DropdownMenuItem>
-					<DropdownMenuItem asChild>
-						<Link to={me.googleId ? "/forgot-password" : "/change-password"}>
-							<HugeiconsIcon icon={ResetPasswordIcon} />
-							{me.googleId ? "Thiết lập mật khẩu" : "Đổi mật khẩu"}
-						</Link>
-					</DropdownMenuItem>
-				</DropdownMenuGroup>
-				<DropdownMenuSeparator />
-				<DropdownMenuGroup>
-					<DropdownMenuItem variant="destructive" onClick={onLogout}>
-						<HugeiconsIcon icon={LogoutCircle01Icon} />
-						Đăng xuất
-					</DropdownMenuItem>
-				</DropdownMenuGroup>
-			</DropdownMenuContent>
-		</DropdownMenu>
+		<div className="flex items-center gap-3">
+			<MyWallet className="border-primary" />
+
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button variant="ghost" size="icon" className="rounded-full">
+						<Avatar className="border border-primary">
+							<AvatarImage
+								src={me.avatarUrl ?? DefaultAvatar}
+								alt="User avatar"
+							/>
+							<AvatarFallback>User</AvatarFallback>
+						</Avatar>
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end">
+					<DropdownMenuGroup>
+						<DropdownMenuLabel>{me.fullName}</DropdownMenuLabel>
+						<DropdownMenuItem>
+							<HugeiconsIcon icon={User03Icon} />
+							Trang cá nhân
+						</DropdownMenuItem>
+						<DropdownMenuItem>
+							<HugeiconsIcon icon={Invoice01Icon} />
+							Giao dịch
+						</DropdownMenuItem>
+						<DropdownMenuItem asChild>
+							<Link to={me.googleId ? "/forgot-password" : "/change-password"}>
+								<HugeiconsIcon icon={ResetPasswordIcon} />
+								{me.googleId ? "Thiết lập mật khẩu" : "Đổi mật khẩu"}
+							</Link>
+						</DropdownMenuItem>
+					</DropdownMenuGroup>
+					<DropdownMenuSeparator />
+					<DropdownMenuGroup>
+						<DropdownMenuItem variant="destructive" onClick={onLogout}>
+							<HugeiconsIcon icon={LogoutCircle01Icon} />
+							Đăng xuất
+						</DropdownMenuItem>
+					</DropdownMenuGroup>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		</div>
 	);
 }

@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+	startWavRecording,
+	type WavRecorderControls,
+} from "@shared/lib/audio-recording";
 
 import type {
 	ConversationExercise,
 	PronunciationResultPayload,
 	ConversationSubmitPayload,
 } from "@shared/types/conversation";
-
-import {
-	startWavRecording,
-	type WavRecorderControls,
-} from "@shared/lib/audio-recording";
-import { assessPronunciation } from "@/shared/lib/azure";
+import { toast } from "sonner";
+import { assessPronunciation } from "@shared/lib/azure";
 import {
 	useAzureToken,
 	ensureAzureToken,
@@ -21,7 +21,8 @@ import {
 	submitConversation,
 } from "@shared/api/conversation";
 import { queryClient } from "@shared/lib/query-client";
-import { toast } from "sonner";
+import { useBalance } from "@user/features/wallet/hooks/use-balance";
+import { hasInsufficientCredits } from "@user/features/wallet/utils/credit-utils";
 
 export type Phase =
 	| "idle"
@@ -55,6 +56,8 @@ function revokePlaybackUrl(url: string | null) {
 }
 
 export function useConversation(exerciseId: string) {
+	const { data: balance } = useBalance();
+
 	const exerciseQuery = useQuery({
 		queryKey: ["conversation", "exercise", exerciseId],
 		queryFn: () => getConversationExercise(exerciseId),
@@ -220,10 +223,19 @@ export function useConversation(exerciseId: string) {
 			queryClient.invalidateQueries({
 				queryKey: ["conversation", "exercise", exerciseId],
 			});
+			queryClient.invalidateQueries({
+				queryKey: ["wallet", "balance"],
+			});
 		},
 	});
 
 	const handleSubmit = useCallback(async () => {
+		if (hasInsufficientCredits(balance)) {
+			toast.info("Bạn không có đủ xu. Vui lòng nạp thêm xu để tiếp tục!", {
+				position: "bottom-right",
+			});
+			return;
+		}
 		if (!recordingFile || !currentPair || submitMutation.isPending) return;
 
 		setPhase("assessing");
@@ -260,6 +272,7 @@ export function useConversation(exerciseId: string) {
 		refetchToken,
 		clearRecording,
 		playbackUrl,
+		balance,
 	]);
 
 	const handleNext = useCallback(() => {

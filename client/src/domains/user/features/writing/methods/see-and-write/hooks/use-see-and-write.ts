@@ -2,18 +2,20 @@ import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import type {
+	SAWExercise,
+	SAWStep,
+	KeywordStatus,
+} from "@shared/types/see-and-write";
 import {
 	fetchSAWExercise,
 	submitKeyword,
 	submitParagraph,
 } from "@shared/api/see-and-write";
 import { resetExercise } from "@shared/api/attempt";
-import type {
-	SAWExercise,
-	SAWStep,
-	KeywordStatus,
-} from "@shared/types/see-and-write";
 import { queryClient } from "@shared/lib/query-client";
+import { useBalance } from "@user/features/wallet/hooks/use-balance";
+import { hasInsufficientCredits } from "@user/features/wallet/utils/credit-utils";
 
 function escapeRegExp(str: string) {
 	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -26,6 +28,8 @@ function countWords(text: string) {
 }
 
 export function useSeeAndWrite(exerciseId: string) {
+	const { data: balance } = useBalance();
+
 	const exerciseQuery = useQuery({
 		queryKey: ["see-and-write", "exercise", exerciseId],
 		queryFn: () => fetchSAWExercise(exerciseId),
@@ -96,6 +100,9 @@ export function useSeeAndWrite(exerciseId: string) {
 			});
 			queryClient.invalidateQueries({
 				queryKey: ["see-and-write", "list", exerciseId],
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["wallet", "balance"],
 			});
 		},
 	});
@@ -175,11 +182,22 @@ export function useSeeAndWrite(exerciseId: string) {
 	}, [exercise, selectedKeywordIds, submitKeywordsMutation]);
 
 	const handleSubmitParagraph = useCallback(() => {
+		if (hasInsufficientCredits(balance)) {
+			toast.info("Bạn không có đủ xu. Vui lòng nạp thêm xu để tiếp tục!", {
+				position: "bottom-right",
+			});
+			return;
+		}
 		const trimmed = paragraph.trim();
 		if (!paragraphValidation.isValid) return;
 		if (submitParagraphMutation.isPending) return;
 		submitParagraphMutation.mutate(trimmed);
-	}, [paragraph, paragraphValidation.isValid, submitParagraphMutation]);
+	}, [
+		paragraph,
+		paragraphValidation.isValid,
+		submitParagraphMutation,
+		balance,
+	]);
 
 	const resetMutation = useMutation({
 		mutationFn: () => resetExercise(exerciseId, { action: "retry" }),

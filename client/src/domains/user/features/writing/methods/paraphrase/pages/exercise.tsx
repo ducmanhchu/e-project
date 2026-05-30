@@ -2,17 +2,13 @@ import { useParams, useNavigate } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	ArrowLeft02Icon,
-	ArrowUp02Icon,
 	Redo02Icon,
 	Loading03Icon,
 	HelpCircleIcon,
+	CoinbaseIcon,
 } from "@hugeicons/core-free-icons";
 
 import type { WritingExerciseTopic, ExerciseLevel } from "@shared/types/utils";
-
-import { queryClient } from "@shared/lib/query-client";
-import { cn, translateTopic } from "@shared/lib/utils";
-
 import { Button } from "@shared/components/ui/button";
 import { Skeleton } from "@shared/components/ui/skeleton";
 import { ExerciseLevelBadge } from "@user/components/exercise-level-badge";
@@ -36,10 +32,13 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@shared/components/ui/tooltip";
-
 import { ShimmerText } from "@user/components/shimmer-text";
-import { useParaphrase } from "@user/features/writing/methods/paraphrase/hooks/use-paraphrase";
 import { SentenceFeedback } from "@user/features/writing/methods/paraphrase/components/sentence-feedback";
+import { MyWallet } from "@user/components/my-wallet";
+
+import { queryClient } from "@shared/lib/query-client";
+import { cn, translateTopic } from "@shared/lib/utils";
+import { useParaphrase } from "@user/features/writing/methods/paraphrase/hooks/use-paraphrase";
 
 export function ParaphraseExercise() {
 	const { id } = useParams<{ id: string }>();
@@ -187,7 +186,7 @@ export function ParaphraseExercise() {
 								<TooltipTrigger asChild>
 									<InputGroupButton
 										variant={shouldShowRedoIcon ? "greenHover" : "blackHover"}
-										size={isSubmitting ? "xs" : "icon-sm"}
+										size={!shouldShowRedoIcon ? "sm" : "icon-sm"}
 										className={cn(isSubmitting && "h-8! w-48 shrink-0 px-2")}
 										onClick={shouldShowRedoIcon ? handleRedo : handleSubmit}
 										disabled={
@@ -208,9 +207,12 @@ export function ParaphraseExercise() {
 												/>
 											</>
 										) : (
-											<HugeiconsIcon
-												icon={shouldShowRedoIcon ? Redo02Icon : ArrowUp02Icon}
-											/>
+											<>
+												<HugeiconsIcon
+													icon={shouldShowRedoIcon ? Redo02Icon : CoinbaseIcon}
+												/>
+												{!shouldShowRedoIcon && <span>1</span>}
+											</>
 										)}
 									</InputGroupButton>
 								</TooltipTrigger>
@@ -220,17 +222,20 @@ export function ParaphraseExercise() {
 							</Tooltip>
 						</InputGroupAddon>
 					</InputGroup>
-					<div className="flex gap-2 ms-4 items-center">
-						<HugeiconsIcon
-							icon={HelpCircleIcon}
-							size={16}
-							className="text-muted-foreground"
-						/>
-						<p className="text-xs text-muted-foreground">
-							{isAllCompleted
-								? `Hoàn thành ${progress.total}/${progress.total} câu.`
-								: `Câu ${progress.completed}/${progress.total} đã hoàn thành · Đạt 70 điểm để vượt qua câu.`}
-						</p>
+					<div className="flex justify-between items-center">
+						<div className="flex gap-2 ms-4 items-center">
+							<HugeiconsIcon
+								icon={HelpCircleIcon}
+								size={16}
+								className="text-muted-foreground"
+							/>
+							<p className="text-xs text-muted-foreground">
+								{isAllCompleted
+									? `Hoàn thành ${progress.total}/${progress.total} câu.`
+									: `Câu ${progress.completed}/${progress.total} đã hoàn thành · Đạt 70 điểm để vượt qua câu.`}
+							</p>
+						</div>
+						<MyWallet className="py-0.5 ps-0.5 pe-2 bg-neutral-50" secondary />
 					</div>
 				</div>
 			</div>

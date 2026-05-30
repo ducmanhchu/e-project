@@ -3,19 +3,22 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { toast } from "sonner";
 
+import type {
+	CurrentFeedback,
+	RTExerciseSubmitPayload,
+} from "@shared/types/reverse-translate";
 import {
 	fetchRTExercise,
 	submitRTExercise,
 } from "@shared/api/reverse-translate";
 import { resetExercise } from "@shared/api/attempt";
 import { fetchWordList } from "@shared/api/vocab";
-import type {
-	CurrentFeedback,
-	RTExerciseSubmitPayload,
-} from "@shared/types/reverse-translate";
+import { useBalance } from "@user/features/wallet/hooks/use-balance";
+import { hasInsufficientCredits } from "@user/features/wallet/utils/credit-utils";
 
 export function useReverseTranslate(exerciseId: string) {
 	const queryClient = useQueryClient();
+	const { data: balance } = useBalance();
 
 	const exerciseQuery = useQuery({
 		queryKey: ["reverse-translate", "exercise", exerciseId],
@@ -84,6 +87,9 @@ export function useReverseTranslate(exerciseId: string) {
 				queryClient.invalidateQueries({
 					queryKey: ["reverse-translate", "exercise", exerciseId],
 				});
+				queryClient.invalidateQueries({
+					queryKey: ["wallet", "balance"],
+				});
 			}
 		},
 		onError: () => {
@@ -92,6 +98,12 @@ export function useReverseTranslate(exerciseId: string) {
 	});
 
 	const handleSubmit = useCallback(() => {
+		if (hasInsufficientCredits(balance)) {
+			toast.info("Bạn không có đủ xu. Vui lòng nạp thêm xu để tiếp tục!", {
+				position: "bottom-right",
+			});
+			return;
+		}
 		const trimmed = userInput.trim();
 		if (!trimmed || currentSentenceIdx === null || submitMutation.isPending)
 			return;
@@ -99,7 +111,7 @@ export function useReverseTranslate(exerciseId: string) {
 			sentenceOrder: currentSentenceIdx,
 			userAnswer: trimmed,
 		});
-	}, [userInput, currentSentenceIdx, submitMutation]);
+	}, [userInput, currentSentenceIdx, submitMutation, balance]);
 
 	const viewingFeedback = useMemo(() => {
 		if (viewingSentenceIdx === null) return null;

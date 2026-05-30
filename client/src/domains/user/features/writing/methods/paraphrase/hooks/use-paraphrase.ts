@@ -1,16 +1,19 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
+import { toast } from "sonner";
+
 import type {
 	ParaphraseExercise,
 	ParaphraseSubmitPayload,
 } from "@shared/types/paraphrase";
-
 import {
 	fetchParaphraseExercise,
 	submitParaphraseSentence,
 } from "@shared/api/paraphrase";
 import { queryClient } from "@shared/lib/query-client";
+import { useBalance } from "@user/features/wallet/hooks/use-balance";
+import { hasInsufficientCredits } from "@user/features/wallet/utils/credit-utils";
 
 type SentenceFeedback = NonNullable<
 	ParaphraseExercise["sentences"][number]["lastSubmission"]
@@ -24,6 +27,8 @@ type CurrentFeedback = {
 };
 
 export function useParaphrase(exerciseId: string) {
+	const { data: balance } = useBalance();
+
 	const exerciseQuery = useQuery({
 		queryKey: ["paraphrase", "exercise", exerciseId],
 		queryFn: () => fetchParaphraseExercise(exerciseId),
@@ -134,6 +139,9 @@ export function useParaphrase(exerciseId: string) {
 			queryClient.invalidateQueries({
 				queryKey: ["paraphrase", "exercise", exerciseId],
 			});
+			queryClient.invalidateQueries({
+				queryKey: ["wallet", "balance"],
+			});
 		},
 	});
 
@@ -159,6 +167,12 @@ export function useParaphrase(exerciseId: string) {
 	}, [isViewingCompleted]);
 
 	const handleSubmit = useCallback(() => {
+		if (hasInsufficientCredits(balance)) {
+			toast.info("Bạn không có đủ xu. Vui lòng nạp thêm xu để tiếp tục!", {
+				position: "bottom-right",
+			});
+			return;
+		}
 		const trimmed = userInput.trim();
 		if (
 			!trimmed ||
@@ -172,7 +186,14 @@ export function useParaphrase(exerciseId: string) {
 			sentenceOrder: viewingOrder,
 			userAnswer: trimmed,
 		});
-	}, [userInput, viewingOrder, submitMutation, isViewingCompleted, isRetrying]);
+	}, [
+		userInput,
+		viewingOrder,
+		submitMutation,
+		isViewingCompleted,
+		isRetrying,
+		balance,
+	]);
 
 	const isSubmitting = submitMutation.isPending;
 	const isInputDisabled = isSubmitting || (isViewingCompleted && !isRetrying);
