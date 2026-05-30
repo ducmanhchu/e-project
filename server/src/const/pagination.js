@@ -1,0 +1,5 @@
+export const PAGINATION = {
+  DEFAULT_LIST_LIMIT: 12,
+  DEFAULT_ADMIN_LIMIT: 20,
+  MAX_LIMIT: 50,
+};

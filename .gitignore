@@ -26,6 +26,7 @@ Thumbs.db
 # VS Code
 .vscode/
 !.vscode/extensions.json
+.idea/
 
 # Testing / Coverage
 coverage/
@@ -33,3 +34,23 @@ coverage/
 # MongoDB
 data/
 mongo-data/
+
+# server build 
+server/lib/
+serviceAccount.json
+
+# Cursor
+.cursor/
+.agents/
+.cursorignore
+
+# Celo ignore
+.claude/
+CLAUDE.md
+plans/
+words_data.json
+.superpowers/
+.obsidian/
+tests/
+docs/
+playground/
