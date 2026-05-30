@@ -305,9 +305,11 @@ function UserAction({ me, isLoading, onLogout }: HeaderContentProps) {
 				<DropdownMenuContent align="end">
 					<DropdownMenuGroup>
 						<DropdownMenuLabel>{me.fullName}</DropdownMenuLabel>
-						<DropdownMenuItem>
-							<HugeiconsIcon icon={User03Icon} />
-							Trang cá nhân
+						<DropdownMenuItem asChild>
+							<Link to="/profile">
+								<HugeiconsIcon icon={User03Icon} />
+								Trang cá nhân
+							</Link>
 						</DropdownMenuItem>
 						<DropdownMenuItem asChild>
 							<Link to="/my-transactions">

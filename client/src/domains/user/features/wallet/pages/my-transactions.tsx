@@ -78,11 +78,11 @@ export function MyTransactions() {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="flex flex-col gap-1">
+			<div className="flex flex-col gap-">
 				<h1 className="text-2xl md:text-4xl font-extrabold">
 					Thông tin giao dịch
 				</h1>
-				<p className="text-sm md:text-base text-muted-foreground">
+				<p className="text-sm md:text-base">
 					Theo dõi thông tin giao dịch của bạn.
 				</p>
 			</div>

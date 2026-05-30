@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Alert01Icon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/shared/components/ui/button";
 import { ShimmeringText } from "@/shared/components/ui/shimmering-text";
@@ -58,7 +60,7 @@ export function CheckoutQrStep({
 		(status === "pending" && remainingMs <= 0);
 
 	return (
-		<div className="flex flex-col items-center gap-4">
+		<div className="flex flex-col items-center gap-5">
 			{!isExpired && (
 				<>
 					<PaymentQrDisplay qrCode={order.qrCode} />
@@ -93,12 +95,23 @@ export function CheckoutQrStep({
 			</div>
 
 			{!isExpired && (
-				<p className="text-sm text-muted-foreground">
-					Thời gian còn lại:{" "}
-					<span className="font-mono font-medium text-foreground">
-						{formatCountdown(remainingMs)}
-					</span>
-				</p>
+				<div className="flex flex-col items-center justify-center gap-1">
+					<p className="text-sm text-muted-foreground">
+						Thời gian còn lại:{" "}
+						<span className="font-mono font-medium text-foreground">
+							{formatCountdown(remainingMs)}
+						</span>
+					</p>
+					<div className="flex gap-1.5 items-center">
+						<HugeiconsIcon
+							icon={Alert01Icon}
+							className="size-4 text-destructive"
+						/>
+						<p className="text-sm text-destructive">
+							Giao dịch không thể hoàn trả
+						</p>
+					</div>
+				</div>
 			)}
 
 			{isExpired ? (
