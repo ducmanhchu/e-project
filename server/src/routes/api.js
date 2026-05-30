@@ -12,8 +12,10 @@ import * as deckController from "@server/controllers/deckController";
 import * as folderController from "@server/controllers/folderController";
 import * as communityController from "@server/controllers/communityController";
 import * as uploadController from "@server/controllers/uploadController";
+import * as wordChainController from "@server/controllers/wordChainController";
 import * as walletController from "@server/controllers/walletController";
 import * as paymentController from "@server/controllers/paymentController";
+import * as progressController from "@server/controllers/progressController";
 import { mediaUpload } from "@server/middlewares/upload";
 import {
 	protectedRoute,
@@ -136,6 +138,22 @@ router.post(
 	slangHangController.submitMessageAttempt,
 );
 router.post("/slang-hang/dialogues/:id/retry", slangHangController.retry);
+
+// ── Word Chain ──────────────────────────────────────────
+router.post("/word-chain/games", wordChainController.startGame);
+router.get("/word-chain/active", wordChainController.getActive);
+router.get("/word-chain/games", wordChainController.listMyGames);
+router.get("/word-chain/best-scores", wordChainController.getBestScores);
+router.get("/word-chain/games/:gameId", wordChainController.getGame);
+router.post("/word-chain/games/:gameId/submit", wordChainController.submit);
+router.post("/word-chain/games/:gameId/give-up", wordChainController.giveUp);
+
+// ── Progress ─────────────────────────────────────────────
+router.get("/me/progress/summary", progressController.getSummary);
+router.get(
+	"/me/progress/history/attempts",
+	progressController.getAttemptHistory,
+);
 
 // ── Deck folders (PER-USER, 1 level only) ──────────
 router.post("/me/folders", folderController.createFolder);
