@@ -40,6 +40,7 @@ import {
 	FLASHCARD_PREFETCH_THRESHOLD,
 	FLASHCARD_STATUS_FILTER_OPTIONS,
 	FLASHCARD_TABLE_QUERY_KEY,
+	VOCAB_ROUTES,
 	type FlashcardStatusFilter,
 } from "@user/features/vocabulary/utils/constants";
 import {
@@ -104,6 +105,14 @@ const VocabDeckAddWordDialog = lazy(() =>
 	),
 );
 
+const VocabTestSetupDialog = lazy(() =>
+	import("@user/features/vocabulary/components/test-setup-dialog").then(
+		(m) => ({
+			default: m.VocabTestSetupDialog,
+		}),
+	),
+);
+
 export function VocabularyDeck() {
 	const navigate = useNavigate();
 
@@ -112,6 +121,7 @@ export function VocabularyDeck() {
 	const [updateOpen, setUpdateOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [addWordOpen, setAddWordOpen] = useState(false);
+	const [testSetupOpen, setTestSetupOpen] = useState(false);
 	const [shuffled, setShuffled] = useState(false);
 	const [trackProgress, setTrackProgress] = useState(false);
 	const [statusFilter, setStatusFilter] =
@@ -246,7 +256,9 @@ export function VocabularyDeck() {
 	);
 
 	const handleBack = (): void => {
-		navigate(-1);
+		if (deckQuery.data?.data?.folderId)
+			navigate(VOCAB_ROUTES.folder(deckQuery.data.data.folderId));
+		else navigate(VOCAB_ROUTES.root);
 	};
 
 	const handleShuffleToggle = useCallback((pressed: boolean) => {
@@ -292,7 +304,9 @@ export function VocabularyDeck() {
 				{isDeckLoading ? (
 					<Skeleton className="h-8 w-48 max-w-[50vw]" />
 				) : (
-					<p className="text-xl font-medium">{deckQuery.data?.data?.name}</p>
+					<p className="text-base md:text-xl font-medium md:ps-30">
+						{deckQuery.data?.data?.name}
+					</p>
 				)}
 
 				<div className="flex items-center">
@@ -404,7 +418,7 @@ export function VocabularyDeck() {
 								onPrefetchNearEnd={prefetchIfNearEnd}
 							/>
 						) : (
-							<p className="text-muted-foreground h-[min(62vh,500px)] text-sm self-center">
+							<p className="text-muted-foreground text-sm self-center justify-self-center">
 								{emptyFlashcardsMessage}
 							</p>
 						)}
@@ -435,12 +449,12 @@ export function VocabularyDeck() {
 					)}
 				</div>
 
-				{/* {!showFlashcardSkeleton && flashcards.length > 0 ? (
-					<Button variant="blackHover">
+				{!showFlashcardSkeleton && flashcards.length > 0 ? (
+					<Button variant="blackHover" onClick={() => setTestSetupOpen(true)}>
 						<HugeiconsIcon icon={TaskDaily01Icon} />
 						Kiểm tra
 					</Button>
-				) : null} */}
+				) : null}
 			</div>
 
 			{deckId ? (
@@ -450,7 +464,7 @@ export function VocabularyDeck() {
 				</div>
 			) : null}
 
-			{updateOpen || deleteOpen || addWordOpen ? (
+			{updateOpen || deleteOpen || addWordOpen || testSetupOpen ? (
 				<Suspense fallback={null}>
 					{updateOpen ? (
 						<VocabDeckUpdateDialog
@@ -476,6 +490,15 @@ export function VocabularyDeck() {
 							open={addWordOpen}
 							onOpenChange={setAddWordOpen}
 							deckId={deckId}
+						/>
+					) : null}
+
+					{testSetupOpen && deckId ? (
+						<VocabTestSetupDialog
+							open={testSetupOpen}
+							onOpenChange={setTestSetupOpen}
+							deckId={deckId}
+							maxCount={totalCards}
 						/>
 					) : null}
 				</Suspense>

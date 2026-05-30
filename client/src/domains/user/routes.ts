@@ -28,6 +28,7 @@ import { Vocabulary } from "@user/features/vocabulary/pages";
 import { VocabularyLayout } from "@user/features/vocabulary/layout/vocabulary-layout";
 import { VocabularyFolder } from "@user/features/vocabulary/pages/folder";
 import { VocabularyDeck } from "@user/features/vocabulary/pages/deck";
+import { VocabularyTest } from "@user/features/vocabulary/pages/test";
 
 import { requireAuthLoader } from "@shared/lib/auth-loaders";
 
@@ -120,6 +121,11 @@ export const userRoutes: RouteObject[] = [
 	{
 		path: "/speaking/conversation/:id",
 		Component: ConversationExercise,
+		loader: requireAuthLoader,
+	},
+	{
+		path: "/vocabulary/test",
+		Component: VocabularyTest,
 		loader: requireAuthLoader,
 	},
 	{

@@ -121,7 +121,7 @@ export function FlashcardCarousel({
 			const card = flashcards[index];
 			if (!card || isUpdatingStatus || card.status === status) return;
 
-			await onStatusUpdate(card._id, status);
+			await onStatusUpdate(card._id as string, status);
 			api?.scrollNext();
 			setFlippedCardId(null);
 		},
