@@ -1,16 +1,19 @@
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
+import { toast } from "sonner";
+
 import type {
 	ParaphraseExercise,
 	ParaphraseSubmitPayload,
 } from "@shared/types/paraphrase";
-
 import {
 	fetchParaphraseExercise,
 	submitParaphraseSentence,
 } from "@shared/api/paraphrase";
 import { queryClient } from "@shared/lib/query-client";
+import { useBalance } from "@user/features/wallet/hooks/use-balance";
+import { hasInsufficientCredits } from "@user/features/wallet/utils/credit-utils";
 
 type SentenceFeedback = NonNullable<
 	ParaphraseExercise["sentences"][number]["lastSubmission"]
@@ -24,6 +27,8 @@ type CurrentFeedback = {
 };
 
 export function useParaphrase(exerciseId: string) {
+	const { data: balance } = useBalance();
+
 	const exerciseQuery = useQuery({
 		queryKey: ["paraphrase", "exercise", exerciseId],
 		queryFn: () => fetchParaphraseExercise(exerciseId),
@@ -134,6 +139,9 @@ export function useParaphrase(exerciseId: string) {
 			queryClient.invalidateQueries({
 				queryKey: ["paraphrase", "exercise", exerciseId],
 			});
+			queryClient.invalidateQueries({
+				queryKey: ["wallet", "balance"],
+			});
 		},
 	});
 
@@ -159,6 +167,12 @@ export function useParaphrase(exerciseId: string) {
 	}, [isViewingCompleted]);
 
 	const handleSubmit = useCallback(() => {
+		if (hasInsufficientCredits(balance)) {
+			toast.info("Bạn không có đủ xu. Vui lòng nạp thêm xu để tiếp tục!", {
+				position: "bottom-right",
+			});
+			return;
+		}
 		const trimmed = userInput.trim();
 		if (
 			!trimmed ||
@@ -172,7 +186,14 @@ export function useParaphrase(exerciseId: string) {
 			sentenceOrder: viewingOrder,
 			userAnswer: trimmed,
 		});
-	}, [userInput, viewingOrder, submitMutation, isViewingCompleted, isRetrying]);
+	}, [
+		userInput,
+		viewingOrder,
+		submitMutation,
+		isViewingCompleted,
+		isRetrying,
+		balance,
+	]);
 
 	const isSubmitting = submitMutation.isPending;
 	const isInputDisabled = isSubmitting || (isViewingCompleted && !isRetrying);
@@ -182,6 +203,44 @@ export function useParaphrase(exerciseId: string) {
 		viewingOrder !== null &&
 		!isSubmitting &&
 		(!isViewingCompleted || isRetrying);
+
+	// Bao gồm feedback vừa nộp (trước khi refetch) để hiện nút câu tiếp ngay sau khi đạt điểm
+	const isViewingPassed = useMemo(() => {
+		if (isRetrying) return false;
+		if (isViewingCompleted) return true;
+		return (
+			viewingOrder !== null &&
+			currentFeedback?.order === viewingOrder &&
+			currentFeedback.score >= 70
+		);
+	}, [isViewingCompleted, isRetrying, viewingOrder, currentFeedback]);
+
+	// Feedback vừa nộp — dùng mở khóa câu kế trước khi refetch cập nhật maxSelectableOrder (hỗ trợ autofocus button tiếp theo khi chưa fetch xong)
+	const hasJustPassedCurrent = useMemo(() => {
+		if (isRetrying || viewingOrder === null) return false;
+		return (
+			currentFeedback?.order === viewingOrder && currentFeedback.score >= 70
+		);
+	}, [isRetrying, viewingOrder, currentFeedback]);
+
+	const canGoNext = useMemo(() => {
+		if (viewingOrder === null) return false;
+		const nextOrder = viewingOrder + 1;
+		if (nextOrder > sentences.length) return false;
+		return nextOrder <= maxSelectableOrder || hasJustPassedCurrent;
+	}, [
+		viewingOrder,
+		sentences.length,
+		maxSelectableOrder,
+		hasJustPassedCurrent,
+	]);
+
+	const shouldShowNextButton = isViewingPassed && canGoNext;
+
+	const handleNextSentence = useCallback(() => {
+		if (!canGoNext || viewingOrder === null) return;
+		handleChangeOrder(viewingOrder + 1);
+	}, [canGoNext, viewingOrder, handleChangeOrder]);
 
 	return {
 		exercise,
@@ -199,9 +258,11 @@ export function useParaphrase(exerciseId: string) {
 		handleChangeOrder,
 		handleRedo,
 		handleSubmit,
+		handleNextSentence,
 		canSubmit,
 		isInputDisabled,
 		shouldShowRedoIcon,
+		shouldShowNextButton,
 		isLoading: exerciseQuery.isLoading,
 		isSubmitting,
 	};

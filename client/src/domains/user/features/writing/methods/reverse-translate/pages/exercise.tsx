@@ -1,12 +1,13 @@
+import { useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	ArrowLeft02Icon,
-	ArrowUp02Icon,
 	Redo02Icon,
 	IdeaIcon,
 	HelpCircleIcon,
 	Loading03Icon,
+	CoinbaseIcon,
 } from "@hugeicons/core-free-icons";
 
 import type { ExerciseLevel, WritingExerciseTopic } from "@shared/types/utils";
@@ -37,6 +38,8 @@ import { WordCard } from "@user/features/writing/methods/reverse-translate/compo
 import { SentenceParagraph } from "@user/features/writing/methods/reverse-translate/components/sentence-paragraph";
 import { FeedbackPanel } from "@user/features/writing/methods/reverse-translate/components/feedback-panel";
 import { useReverseTranslate } from "@user/features/writing/methods/reverse-translate/hooks/use-reverse-translate";
+import { MyWallet } from "@/domains/user/components/my-wallet";
+
 import { queryClient } from "@shared/lib/query-client";
 
 export function ReverseTranslateExercise() {
@@ -64,6 +67,16 @@ export function ReverseTranslateExercise() {
 		isResetting,
 	} = useReverseTranslate(id as string);
 
+	const wasSubmittingRef = useRef(false);
+
+	// Focus lại input sau khi nộp bài xong để tiếp tục gõ câu tiếp theo
+	useEffect(() => {
+		if (wasSubmittingRef.current && !isSubmitting && !isAllCompleted) {
+			document.getElementById("rt-answer-input")?.focus();
+		}
+		wasSubmittingRef.current = isSubmitting;
+	}, [isSubmitting, isAllCompleted]);
+
 	const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		if (e.key === "Enter" && !e.nativeEvent.isComposing) {
 			e.preventDefault();
@@ -73,7 +86,7 @@ export function ReverseTranslateExercise() {
 
 	const handleBack = () => {
 		queryClient.invalidateQueries({ queryKey: ["reverse-translate", "list"] });
-		navigate(-1);
+		navigate("/writing/reverse-translate");
 	};
 
 	return (
@@ -185,7 +198,7 @@ export function ReverseTranslateExercise() {
 								<TooltipTrigger asChild>
 									<InputGroupButton
 										variant={isResetting ? "greenHover" : "blackHover"}
-										size="icon-sm"
+										size={!isAllCompleted ? "sm" : "icon-sm"}
 										onClick={isAllCompleted ? handleReset : handleSubmit}
 										disabled={
 											isAllCompleted
@@ -199,9 +212,12 @@ export function ReverseTranslateExercise() {
 												className="animate-spin"
 											/>
 										) : (
-											<HugeiconsIcon
-												icon={isAllCompleted ? Redo02Icon : ArrowUp02Icon}
-											/>
+											<>
+												<HugeiconsIcon
+													icon={isAllCompleted ? Redo02Icon : CoinbaseIcon}
+												/>
+												{!isAllCompleted && <span>1</span>}
+											</>
 										)}
 									</InputGroupButton>
 								</TooltipTrigger>
@@ -211,17 +227,20 @@ export function ReverseTranslateExercise() {
 							</Tooltip>
 						</InputGroupAddon>
 					</InputGroup>
-					<div className="flex gap-2 ms-4 items-center">
-						<HugeiconsIcon
-							icon={HelpCircleIcon}
-							size={16}
-							className="text-muted-foreground"
-						/>
-						<p className="text-xs text-muted-foreground">
-							{isAllCompleted
-								? `Hoàn thành ${progress.total}/${progress.total} câu.`
-								: `Câu ${progress.completed + 1}/${progress.total} · Đạt 70 điểm để đến với câu tiếp theo.`}
-						</p>
+					<div className="flex justify-between items-center">
+						<div className="flex gap-2 ms-4 items-center">
+							<HugeiconsIcon
+								icon={HelpCircleIcon}
+								size={16}
+								className="text-muted-foreground"
+							/>
+							<p className="text-xs text-muted-foreground">
+								{isAllCompleted
+									? `Hoàn thành ${progress.total}/${progress.total} câu.`
+									: `Câu ${progress.completed + 1}/${progress.total} · Đạt 70 điểm để đến với câu tiếp theo.`}
+							</p>
+						</div>
+						<MyWallet className="py-0.5 ps-0.5 pe-2 bg-neutral-50" secondary />
 					</div>
 				</div>
 			</div>

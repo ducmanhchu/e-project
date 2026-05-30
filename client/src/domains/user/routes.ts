@@ -25,6 +25,13 @@ import { ConversationList } from "@user/features/speaking/methods/conversation/p
 import { ConversationExercise } from "@user/features/speaking/methods/conversation/pages/exercise";
 
 import { Vocabulary } from "@user/features/vocabulary/pages";
+import { VocabularyLayout } from "@user/features/vocabulary/layout/vocabulary-layout";
+import { VocabularyFolder } from "@user/features/vocabulary/pages/folder";
+import { VocabularyDeck } from "@user/features/vocabulary/pages/deck";
+import { VocabularyTest } from "@user/features/vocabulary/pages/test";
+import { MyTransactions } from "@user/features/wallet/pages/my-transactions";
+
+import { Profile } from "@user/features/profile/pages";
 
 import { requireAuthLoader } from "@shared/lib/auth-loaders";
 
@@ -40,6 +47,16 @@ export const userRoutes: RouteObject[] = [
 			{
 				path: "change-password",
 				Component: ChangePassword,
+				loader: requireAuthLoader,
+			},
+			{
+				path: "my-transactions",
+				Component: MyTransactions,
+				loader: requireAuthLoader,
+			},
+			{
+				path: "profile",
+				Component: Profile,
 				loader: requireAuthLoader,
 			},
 			{
@@ -80,7 +97,22 @@ export const userRoutes: RouteObject[] = [
 			},
 			{
 				path: "vocabulary",
-				Component: Vocabulary,
+				Component: VocabularyLayout,
+				loader: requireAuthLoader,
+				children: [
+					{
+						index: true,
+						Component: Vocabulary,
+					},
+					{
+						path: "folder/:folderId",
+						Component: VocabularyFolder,
+					},
+					{
+						path: "deck/:deckId",
+						Component: VocabularyDeck,
+					},
+				],
 			},
 		],
 	},
@@ -102,6 +134,11 @@ export const userRoutes: RouteObject[] = [
 	{
 		path: "/speaking/conversation/:id",
 		Component: ConversationExercise,
+		loader: requireAuthLoader,
+	},
+	{
+		path: "/vocabulary/test",
+		Component: VocabularyTest,
 		loader: requireAuthLoader,
 	},
 	{

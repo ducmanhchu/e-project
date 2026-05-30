@@ -90,6 +90,8 @@ export interface GooeyInputProps {
 	onValueChange?: (value: string) => void;
 	onOpenChange?: (open: boolean) => void;
 	disabled?: boolean;
+	/** Màu nền/chữ: dark = nền tối (mặc định), light = đảo ngược */
+	theme?: "light" | "dark";
 }
 
 export function GooeyInput({
@@ -105,6 +107,7 @@ export function GooeyInput({
 	onValueChange,
 	onOpenChange,
 	disabled = false,
+	theme = "dark",
 }: GooeyInputProps) {
 	const reactId = useId();
 	const safeId = reactId.replace(/:/g, "");
@@ -171,8 +174,24 @@ export function GooeyInput({
 		if (!searchText) setExpanded(false);
 	}, [searchText, setExpanded]);
 
-	const surfaceClass =
-		"bg-foreground text-background shadow-sm ring-1 ring-border/60";
+	const themeClasses = useMemo(() => {
+		if (theme === "light") {
+			return {
+				surface: "bg-white text-foreground shadow-sm",
+				input: "text-foreground",
+				placeholderExpanded: "placeholder:text-foreground/50",
+				placeholderCollapsed: "placeholder:text-foreground/80",
+				ringOffset: "focus-visible:ring-offset-foreground",
+			};
+		}
+		return {
+			surface: "bg-foreground text-background shadow-sm ring-1 ring-border/60",
+			input: "text-background",
+			placeholderExpanded: "placeholder:text-background/50",
+			placeholderCollapsed: "placeholder:text-background/80",
+			ringOffset: "focus-visible:ring-offset-background",
+		};
+	}, [theme]);
 
 	return (
 		<div
@@ -206,8 +225,9 @@ export function GooeyInput({
 						disabled={disabled}
 						onClick={handleExpand}
 						className={cn(
-							"flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-sm font-medium outline-none transition-[color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50",
-							surfaceClass,
+							"flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-sm font-medium outline-none transition-[color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+							themeClasses.ringOffset,
+							themeClasses.surface,
 							classNames?.trigger,
 						)}
 					>
@@ -224,10 +244,14 @@ export function GooeyInput({
 							disabled={disabled || !isExpanded}
 							placeholder={placeholder}
 							className={cn(
-								"h-full min-w-0 flex-1 bg-transparent text-sm text-background outline-none",
+								"h-full min-w-0 flex-1 bg-transparent text-sm outline-none",
+								themeClasses.input,
 								isExpanded
-									? "placeholder:text-background/50 dark:placeholder:text-background/45"
-									: "pointer-events-none placeholder:text-background/80 dark:placeholder:text-background/70",
+									? themeClasses.placeholderExpanded
+									: cn(
+											"pointer-events-none",
+											themeClasses.placeholderCollapsed,
+										),
 								classNames?.input,
 							)}
 						/>
@@ -247,7 +271,7 @@ export function GooeyInput({
 					<div
 						className={cn(
 							"flex size-9 items-center justify-center rounded-full",
-							surfaceClass,
+							themeClasses.surface,
 							classNames?.bubbleSurface,
 						)}
 					>

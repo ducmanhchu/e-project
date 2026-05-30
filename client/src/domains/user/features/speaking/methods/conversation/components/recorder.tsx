@@ -8,13 +8,12 @@ import {
 	ArrowRight02Icon,
 	Loading03Icon,
 	Redo02Icon,
-	Tick02Icon,
 	Tick01Icon,
+	CoinbaseIcon,
 } from "@hugeicons/core-free-icons";
 import { motion } from "motion/react";
 
 import type { Phase } from "@/domains/user/features/speaking/methods/conversation/hooks/use-conversation";
-
 import { Button } from "@shared/components/ui/button";
 import { cn } from "@shared/lib/utils";
 
@@ -128,8 +127,9 @@ export function ConversationRecorder({
 						onClick={onSubmit}
 						aria-label="Nộp bài"
 					>
-						<HugeiconsIcon icon={Tick02Icon} className="size-4 mr-1" />
-						Nộp
+						<span>1</span>
+						<HugeiconsIcon icon={CoinbaseIcon} className="size-4" />-
+						<span>Nộp</span>
 					</Button>
 					<Button
 						variant="outline"

@@ -10,6 +10,8 @@ export type User = {
 	createdAt: string;
 	updatedAt: string;
 	googleId?: string;
+	credits?: number;
+	lastCheckinAt?: string;
 };
 
 export type SignInPayload = {

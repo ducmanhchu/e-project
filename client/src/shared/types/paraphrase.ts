@@ -41,6 +41,7 @@ export type ParaphraseListQueryParams = {
 	level?: string;
 	topic?: string;
 	status?: string;
+	search?: string;
 	page?: number;
 	limit?: number;
 };

@@ -1,18 +1,16 @@
+import { useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	ArrowLeft02Icon,
-	ArrowUp02Icon,
 	Redo02Icon,
 	Loading03Icon,
 	HelpCircleIcon,
+	CoinbaseIcon,
+	ArrowRight02Icon,
 } from "@hugeicons/core-free-icons";
 
 import type { WritingExerciseTopic, ExerciseLevel } from "@shared/types/utils";
-
-import { queryClient } from "@shared/lib/query-client";
-import { cn, translateTopic } from "@shared/lib/utils";
-
 import { Button } from "@shared/components/ui/button";
 import { Skeleton } from "@shared/components/ui/skeleton";
 import { ExerciseLevelBadge } from "@user/components/exercise-level-badge";
@@ -36,10 +34,13 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@shared/components/ui/tooltip";
-
 import { ShimmerText } from "@user/components/shimmer-text";
-import { useParaphrase } from "@user/features/writing/methods/paraphrase/hooks/use-paraphrase";
 import { SentenceFeedback } from "@user/features/writing/methods/paraphrase/components/sentence-feedback";
+import { MyWallet } from "@user/components/my-wallet";
+
+import { queryClient } from "@shared/lib/query-client";
+import { cn, translateTopic } from "@shared/lib/utils";
+import { useParaphrase } from "@user/features/writing/methods/paraphrase/hooks/use-paraphrase";
 
 export function ParaphraseExercise() {
 	const { id } = useParams<{ id: string }>();
@@ -59,13 +60,49 @@ export function ParaphraseExercise() {
 		handleChangeOrder,
 		handleRedo,
 		handleSubmit,
+		handleNextSentence,
 		canSubmit,
 		isViewingCompleted,
 		isInputDisabled,
 		shouldShowRedoIcon,
+		shouldShowNextButton,
 		isLoading,
 		isSubmitting,
 	} = useParaphrase(id as string);
+
+	const inputRef = useRef<HTMLInputElement>(null);
+	const nextButtonRef = useRef<HTMLButtonElement>(null);
+	const wasSubmittingRef = useRef(false);
+	const pendingFocusRef = useRef<"next" | "input" | null>(null);
+
+	// Cập nhật trạng thái câu tiếp theo trước fetch để focus ngay khi nộp xong (trước khi nút tiếp theo mount)
+	useEffect(() => {
+		if (wasSubmittingRef.current && !isSubmitting && viewingFeedback) {
+			if (viewingFeedback.score >= 70 && shouldShowNextButton) {
+				pendingFocusRef.current = "next";
+			} else if (viewingFeedback.score < 70) {
+				pendingFocusRef.current = "input";
+			}
+		}
+		wasSubmittingRef.current = isSubmitting;
+	}, [isSubmitting, viewingFeedback, shouldShowNextButton]);
+
+	// Focus input khi không đạt điểm
+	useEffect(() => {
+		if (pendingFocusRef.current !== "input" || isInputDisabled) return;
+		inputRef.current?.focus();
+		pendingFocusRef.current = null;
+	}, [isInputDisabled, viewingFeedback]);
+
+	// Focus nút tiếp theo sau khi mount (đạt điểm + còn câu kế)
+	useEffect(() => {
+		if (pendingFocusRef.current !== "next" || !shouldShowNextButton) return;
+		const frameId = requestAnimationFrame(() => {
+			nextButtonRef.current?.focus();
+			pendingFocusRef.current = null;
+		});
+		return () => cancelAnimationFrame(frameId);
+	}, [shouldShowNextButton]);
 
 	const handleBack = () => {
 		queryClient.invalidateQueries({ queryKey: ["paraphrase", "list"] });
@@ -118,7 +155,7 @@ export function ParaphraseExercise() {
 					{isLoading ? (
 						<Skeleton className="h-6 w-64 mx-auto" />
 					) : (
-						<h1 className="text-xl font-medium flex-1 text-center">
+						<h1 className="text-xl font-medium flex-1 text-center md:ps-20">
 							{exerciseData?.title}
 						</h1>
 					)}
@@ -171,6 +208,8 @@ export function ParaphraseExercise() {
 				<div className="flex flex-col w-full gap-2">
 					<InputGroup className="bg-neutral-50 border-secondary-black rounded-full py-6 ps-4">
 						<InputGroupInput
+							ref={inputRef}
+							id="paraphrase-answer-input"
 							placeholder={
 								isAllCompleted
 									? "Bạn đã hoàn thành tất cả các câu!"
@@ -183,11 +222,30 @@ export function ParaphraseExercise() {
 							autoComplete="off"
 						/>
 						<InputGroupAddon align="inline-end">
+							{shouldShowNextButton && (
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<InputGroupButton
+											ref={nextButtonRef}
+											variant="blackHover"
+											size="sm"
+											onClick={handleNextSentence}
+											aria-label="Câu tiếp theo"
+										>
+											<HugeiconsIcon icon={ArrowRight02Icon} />
+											Tiếp theo
+										</InputGroupButton>
+									</TooltipTrigger>
+									<TooltipContent>
+										<p>Câu tiếp theo</p>
+									</TooltipContent>
+								</Tooltip>
+							)}
 							<Tooltip>
 								<TooltipTrigger asChild>
 									<InputGroupButton
 										variant={shouldShowRedoIcon ? "greenHover" : "blackHover"}
-										size={isSubmitting ? "xs" : "icon-sm"}
+										size={!shouldShowRedoIcon ? "sm" : "icon-sm"}
 										className={cn(isSubmitting && "h-8! w-48 shrink-0 px-2")}
 										onClick={shouldShowRedoIcon ? handleRedo : handleSubmit}
 										disabled={
@@ -208,9 +266,12 @@ export function ParaphraseExercise() {
 												/>
 											</>
 										) : (
-											<HugeiconsIcon
-												icon={shouldShowRedoIcon ? Redo02Icon : ArrowUp02Icon}
-											/>
+											<>
+												<HugeiconsIcon
+													icon={shouldShowRedoIcon ? Redo02Icon : CoinbaseIcon}
+												/>
+												{!shouldShowRedoIcon && <span>1</span>}
+											</>
 										)}
 									</InputGroupButton>
 								</TooltipTrigger>
@@ -220,17 +281,20 @@ export function ParaphraseExercise() {
 							</Tooltip>
 						</InputGroupAddon>
 					</InputGroup>
-					<div className="flex gap-2 ms-4 items-center">
-						<HugeiconsIcon
-							icon={HelpCircleIcon}
-							size={16}
-							className="text-muted-foreground"
-						/>
-						<p className="text-xs text-muted-foreground">
-							{isAllCompleted
-								? `Hoàn thành ${progress.total}/${progress.total} câu.`
-								: `Câu ${progress.completed}/${progress.total} đã hoàn thành · Đạt 70 điểm để vượt qua câu.`}
-						</p>
+					<div className="flex justify-between items-center">
+						<div className="flex gap-2 ms-4 items-center">
+							<HugeiconsIcon
+								icon={HelpCircleIcon}
+								size={16}
+								className="text-muted-foreground"
+							/>
+							<p className="text-xs text-muted-foreground">
+								{isAllCompleted
+									? `Hoàn thành ${progress.total}/${progress.total} câu.`
+									: `Câu ${progress.completed}/${progress.total} đã hoàn thành · Đạt 70 điểm để vượt qua câu.`}
+							</p>
+						</div>
+						<MyWallet className="py-0.5 ps-0.5 pe-2 bg-neutral-50" secondary />
 					</div>
 				</div>
 			</div>
