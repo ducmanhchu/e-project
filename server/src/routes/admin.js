@@ -6,6 +6,7 @@ import * as examController from "@server/controllers/examController";
 import * as uploadController from "@server/controllers/uploadController";
 import * as vocabularyController from "@server/controllers/vocabularyController";
 import * as slangHangController from "@server/controllers/slangHangController";
+import * as statsController from "@server/controllers/statsController";
 import { mediaUpload } from "@server/middlewares/upload";
 import {
 	protectedRoute,
@@ -104,6 +105,9 @@ adminRouter.put(
 );
 adminRouter.delete("/slang-hang/dialogues", slangHangController.bulkDelete);
 adminRouter.delete("/slang-hang/dialogues/:id", slangHangController.remove);
+
+// ── Stats (dashboard) ─────────────────────────────────
+adminRouter.get("/stats/overview", statsController.getOverview);
 
 // ── Upload ────────────────────────────────────────────
 adminRouter.post(
