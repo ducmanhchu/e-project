@@ -2,8 +2,7 @@ export type TransactionType =
 	| "signup_bonus"
 	| "purchase_pack"
 	| "charge_submit"
-	| "refund_ai_fail"
-	| "daily_checkin";
+	| "refund_ai_fail";
 
 export type Transaction = {
 	_id: string;

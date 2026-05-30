@@ -309,9 +309,11 @@ function UserAction({ me, isLoading, onLogout }: HeaderContentProps) {
 							<HugeiconsIcon icon={User03Icon} />
 							Trang cá nhân
 						</DropdownMenuItem>
-						<DropdownMenuItem>
-							<HugeiconsIcon icon={Invoice01Icon} />
-							Giao dịch
+						<DropdownMenuItem asChild>
+							<Link to="/my-transactions">
+								<HugeiconsIcon icon={Invoice01Icon} />
+								Giao dịch
+							</Link>
 						</DropdownMenuItem>
 						<DropdownMenuItem asChild>
 							<Link to={me.googleId ? "/forgot-password" : "/change-password"}>

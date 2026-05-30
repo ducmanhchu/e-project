@@ -107,7 +107,12 @@ export function Vocabulary() {
 		<div className="grid grid-cols-1 gap-10 md:gap-6 md:grid-cols-4">
 			<div className="col-span-3 flex flex-col gap-12">
 				<div className="flex flex-col gap-8">
-					<h1 className="text-4xl font-black">Từ vựng của tôi</h1>
+					<div className="flex flex-col gap-4">
+						<h1 className="text-4xl font-extrabold">Từ vựng của tôi</h1>
+						<p className="text-base">
+							Tạo và quản lý các thư mục và học phần từ vựng của riêng bạn.
+						</p>
+					</div>
 					<div className="flex gap-3">
 						<Button variant="blackHover" onClick={() => setCreateOpen(true)}>
 							<HugeiconsIcon icon={PlusSignIcon} />

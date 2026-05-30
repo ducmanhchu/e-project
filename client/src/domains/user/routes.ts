@@ -29,6 +29,7 @@ import { VocabularyLayout } from "@user/features/vocabulary/layout/vocabulary-la
 import { VocabularyFolder } from "@user/features/vocabulary/pages/folder";
 import { VocabularyDeck } from "@user/features/vocabulary/pages/deck";
 import { VocabularyTest } from "@user/features/vocabulary/pages/test";
+import { MyTransactions } from "@user/features/wallet/pages/my-transactions";
 
 import { requireAuthLoader } from "@shared/lib/auth-loaders";
 
@@ -44,6 +45,11 @@ export const userRoutes: RouteObject[] = [
 			{
 				path: "change-password",
 				Component: ChangePassword,
+				loader: requireAuthLoader,
+			},
+			{
+				path: "my-transactions",
+				Component: MyTransactions,
 				loader: requireAuthLoader,
 			},
 			{

@@ -6,6 +6,7 @@ import type {
 	WritingContentType,
 	WritingExerciseTopic,
 } from "@shared/types/utils";
+import type { TransactionType } from "@shared/types/wallet";
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -75,7 +76,7 @@ const vietnameseLevels: Record<ExerciseLevel, string> = {
 	advanced: "Nâng cao",
 } as const;
 
-const vietnamesePartOfSpeech: {[key: string]: string} = {
+const vietnamesePartOfSpeech: { [key: string]: string } = {
 	phrasal_verb: "Cụm động từ",
 	verb: "Động từ",
 	numeral: "Số từ",
@@ -96,6 +97,17 @@ const vietnamesePartOfSpeech: {[key: string]: string} = {
 	adj_phrase: "Cụm tính từ",
 	noun: "Danh từ",
 } as const;
+
+const vietnameseTransactionTypes: Record<TransactionType, string> = {
+	signup_bonus: "Thưởng đăng ký",
+	purchase_pack: "Mua gói",
+	charge_submit: "Nộp bài",
+	refund_ai_fail: "Hoàn tiền",
+} as const;
+
+export function translateTransactionType(transactionType: TransactionType) {
+	return vietnameseTransactionTypes[transactionType];
+}
 
 export function translatePartOfSpeech(partOfSpeech: string): string {
 	return vietnamesePartOfSpeech[partOfSpeech] || partOfSpeech;

@@ -2,20 +2,22 @@ import type { Transaction, TransactionType } from "@shared/types/wallet";
 import type { APIResponse } from "@shared/types/utils";
 import { axiosPrivate } from "@shared/lib/axios-instances";
 
+export type TransactionsListData = {
+	items: Transaction[];
+	page: number;
+	limit: number;
+	total: number;
+};
+
 export const listTransactions = async (params?: {
 	page?: number;
 	limit?: number;
 	type?: TransactionType;
-}): Promise<
-	APIResponse<{
-		items: Transaction[];
-	}>
-> => {
-	const { data } = await axiosPrivate.get<
-		APIResponse<{
-			items: Transaction[];
-		}>
-	>("/me/credits/transactions", { params });
+}): Promise<APIResponse<TransactionsListData>> => {
+	const { data } = await axiosPrivate.get<APIResponse<TransactionsListData>>(
+		"/me/credits/transactions",
+		{ params },
+	);
 	return data;
 };
 
