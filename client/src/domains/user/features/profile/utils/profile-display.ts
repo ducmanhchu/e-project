@@ -1,4 +1,4 @@
-import type { AttemptHistoryItem } from "@/shared/types/profile";
+import type { AttemptHistoryItem } from "@/shared/types/progress";
 
 const LESSON_TYPE_LABELS = {
 	ReverseTranslation: "Dịch ngược",

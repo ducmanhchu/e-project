@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchAttemptHistory } from "@/shared/api/profile";
-import type { AttemptHistoryParams } from "@/shared/types/profile";
+import { fetchAttemptHistory } from "@/shared/api/progress";
+import type { AttemptHistoryParams } from "@/shared/types/progress";
 import { useAuthStore } from "@/shared/store/use-auth-store";
 
 /**

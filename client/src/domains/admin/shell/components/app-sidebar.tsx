@@ -4,6 +4,7 @@ import {
 	LogoutCircle01Icon,
 	Mic02Icon,
 	TextFontIcon,
+	WaterfallUp01Icon,
 } from "@hugeicons/core-free-icons";
 import { Link } from "react-router";
 import { useNavigate } from "react-router";
@@ -130,19 +131,19 @@ export function AppSidebar() {
 					</SidebarMenu>
 				</SidebarGroup>
 
-				{/* <SidebarGroup>
-					<SidebarGroupLabel>Người dùng</SidebarGroupLabel>
+				<SidebarGroup>
+					<SidebarGroupLabel>Thống kê</SidebarGroupLabel>
 					<SidebarMenu>
 						<SidebarMenuItem>
 							<SidebarMenuButton asChild>
-								<Link to="/admin/users">
-									<User />
-									Người dùng
+								<Link to="/admin/dashboard">
+									<HugeiconsIcon icon={WaterfallUp01Icon} />
+									Thống kê
 								</Link>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 					</SidebarMenu>
-				</SidebarGroup> */}
+				</SidebarGroup>
 			</SidebarContent>
 
 			<SidebarFooter>

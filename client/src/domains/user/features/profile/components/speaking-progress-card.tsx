@@ -14,7 +14,7 @@ import {
 	type ChartConfig,
 } from "@/shared/components/ui/chart";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import type { SummaryResponse } from "@/shared/types/profile";
+import type { SummaryResponse } from "@/shared/types/progress";
 
 import { InsufficientData } from "@user/features/profile/components/insufficient-data";
 

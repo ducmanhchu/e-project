@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchSummary } from "@/shared/api/profile";
+import { fetchSummary } from "@/shared/api/progress";
 import { useAuthStore } from "@/shared/store/use-auth-store";
 
 /**

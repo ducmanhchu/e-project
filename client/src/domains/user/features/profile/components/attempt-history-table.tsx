@@ -17,7 +17,7 @@ import {
 	TableRow,
 } from "@/shared/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import type { AttemptHistoryParams } from "@/shared/types/profile";
+import type { AttemptHistoryParams } from "@/shared/types/progress";
 
 import { useAttemptHistory } from "@user/features/profile/hooks/use-attempt-history";
 import {

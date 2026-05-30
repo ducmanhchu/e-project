@@ -4,7 +4,7 @@ import type {
 	SummaryResponse,
 	AdminSummaryParams,
 	AdminSummaryResponse,
-} from "@shared/types/profile";
+} from "@/shared/types/progress";
 import type { APIResponse } from "@shared/types/utils";
 import { axiosPrivate } from "@shared/lib/axios-instances";
 
