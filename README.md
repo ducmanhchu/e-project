@@ -17,33 +17,37 @@
 ## Features
 
 ### Writing Module
+
 - **Reverse Translation** &mdash; Read a Vietnamese passage and translate it sentence by sentence into English, with AI-powered grammar and meaning evaluation.
 - **Image-based Writing** &mdash; Observe an image and produce a written description that is graded against contextual relevance and language quality.
 - **Paraphrasing** &mdash; Rewrite English sentences while preserving the original meaning, supported by AI feedback on grammar, structure, and word choice.
 
 ### Speaking Module
+
 - **Role-play Conversations** &mdash; Engage in immersive, scenario-based dialogues with an AI partner. Spoken responses are transcribed and scored for pronunciation accuracy, fluency, and completeness.
 
 ### Vocabulary Module
+
 - **Personalized Flashcards** &mdash; A customizable flashcard system that adapts to each learner's vocabulary list and progress.
 - **Word Chain Game** &mdash; A timed word-linking game that reinforces lexical recall under pressure.
 
 ### System Management
-- **Freemium Account Tiers** &mdash; Tiered access with Free and Premium plans, including configurable usage limits per feature.
-- **Admin Panel** &mdash; Administrative tools for managing the learning content library, user accounts, and platform configuration.
+
+- **Credit-based Payments** &mdash; Users spend credits (xu) to submit assignments. Credits can be topped up via predefined packages or a custom amount. New users receive **20 free credits** to explore the platform.
+- **Admin Panel** &mdash; Administrative tools for managing the learning content library, user accounts, and platform configuration. Includes **revenue analytics** and tracking of **free vs. paid** user counts.
 
 ---
 
 ## Architecture & Tech Stack
 
-| Layer            | Technology                                                                 |
-| ---------------- | -------------------------------------------------------------------------- |
-| Architecture     | Client &ndash; Server (RESTful API)                                        |
-| Frontend         | React 19, Vite 7, TypeScript, Tailwind CSS 4, shadcn/ui                    |
-| Backend          | Node.js, Express 5                                                         |
-| Database         | MongoDB (Mongoose 9)                                                       |
-| AI / NLP         | Google Gemini 2.5 Flash &mdash; grammar scoring, dialogue generation, NLP  |
-| Speech Services  | Microsoft Azure Pronunciation Assessment &mdash; Speech-to-Text & scoring  |
+| Layer           | Technology                                                                |
+| --------------- | ------------------------------------------------------------------------- |
+| Architecture    | Client &ndash; Server (RESTful API)                                       |
+| Frontend        | React 19, Vite 7, TypeScript, Tailwind CSS 4, shadcn/ui                   |
+| Backend         | Node.js, Express 5                                                        |
+| Database        | MongoDB (Mongoose 9)                                                      |
+| AI / NLP        | Google Gemini 2.5 Flash &mdash; grammar scoring, dialogue generation, NLP |
+| Speech Services | Microsoft Azure Pronunciation Assessment &mdash; Speech-to-Text & scoring |
 
 ---
 
@@ -57,6 +61,7 @@ Before installing the project, make sure the following tools and accounts are av
 - **Google Cloud** project with access to the Gemini API
 - **Microsoft Azure** subscription with the Speech (Pronunciation Assessment) service enabled
 - **Google OAuth 2.0** Client credentials (for social login)
+- **Sepay** account and API credentials (for bank-transfer payments via VietQR)
 - A POSIX-compatible shell is recommended for the server scripts (Git Bash, WSL, macOS, or Linux), since they rely on `rm -rf`.
 
 ---
@@ -87,11 +92,11 @@ cp .env.example .env
 
 Available scripts (defined in `server/package.json`):
 
-| Command            | Description                                                                          |
-| ------------------ | ------------------------------------------------------------------------------------ |
-| `pnpm dev`         | Builds with Babel and runs the server in watch mode using `concurrently` + `--watch`.|
-| `pnpm production`  | Builds the project and starts the compiled server from `lib/index.js`.               |
-| `pnpm test`        | Runs the Jest test suite in verbose mode.                                            |
+| Command           | Description                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `pnpm dev`        | Builds with Babel and runs the server in watch mode using `concurrently` + `--watch`. |
+| `pnpm production` | Builds the project and starts the compiled server from `lib/index.js`.                |
+| `pnpm test`       | Runs the Jest test suite in verbose mode.                                             |
 
 Start the development server:
 
@@ -118,12 +123,12 @@ cp .env.example .env
 
 Available scripts (defined in `client/package.json`):
 
-| Command           | Description                                                |
-| ----------------- | ---------------------------------------------------------- |
-| `pnpm dev`        | Starts the Vite development server.                        |
-| `pnpm build`      | Type-checks the project (`tsc -b`) and builds for production.|
-| `pnpm lint`       | Runs ESLint across the project.                            |
-| `pnpm preview`    | Serves the production build locally for preview.           |
+| Command        | Description                                                   |
+| -------------- | ------------------------------------------------------------- |
+| `pnpm dev`     | Starts the Vite development server.                           |
+| `pnpm build`   | Type-checks the project (`tsc -b`) and builds for production. |
+| `pnpm lint`    | Runs ESLint across the project.                               |
+| `pnpm preview` | Serves the production build locally for preview.              |
 
 Start the development client:
 
@@ -174,19 +179,38 @@ CLAUDE_API_KEY=your_claude_api_key_here
 CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name_here
 CLOUDINARY_API_KEY=your_cloudinary_api_key_here
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret_here
+
+# --- AZURE SPEECH ---
+AZURE_SPEECH_KEY=your_azure_speech_key_here
+AZURE_SPEECH_REGION=your_azure_speech_region_here
+
+# --- PAYMENT ---
+PAYMENT_PROVIDER=sepay
+
+# Sepay (bank transfer via VietQR)
+SEPAY_API_KEY=your_sepay_api_key_here
+SEPAY_ACCOUNT_NUMBER=your_sepay_account_number_here
+SEPAY_BANK_CODE=your_sepay_bank_code_here
+SEPAY_ORDER_PREFIX=your_sepay_order_prefix_here
 ```
 
-| Variable                                                 | Description                                                                                  |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `NODE_ENV`                                               | Runtime environment: `development` or `production`.                                          |
-| `LOCAL_PORT`, `LOCAL_HOST`                               | Port and host the Express server listens on.                                                 |
-| `MONGODB_URI`, `DATABASE_NAME`                           | Connection string and database name for MongoDB.                                             |
-| `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`            | Secrets used to sign JWT access and refresh tokens.                                          |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`               | Google OAuth 2.0 credentials used for social authentication.                                 |
-| `AI_PRIMARY_PROVIDER`, `VERTEX_PROJECT_ID`, `VERTEX_LOCATION` | AI provider configuration for invoking Gemini via Google Vertex AI.                       |
-| `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `EMAIL_FROM_NAME`    | SMTP credentials for transactional email (account verification, password reset, etc.).      |
-| `CLAUDE_API_KEY`                                         | API key for the secondary AI provider.                                                       |
-| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Cloudinary credentials for storing user-generated and lesson media assets.   |
+| Variable                                                               | Description                                                                            |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                                             | Runtime environment: `development` or `production`.                                    |
+| `LOCAL_PORT`, `LOCAL_HOST`                                             | Port and host the Express server listens on.                                           |
+| `MONGODB_URI`, `DATABASE_NAME`                                         | Connection string and database name for MongoDB.                                       |
+| `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`                          | Secrets used to sign JWT access and refresh tokens.                                    |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                             | Google OAuth 2.0 credentials used for social authentication.                           |
+| `AI_PRIMARY_PROVIDER`, `VERTEX_PROJECT_ID`, `VERTEX_LOCATION`          | AI provider configuration for invoking Gemini via Google Vertex AI.                    |
+| `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `EMAIL_FROM_NAME`                  | SMTP credentials for transactional email (account verification, password reset, etc.). |
+| `CLAUDE_API_KEY`                                                       | API key for the secondary AI provider.                                                 |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Cloudinary credentials for storing user-generated and lesson media assets.             |
+| `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`                              | Azure Speech service credentials for pronunciation assessment and speech-to-text.      |
+| `PAYMENT_PROVIDER`                                                     | Payment gateway identifier (currently `sepay`).                                        |
+| `SEPAY_API_KEY`                                                        | Sepay API key for authenticating payment webhook and API requests.                     |
+| `SEPAY_ACCOUNT_NUMBER`                                                 | Bank account number receiving user top-up transfers.                                   |
+| `SEPAY_BANK_CODE`                                                      | Bank code used to generate VietQR payment codes.                                       |
+| `SEPAY_ORDER_PREFIX`                                                   | Prefix prepended to order IDs for identifying platform transactions in Sepay.          |
 
 ### Client (`client/.env`)
 
@@ -200,10 +224,10 @@ VITE_BASE_URL=your_base_url
 VITE_GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
-| Variable                | Description                                                                                          |
-| ----------------------- | ---------------------------------------------------------------------------------------------------- |
-| `VITE_BASE_URL`         | Base URL of the backend API the client should call (e.g. `http://localhost:5000/api`).               |
-| `VITE_GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID used by the frontend for Google Sign-In.                                  |
+| Variable                | Description                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| `VITE_BASE_URL`         | Base URL of the backend API the client should call (e.g. `http://localhost:5000/api`). |
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID used by the frontend for Google Sign-In.                    |
 
 > **Note:** Variables consumed by Vite **must** be prefixed with `VITE_` in order to be exposed to the browser at build time.
 
