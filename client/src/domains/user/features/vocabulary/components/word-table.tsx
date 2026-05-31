@@ -90,7 +90,7 @@ export function WordTable({ deckId, status, title }: WordTableProps) {
 	);
 
 	const handleStartEdit = useCallback((flashcard: Flashcard) => {
-		setEditingCardId(flashcard._id);
+		setEditingCardId(flashcard._id as string);
 		setDraft(toDraft(flashcard));
 	}, []);
 
@@ -115,7 +115,7 @@ export function WordTable({ deckId, status, title }: WordTableProps) {
 			};
 
 			void updateMutation
-				.mutateAsync({ cardId: flashcard._id, payload })
+				.mutateAsync({ cardId: flashcard._id as string, payload })
 				.then(() => {
 					setEditingCardId(null);
 					setDraft(null);
@@ -133,7 +133,7 @@ export function WordTable({ deckId, status, title }: WordTableProps) {
 				setDraft(null);
 			}
 			void statusMutation.mutateAsync({
-				cardId: flashcard._id,
+				cardId: flashcard._id as string,
 				newStatus,
 			});
 		},
@@ -146,7 +146,7 @@ export function WordTable({ deckId, status, title }: WordTableProps) {
 				setEditingCardId(null);
 				setDraft(null);
 			}
-			void deleteMutation.mutateAsync(flashcard._id);
+			void deleteMutation.mutateAsync(flashcard._id as string);
 		},
 		[deleteMutation, editingCardId],
 	);
@@ -214,7 +214,7 @@ export function WordTable({ deckId, status, title }: WordTableProps) {
 								onToggleStatus={() => handleToggleStatus(flashcard)}
 								onDelete={() => handleDelete(flashcard)}
 								onPlayAudio={() =>
-									handlePlayAudio(flashcard._id, flashcard.word)
+									handlePlayAudio(flashcard._id as string, flashcard.word)
 								}
 							/>
 						);

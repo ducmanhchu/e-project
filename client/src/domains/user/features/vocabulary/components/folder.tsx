@@ -72,12 +72,8 @@ export const VocabFolder: React.FC<FolderProps> = ({
 		papers.push(null);
 	}
 
-	const [open, setOpen] = useState(false);
 	const [renameOpen, setRenameOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
-	const [paperOffsets, setPaperOffsets] = useState<{ x: number; y: number }[]>(
-		Array.from({ length: maxItems }, () => ({ x: 0, y: 0 })),
-	);
 	// Chặn click "xuyên" tới Link sau khi chọn mục context menu
 	const blockNavRef = useRef(false);
 
@@ -85,34 +81,11 @@ export const VocabFolder: React.FC<FolderProps> = ({
 	const paper1 = darkenColor("#ffffff", 0.1);
 	const paper2 = darkenColor("#ffffff", 0.05);
 	const paper3 = "#ffffff";
-
-	const handlePaperMouseMove = (
-		e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-		index: number,
-	) => {
-		if (!open) return;
-		const rect = e.currentTarget.getBoundingClientRect();
-		const centerX = rect.left + rect.width / 2;
-		const centerY = rect.top + rect.height / 2;
-		const offsetX = (e.clientX - centerX) * 0.15;
-		const offsetY = (e.clientY - centerY) * 0.15;
-		setPaperOffsets((prev) => {
-			const newOffsets = [...prev];
-			newOffsets[index] = { x: offsetX, y: offsetY };
-			return newOffsets;
-		});
-	};
-
-	const handlePaperMouseLeave = (
-		_e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-		index: number,
-	) => {
-		setPaperOffsets((prev) => {
-			const newOffsets = [...prev];
-			newOffsets[index] = { x: 0, y: 0 };
-			return newOffsets;
-		});
-	};
+	const paperSizeClasses = [
+		"w-[70%] h-[80%]",
+		"w-[80%] h-[70%]",
+		"w-[90%] h-[60%]",
+	];
 
 	const folderStyle: React.CSSProperties = {
 		"--folder-color": color,
@@ -145,13 +118,8 @@ export const VocabFolder: React.FC<FolderProps> = ({
 						}}
 					>
 						<div
-							className={`group relative transition-all duration-200 ease-in cursor-pointer ${
-								!open ? "hover:-translate-y-2" : ""
-							}`}
-							style={{
-								...folderStyle,
-								transform: open ? "translateY(-8px)" : undefined,
-							}}
+							className="group relative transition-all duration-200 ease-in cursor-pointer hover:-translate-y-2"
+							style={folderStyle}
 						>
 							<div
 								className="relative w-[160px] h-[125px] lg:w-[180px] lg:h-[150px] rounded-tl-0 rounded-tr-[20px] rounded-br-[20px] rounded-bl-[20px]"
@@ -161,57 +129,31 @@ export const VocabFolder: React.FC<FolderProps> = ({
 									className="absolute z-0 bottom-[98%] left-0 w-[30px] h-[10px] rounded-tl-[10px] rounded-tr-[10px] rounded-bl-0 rounded-br-0"
 									style={{ backgroundColor: folderBackColor }}
 								></span>
-								{papers.map((item, i) => {
-									let sizeClasses = "";
-									if (i === 0)
-										sizeClasses = open ? "w-[70%] h-[80%]" : "w-[70%] h-[80%]";
-									if (i === 1)
-										sizeClasses = open ? "w-[80%] h-[80%]" : "w-[80%] h-[70%]";
-									if (i === 2)
-										sizeClasses = open ? "w-[90%] h-[80%]" : "w-[90%] h-[60%]";
-
-									return (
-										<div
-											key={i}
-											onMouseMove={(e) => handlePaperMouseMove(e, i)}
-											onMouseLeave={(e) => handlePaperMouseLeave(e, i)}
-											className={`absolute z-20 bottom-[10%] left-1/2 transition-all duration-300 ease-in-out ${
-												!open
-													? "transform -translate-x-1/2 translate-y-[10%] group-hover:translate-y-0"
-													: "hover:scale-110"
-											} ${sizeClasses}`}
-											style={{
-												backgroundColor:
-													i === 0 ? paper1 : i === 1 ? paper2 : paper3,
-												borderRadius: "10px",
-											}}
-										>
-											{item}
-										</div>
-									);
-								})}
+								{papers.map((item, i) => (
+									<div
+										key={i}
+										className={`absolute z-20 bottom-[10%] left-1/2 transition-all duration-300 ease-in-out transform -translate-x-1/2 translate-y-[10%] group-hover:translate-y-0 ${paperSizeClasses[i] ?? paperSizeClasses[2]}`}
+										style={{
+											backgroundColor:
+												i === 0 ? paper1 : i === 1 ? paper2 : paper3,
+											borderRadius: "10px",
+										}}
+									>
+										{item}
+									</div>
+								))}
 								<div
-									className={`absolute z-30 w-full h-full origin-bottom transition-all duration-300 ease-in-out ${
-										!open
-											? "group-hover:transform-[skew(7deg)_scaleY(0.6)]"
-											: ""
-									}`}
+									className="absolute z-30 w-full h-full origin-bottom transition-all duration-300 ease-in-out group-hover:transform-[skew(7deg)_scaleY(0.6)]"
 									style={{
 										backgroundColor: color,
 										borderRadius: "10px 20px 20px 20px",
-										...(open && { transform: "skew(7deg) scaleY(0.6)" }),
 									}}
 								></div>
 								<div
-									className={`absolute z-30 w-full h-full origin-bottom transition-all duration-300 ease-in-out ${
-										!open
-											? "group-hover:transform-[skew(-7deg)_scaleY(0.6)]"
-											: ""
-									}`}
+									className="absolute z-30 w-full h-full origin-bottom transition-all duration-300 ease-in-out group-hover:transform-[skew(-7deg)_scaleY(0.6)]"
 									style={{
 										backgroundColor: color,
 										borderRadius: "10px 20px 20px 20px",
-										...(open && { transform: "skew(-7deg) scaleY(0.6)" }),
 									}}
 								>
 									<div className="group-hover:transform-[skew(7deg)] transition-all duration-300 ease-in-out absolute bottom-3 left-3 flex flex-col gap-0.5 items-start">
