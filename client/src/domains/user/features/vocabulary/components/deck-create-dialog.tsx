@@ -47,6 +47,8 @@ export function VocabDeckCreateDialog({
 				...(folderId ? { folderId } : {}),
 			}),
 		onSuccess: () => {
+			setName("");
+			setDescription("");
 			void queryClient.invalidateQueries({ queryKey: ["deck"] });
 			void queryClient.invalidateQueries({ queryKey: ["folder"] });
 			toast.success("Đã tạo học phần");

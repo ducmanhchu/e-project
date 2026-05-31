@@ -100,17 +100,17 @@ export function VocabDeck({ deck, to }: VocabDeckProps) {
 							}
 						}}
 					>
-						<div className="relative w-[160px] h-[125px] lg:w-[180px] lg:h-[150px] group cursor-pointer">
+						<div className="relative w-[160px] h-[125px] lg:w-[170px] lg:h-[150px] group cursor-pointer">
 							<div
 								aria-hidden
-								className="absolute bottom-0 left-1/2 -translate-x-1/2 z-1 border h-full w-[144px] lg:w-[164px] rounded-2xl bg-neutral-100 group-hover:scale-y-75 transition-transform duration-500 ease-in-out"
+								className="absolute bottom-0 left-1/2 -translate-x-1/2 z-1 border h-full w-[144px] lg:w-[154px] rounded-2xl bg-neutral-100 group-hover:scale-y-75 transition-transform duration-500 ease-in-out"
 							/>
 							<div
 								aria-hidden
-								className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2 border w-[152px] h-[120px] lg:h-[145px] lg:w-[172px] rounded-2xl bg-neutral-100 group-hover:scale-y-85 transition-transform duration-400 ease-in-out"
+								className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2 border w-[152px] h-[120px] lg:h-[145px] lg:w-[162px] rounded-2xl bg-neutral-100 group-hover:scale-y-85 transition-transform duration-400 ease-in-out"
 							/>
 
-							<div className="absolute bottom-0 z-10 w-[160px] h-[115px] lg:w-[180px] lg:h-[140px] p-3 rounded-2xl bg-neutral-50 border flex flex-col justify-between group-hover:-translate-y-2 transition-transform duration-300 ease-in-out">
+							<div className="absolute bottom-0 z-10 w-[160px] h-[115px] lg:w-[170px] lg:h-[140px] p-3 rounded-2xl bg-neutral-50 border flex flex-col justify-between group-hover:-translate-y-2 transition-transform duration-300 ease-in-out">
 								<div className="flex gap-1">
 									<HugeiconsIcon
 										icon={Cards02Icon}

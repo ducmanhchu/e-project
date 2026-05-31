@@ -105,7 +105,7 @@ export function Header() {
 
 function DesktopHeaderContent({ me, isLoading, onLogout }: HeaderContentProps) {
 	return (
-		<div className="hidden h-full w-full items-center justify-between md:flex">
+		<div className="hidden h-full w-full items-center justify-between lg:flex">
 			<Link to="/">
 				<Logo className="h-14 w-32" />
 			</Link>
@@ -117,7 +117,7 @@ function DesktopHeaderContent({ me, isLoading, onLogout }: HeaderContentProps) {
 
 function MobileHeaderContent({ me, isLoading, onLogout }: HeaderContentProps) {
 	return (
-		<div className="relative flex h-full w-full items-center justify-between md:hidden">
+		<div className="relative flex h-full w-full items-center justify-between lg:hidden">
 			<MobileNavSheet />
 			<Link to="/" className="absolute left-12">
 				<Logo className="h-14 w-30" />
