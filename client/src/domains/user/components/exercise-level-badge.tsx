@@ -16,8 +16,6 @@ const translateLevels: Record<ExerciseLevel, string> = {
 
 export function ExerciseLevelBadge({ level }: { level: ExerciseLevel }) {
 	return (
-		<Badge className={cn(levelStyle[level], "mb-2")}>
-			{translateLevels[level]}
-		</Badge>
+		<Badge className={cn(levelStyle[level])}>{translateLevels[level]}</Badge>
 	);
 }
