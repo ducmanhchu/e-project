@@ -122,7 +122,7 @@ export const VocabFolder: React.FC<FolderProps> = ({
 							style={folderStyle}
 						>
 							<div
-								className="relative w-[160px] h-[125px] lg:w-[180px] lg:h-[150px] rounded-tl-0 rounded-tr-[20px] rounded-br-[20px] rounded-bl-[20px]"
+								className="relative w-[160px] h-[125px] lg:w-[170px] lg:h-[150px] rounded-tl-0 rounded-tr-[20px] rounded-br-[20px] rounded-bl-[20px]"
 								style={{ backgroundColor: folderBackColor }}
 							>
 								<span

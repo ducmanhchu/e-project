@@ -5,16 +5,10 @@ import * as emailVerificationService from "@server/services/emailVerificationSer
 import { ApiError } from "@server/helpers/ApiError";
 import * as passwordService from "@server/services/passwordService";
 
-// Kiểm tra xem có phải đang chạy trên Production (DigitalOcean) hay không
-const isProduction = process.env.NODE_ENV === "production";
-
 const REFRESH_TOKEN_OPTIONS = {
 	httpOnly: true,
-	// Nếu là Production thì bắt buộc phải true (chạy HTTPS). Nếu là Local thì false (chạy HTTP).
-	secure: isProduction,
-	// Nếu là Production thì dùng "none" để truyền cookie Cross-Site (Vercel <-> DigitalOcean).
-	// Nếu là Local thì dùng "lax" để chạy bình thường qua proxy của Vite.
-	sameSite: isProduction ? "none" : "lax",
+	secure: true,
+	sameSite: "lax",
 	maxAge: TOKEN_LIFE.REFRESH_MAX_AGE_MS,
 };
 
@@ -40,7 +34,7 @@ export async function signIn(req, res, next) {
 export async function signOut(req, res, next) {
 	try {
 		const token = req.cookies?.refreshToken;
-		if (token) res.clearCookie("refreshToken");
+		if (token) res.clearCookie("refreshToken", REFRESH_TOKEN_OPTIONS);
 		res.status(204).end();
 	} catch (e) {
 		next(e);
@@ -53,7 +47,7 @@ export async function refreshToken(req, res, next) {
 		const { accessToken } = await authService.refreshToken(token);
 		res.status(200).json({ accessToken, success: true });
 	} catch (e) {
-		res.clearCookie("refreshToken");
+		res.clearCookie("refreshToken", REFRESH_TOKEN_OPTIONS);
 		next(e);
 	}
 }
