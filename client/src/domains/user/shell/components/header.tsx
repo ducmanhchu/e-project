@@ -293,7 +293,12 @@ function UserAction({ me, isLoading, onLogout }: HeaderContentProps) {
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button variant="ghost" size="icon" className="rounded-full">
-						<Avatar className="border border-primary">
+						<Avatar
+							className={cn(
+								"border border-primary",
+								me.role === "admin" && "ring ring-amber-600 border-amber-600",
+							)}
+						>
 							<AvatarImage
 								src={me.avatarUrl ?? DefaultAvatar}
 								alt="User avatar"

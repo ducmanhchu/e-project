@@ -185,20 +185,18 @@ export function LoginForm({
 
 					<FieldSeparator>Hoặc</FieldSeparator>
 
-					<Field>
-						<div className="flex w-full justify-center [&>div]:w-full!">
-							<GoogleLogin
-								onSuccess={(credentialResponse) => {
-									googleLoginMutation.mutate({
-										idToken: credentialResponse.credential as string,
-									});
-								}}
-								onError={() => {
-									toast.error("Có lỗi xảy ra, vui lòng thử lại");
-								}}
-								shape="pill"
-							/>
-						</div>
+					<Field className="flex justify-center items-center w-full">
+						<GoogleLogin
+							onSuccess={(credentialResponse) => {
+								googleLoginMutation.mutate({
+									idToken: credentialResponse.credential as string,
+								});
+							}}
+							onError={() => {
+								toast.error("Có lỗi xảy ra, vui lòng thử lại");
+							}}
+							shape="pill"
+						/>
 					</Field>
 				</FieldGroup>
 			</form>

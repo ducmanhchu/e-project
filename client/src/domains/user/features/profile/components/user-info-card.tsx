@@ -50,7 +50,11 @@ export function UserInfoCard({ user, isLoading = false }: UserInfoCardProps) {
 			<CardContent className="flex items-center gap-4">
 				<Avatar
 					size="lg"
-					className={cn(user.role === "admin" ? "ring-2 ring-sky-600" : "")}
+					className={cn(
+						user.role === "admin"
+							? "ring-2 ring-amber-600 border-amber-600"
+							: "",
+					)}
 				>
 					{user.avatarUrl ? (
 						<AvatarImage src={user.avatarUrl} alt={user.fullName} />
@@ -63,7 +67,7 @@ export function UserInfoCard({ user, isLoading = false }: UserInfoCardProps) {
 					<div className="flex flex-wrap items-center justify-center gap-2">
 						<span className="text-lg font-semibold">{user.fullName}</span>
 						{user.role === "admin" ? (
-							<Badge className="bg-sky-100 text-sky-600 hover:bg-sky-100">
+							<Badge className="bg-amber-100 text-amber-700">
 								Quản trị viên
 							</Badge>
 						) : null}
