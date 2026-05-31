@@ -124,15 +124,7 @@ export function LoginForm({
 								control={form.control}
 								render={({ field, fieldState }) => (
 									<Field data-invalid={fieldState.invalid}>
-										<div className="flex items-center">
-											<FieldLabel htmlFor={field.name}>Mật khẩu</FieldLabel>
-											<a
-												href="#"
-												className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-											>
-												Quên mật khẩu?
-											</a>
-										</div>
+										<FieldLabel htmlFor={field.name}>Mật khẩu</FieldLabel>
 										<Input
 											{...field}
 											id={field.name}

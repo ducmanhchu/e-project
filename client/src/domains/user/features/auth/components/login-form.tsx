@@ -102,7 +102,7 @@ export function LoginForm({
 	return (
 		<div className={cn("flex flex-col", className)} {...props}>
 			<form onSubmit={onSubmit} noValidate>
-				<FieldGroup>
+				<FieldGroup className="items-center">
 					<div className="flex flex-col items-center gap-2 text-center">
 						<Link to="/" className="flex flex-col">
 							<Logo />
@@ -185,7 +185,7 @@ export function LoginForm({
 
 					<FieldSeparator>Hoặc</FieldSeparator>
 
-					<Field className="flex justify-center items-center w-full">
+					<Field className="w-fit">
 						<GoogleLogin
 							onSuccess={(credentialResponse) => {
 								googleLoginMutation.mutate({
