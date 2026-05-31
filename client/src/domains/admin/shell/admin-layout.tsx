@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import { Outlet } from "react-router";
 
+import { RouteFallback } from "@shared/components/route-fallback";
 import {
 	SidebarInset,
 	SidebarProvider,
@@ -14,7 +16,9 @@ export function AdminLayout() {
 			<SidebarInset>
 				<SidebarTrigger className="mt-2 ms-4" />
 				<main className="px-6 py-4">
-					<Outlet />
+					<Suspense fallback={<RouteFallback />}>
+						<Outlet />
+					</Suspense>
 				</main>
 			</SidebarInset>
 		</SidebarProvider>

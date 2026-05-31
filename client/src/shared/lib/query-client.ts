@@ -13,7 +13,7 @@ export const queryClient = new QueryClient({
 // For using Tanstack Query Devtools:
 declare global {
 	interface Window {
-		__TANSTACK_QUERY_CLIENT__: import("@tanstack/query-core").QueryClient;
+		__TANSTACK_QUERY_CLIENT__: QueryClient;
 	}
 }
 

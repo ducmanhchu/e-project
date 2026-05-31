@@ -1,12 +1,18 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router";
 
+import { ChartSkeleton } from "@shared/components/chart-skeleton";
 import { Button } from "@shared/components/ui/button";
 import { Skeleton } from "@shared/components/ui/skeleton";
 
 import { VocabTestTakingPanel } from "@user/features/vocabulary/components/test/test-taking-panel";
-import { VocabTestResult } from "@user/features/vocabulary/components/test/test-result";
 import { VocabTestSidebar } from "@user/features/vocabulary/components/test/test-sidebar";
+
+const VocabTestResult = lazy(() =>
+	import("@user/features/vocabulary/components/test/test-result").then((m) => ({
+		default: m.VocabTestResult,
+	})),
+);
 import { VocabTestTopbar } from "@user/features/vocabulary/components/test/test-topbar";
 import { useVocabTest } from "@user/features/vocabulary/hooks/use-vocab-test";
 import { VOCAB_ROUTES } from "@user/features/vocabulary/utils/constants";
@@ -111,14 +117,16 @@ export function VocabularyTest() {
 				</div>
 				<div className="md:col-span-5 p-4">
 					{isResult && summary ? (
-						<VocabTestResult
-							summary={summary}
-							results={results}
-							onRetryWrong={retryWrong}
-							onBackToDeck={handleClose}
-							hasWrongQuestions={hasWrongQuestions}
-							registerQuestionRef={registerQuestionRef}
-						/>
+						<Suspense fallback={<ChartSkeleton className="max-w-3xl" />}>
+							<VocabTestResult
+								summary={summary}
+								results={results}
+								onRetryWrong={retryWrong}
+								onBackToDeck={handleClose}
+								hasWrongQuestions={hasWrongQuestions}
+								registerQuestionRef={registerQuestionRef}
+							/>
+						</Suspense>
 					) : (
 						<VocabTestTakingPanel
 							key={sessionId}

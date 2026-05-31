@@ -1,5 +1,3 @@
-import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
-
 import type {
 	AzureToken,
 	PronunciationResultPayload,
@@ -7,6 +5,16 @@ import type {
 
 const TTS_VOICE = "en-US-JennyNeural";
 const PROSODY_BREAK_THRESHOLD = 0.5;
+
+type SpeechSdkModule = typeof import("microsoft-cognitiveservices-speech-sdk");
+
+let speechSdkModule: Promise<SpeechSdkModule> | null = null;
+
+/** Tải Azure Speech SDK một lần — tách khỏi initial bundle. */
+function loadSpeechSdk(): Promise<SpeechSdkModule> {
+	speechSdkModule ??= import("microsoft-cognitiveservices-speech-sdk");
+	return speechSdkModule;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapWordAssessment(w: any) {
@@ -37,10 +45,18 @@ function mapWordAssessment(w: any) {
 	};
 }
 
-export function synthesizeSpeech(
+/**
+ * Tổng hợp giọng nói Azure TTS.
+ * @param text - Văn bản cần đọc
+ * @param auth - Token và region Azure
+ * @returns Blob audio wav
+ */
+export async function synthesizeSpeech(
 	text: string,
 	auth: AzureToken,
 ): Promise<Blob> {
+	const SpeechSDK = await loadSpeechSdk();
+
 	return new Promise((resolve, reject) => {
 		const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(
 			auth.token,
@@ -73,29 +89,34 @@ export function synthesizeSpeech(
 	});
 }
 
-export const assessPronunciation = (
+/**
+ * Đánh giá phát âm từ file wav so với reference text.
+ * @param audioFile - File ghi âm
+ * @param referenceText - Câu mẫu
+ * @param authData - Token Azure
+ * @returns Kết quả chấm điểm phát âm
+ */
+export async function assessPronunciation(
 	audioFile: File,
 	referenceText: string,
 	authData: AzureToken,
-): Promise<PronunciationResultPayload> => {
+): Promise<PronunciationResultPayload> {
+	const SpeechSDK = await loadSpeechSdk();
+
 	return new Promise((resolve, reject) => {
-		// 1. Cấu hình Speech Service bằng Auth Token
 		const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(
 			authData.token,
 			authData.region,
 		);
 		speechConfig.speechRecognitionLanguage = "en-US";
 
-		// 2. Cấu hình Audio Input
 		const audioConfig = SpeechSDK.AudioConfig.fromWavFileInput(audioFile);
 
-		// 3. Khởi tạo Recognizer
 		const recognizer = new SpeechSDK.SpeechRecognizer(
 			speechConfig,
 			audioConfig,
 		);
 
-		// 4. Khởi tạo cấu hình Đánh giá phát âm
 		const pronunciationAssessmentConfig =
 			new SpeechSDK.PronunciationAssessmentConfig(
 				referenceText,
@@ -108,15 +129,12 @@ export const assessPronunciation = (
 
 		pronunciationAssessmentConfig.applyTo(recognizer);
 
-		// 5. Thực thi recognizeOnceAsync
 		recognizer.recognizeOnceAsync(
-			(result: SpeechSDK.SpeechRecognitionResult) => {
+			(result) => {
 				if (result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
-					// Trích xuất kết quả đánh giá thông qua class chuẩn của SDK
 					const pronunciationResult =
 						SpeechSDK.PronunciationAssessmentResult.fromResult(result);
 
-					// Trích xuất JSON raw để lấy chi tiết Phonemes và Miscues chính xác nhất
 					const resultJson = result.properties.getProperty(
 						SpeechSDK.PropertyId.SpeechServiceResponse_JsonResult,
 					);
@@ -151,4 +169,4 @@ export const assessPronunciation = (
 			},
 		);
 	});
-};
+}
