@@ -5,10 +5,16 @@ import * as emailVerificationService from "@server/services/emailVerificationSer
 import { ApiError } from "@server/helpers/ApiError";
 import * as passwordService from "@server/services/passwordService";
 
+// Kiểm tra xem có phải đang chạy trên Production (DigitalOcean) hay không
+const isProduction = process.env.NODE_ENV === "production";
+
 const REFRESH_TOKEN_OPTIONS = {
 	httpOnly: true,
-	secure: false,
-	sameSite: "lax",
+	// Nếu là Production thì bắt buộc phải true (chạy HTTPS). Nếu là Local thì false (chạy HTTP).
+	secure: isProduction,
+	// Nếu là Production thì dùng "none" để truyền cookie Cross-Site (Vercel <-> DigitalOcean).
+	// Nếu là Local thì dùng "lax" để chạy bình thường qua proxy của Vite.
+	sameSite: isProduction ? "none" : "lax",
 	maxAge: TOKEN_LIFE.REFRESH_MAX_AGE_MS,
 };
 
@@ -69,7 +75,9 @@ export async function verifyEmail(req, res, next) {
 		const token = req.body?.token;
 		if (!token) throw ApiError.badRequest("Token is required");
 		await emailVerificationService.verifyEmailByToken(token);
-		res.status(200).json({ success: true, message: "Email verified successfully" });
+		res
+			.status(200)
+			.json({ success: true, message: "Email verified successfully" });
 	} catch (e) {
 		next(e);
 	}
@@ -113,7 +121,8 @@ export async function resetPassword(req, res, next) {
 		await passwordService.resetPassword(token, newPassword);
 		res.status(200).json({
 			success: true,
-			message: "Password reset successfully. Please sign in with your new password.",
+			message:
+				"Password reset successfully. Please sign in with your new password.",
 		});
 	} catch (e) {
 		next(e);
@@ -126,7 +135,9 @@ export async function changePassword(req, res, next) {
 		if (!oldPassword) throw ApiError.badRequest("oldPassword is required");
 		if (!newPassword) throw ApiError.badRequest("newPassword is required");
 		await passwordService.changePassword(req.user.id, oldPassword, newPassword);
-		res.status(200).json({ success: true, message: "Password changed successfully" });
+		res
+			.status(200)
+			.json({ success: true, message: "Password changed successfully" });
 	} catch (e) {
 		next(e);
 	}
