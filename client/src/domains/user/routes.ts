@@ -2,37 +2,7 @@ import type { RouteObject } from "react-router";
 
 import { UserLayout } from "@user/shell/user-layout";
 import { Home } from "@user/features/home/pages";
-
-import { Login } from "@user/features/auth/pages/login";
-import { Register } from "@user/features/auth/pages/register";
-import { ChangePassword } from "@user/features/auth/pages/change-password";
-import { VerifyEmail } from "@user/features/auth/pages/verify-email";
-import { ForgotPassword } from "@user/features/auth/pages/forgot-password";
-import { ResetPassword } from "@user/features/auth/pages/reset-password";
-
-import { WritingLayout } from "@user/features/writing/layout/writing-layout";
-import { WritingMethod } from "@user/features/writing/pages";
-import { ReverseTranslateList } from "@user/features/writing/methods/reverse-translate/pages/list";
-import { ReverseTranslateExercise } from "@user/features/writing/methods/reverse-translate/pages/exercise";
-import { SeeAndWriteList } from "@user/features/writing/methods/see-and-write/pages/list";
-import { SeeAndWriteExercise } from "@user/features/writing/methods/see-and-write/pages/exercise";
-import { ParaphraseList } from "@user/features/writing/methods/paraphrase/pages/list";
-import { ParaphraseExercise } from "@user/features/writing/methods/paraphrase/pages/exercise";
-
-import { SpeakingLayout } from "@user/features/speaking/layout/speaking-layout";
-import { SpeakingMethod } from "@user/features/speaking/pages";
-import { ConversationList } from "@user/features/speaking/methods/conversation/pages/list";
-import { ConversationExercise } from "@user/features/speaking/methods/conversation/pages/exercise";
-
-import { Vocabulary } from "@user/features/vocabulary/pages";
-import { VocabularyLayout } from "@user/features/vocabulary/layout/vocabulary-layout";
-import { VocabularyFolder } from "@user/features/vocabulary/pages/folder";
-import { VocabularyDeck } from "@user/features/vocabulary/pages/deck";
-import { VocabularyTest } from "@user/features/vocabulary/pages/test";
-import { MyTransactions } from "@user/features/wallet/pages/my-transactions";
-
-import { Profile } from "@user/features/profile/pages";
-
+import { lazyRoute } from "@shared/lib/lazy-route";
 import { requireAuthLoader } from "@shared/lib/auth-loaders";
 
 export const userRoutes: RouteObject[] = [
@@ -46,71 +16,117 @@ export const userRoutes: RouteObject[] = [
 			},
 			{
 				path: "change-password",
-				Component: ChangePassword,
 				loader: requireAuthLoader,
+				...lazyRoute(
+					() => import("@user/features/auth/pages/change-password"),
+					"ChangePassword",
+				),
 			},
 			{
 				path: "my-transactions",
-				Component: MyTransactions,
 				loader: requireAuthLoader,
+				...lazyRoute(
+					() => import("@user/features/wallet/pages/my-transactions"),
+					"MyTransactions",
+				),
 			},
 			{
 				path: "profile",
-				Component: Profile,
 				loader: requireAuthLoader,
+				...lazyRoute(() => import("@user/features/profile/pages"), "Profile"),
 			},
 			{
 				path: "writing",
-				Component: WritingLayout,
+				...lazyRoute(
+					() => import("@user/features/writing/layout/writing-layout"),
+					"WritingLayout",
+				),
 				children: [
 					{
 						index: true,
-						Component: WritingMethod,
+						...lazyRoute(
+							() => import("@user/features/writing/pages"),
+							"WritingMethod",
+						),
 					},
 					{
 						path: "reverse-translate",
-						Component: ReverseTranslateList,
+						...lazyRoute(
+							() =>
+								import("@user/features/writing/methods/reverse-translate/pages/list"),
+							"ReverseTranslateList",
+						),
 					},
 					{
 						path: "see-and-write",
-						Component: SeeAndWriteList,
+						...lazyRoute(
+							() =>
+								import("@user/features/writing/methods/see-and-write/pages/list"),
+							"SeeAndWriteList",
+						),
 					},
 					{
 						path: "paraphrase",
-						Component: ParaphraseList,
+						...lazyRoute(
+							() =>
+								import("@user/features/writing/methods/paraphrase/pages/list"),
+							"ParaphraseList",
+						),
 					},
 				],
 			},
 			{
 				path: "speaking",
-				Component: SpeakingLayout,
+				...lazyRoute(
+					() => import("@user/features/speaking/layout/speaking-layout"),
+					"SpeakingLayout",
+				),
 				children: [
 					{
 						index: true,
-						Component: SpeakingMethod,
+						...lazyRoute(
+							() => import("@user/features/speaking/pages"),
+							"SpeakingMethod",
+						),
 					},
 					{
 						path: "conversation",
-						Component: ConversationList,
+						...lazyRoute(
+							() =>
+								import("@user/features/speaking/methods/conversation/pages/list"),
+							"ConversationList",
+						),
 					},
 				],
 			},
 			{
 				path: "vocabulary",
-				Component: VocabularyLayout,
 				loader: requireAuthLoader,
+				...lazyRoute(
+					() => import("@user/features/vocabulary/layout/vocabulary-layout"),
+					"VocabularyLayout",
+				),
 				children: [
 					{
 						index: true,
-						Component: Vocabulary,
+						...lazyRoute(
+							() => import("@user/features/vocabulary/pages"),
+							"Vocabulary",
+						),
 					},
 					{
 						path: "folder/:folderId",
-						Component: VocabularyFolder,
+						...lazyRoute(
+							() => import("@user/features/vocabulary/pages/folder"),
+							"VocabularyFolder",
+						),
 					},
 					{
 						path: "deck/:deckId",
-						Component: VocabularyDeck,
+						...lazyRoute(
+							() => import("@user/features/vocabulary/pages/deck"),
+							"VocabularyDeck",
+						),
 					},
 				],
 			},
@@ -118,47 +134,77 @@ export const userRoutes: RouteObject[] = [
 	},
 	{
 		path: "/writing/reverse-translate/:id",
-		Component: ReverseTranslateExercise,
 		loader: requireAuthLoader,
+		...lazyRoute(
+			() =>
+				import("@user/features/writing/methods/reverse-translate/pages/exercise"),
+			"ReverseTranslateExercise",
+		),
 	},
 	{
 		path: "/writing/see-and-write/:id",
-		Component: SeeAndWriteExercise,
 		loader: requireAuthLoader,
+		...lazyRoute(
+			() =>
+				import("@user/features/writing/methods/see-and-write/pages/exercise"),
+			"SeeAndWriteExercise",
+		),
 	},
 	{
 		path: "/writing/paraphrase/:id",
-		Component: ParaphraseExercise,
 		loader: requireAuthLoader,
+		...lazyRoute(
+			() => import("@user/features/writing/methods/paraphrase/pages/exercise"),
+			"ParaphraseExercise",
+		),
 	},
 	{
 		path: "/speaking/conversation/:id",
-		Component: ConversationExercise,
 		loader: requireAuthLoader,
+		...lazyRoute(
+			() =>
+				import("@user/features/speaking/methods/conversation/pages/exercise"),
+			"ConversationExercise",
+		),
 	},
 	{
 		path: "/vocabulary/test",
-		Component: VocabularyTest,
 		loader: requireAuthLoader,
+		...lazyRoute(
+			() => import("@user/features/vocabulary/pages/test"),
+			"VocabularyTest",
+		),
 	},
 	{
 		path: "/login",
-		Component: Login,
+		...lazyRoute(() => import("@user/features/auth/pages/login"), "Login"),
 	},
 	{
 		path: "/register",
-		Component: Register,
+		...lazyRoute(
+			() => import("@user/features/auth/pages/register"),
+			"Register",
+		),
 	},
 	{
 		path: "/verify-email",
-		Component: VerifyEmail,
+		...lazyRoute(
+			() => import("@user/features/auth/pages/verify-email"),
+			"VerifyEmail",
+		),
 	},
 	{
 		path: "/forgot-password",
-		Component: ForgotPassword,
+		...lazyRoute(
+			() => import("@user/features/auth/pages/forgot-password"),
+			"ForgotPassword",
+		),
 	},
 	{
 		path: "/reset-password",
-		Component: ResetPassword,
+		...lazyRoute(
+			() => import("@user/features/auth/pages/reset-password"),
+			"ResetPassword",
+		),
 	},
 ];

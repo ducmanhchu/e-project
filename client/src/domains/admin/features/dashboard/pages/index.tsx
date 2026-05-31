@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import {
 	Invoice01Icon,
 	MoneyBag01Icon,
@@ -6,13 +6,21 @@ import {
 	UserIcon,
 } from "@hugeicons/core-free-icons";
 
+import { ChartSkeleton } from "@shared/components/chart-skeleton";
 import { StatCard } from "@admin/features/dashboard/components/stat-card";
-import { UserGrowthChart } from "@admin/features/dashboard/components/user-growth-chart";
 import {
 	useAdminSummary,
 	type GrowthRange,
 } from "@admin/features/dashboard/hooks/use-admin-summary";
 import { formatCount, formatVnd } from "@admin/features/dashboard/utils/format";
+
+const UserGrowthChart = lazy(() =>
+	import("@admin/features/dashboard/components/user-growth-chart").then(
+		(m) => ({
+			default: m.UserGrowthChart,
+		}),
+	),
+);
 
 const pageHeader = (
 	<div className="flex flex-col gap-1">
@@ -65,13 +73,15 @@ export function Dashboard() {
 						icon={UserDollarIcon}
 						isLoading={isLoading}
 					/>
-					<UserGrowthChart
-						className="col-span-full"
-						data={data?.userGrowth ?? []}
-						range={range}
-						onRangeChange={setRange}
-						isLoading={isLoading}
-					/>
+					<Suspense fallback={<ChartSkeleton className="col-span-full" />}>
+						<UserGrowthChart
+							className="col-span-full"
+							data={data?.userGrowth ?? []}
+							range={range}
+							onRangeChange={setRange}
+							isLoading={isLoading}
+						/>
+					</Suspense>
 				</div>
 			)}
 		</div>
