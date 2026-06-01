@@ -16,14 +16,14 @@ import {
 } from "@server/helpers/writing/listLessonsQuery";
 import { chargeForSubmit } from "@server/helpers/chargeForSubmit";
 
-/** Projection dùng khi admin list có sort (aggregate hoặc find). */
+/** Projection dùng khi list có sort (aggregate hoặc find). Chỉ lấy messages.order vì list chỉ cần messageCount. */
 const DIALOGUE_LIST_PROJECTION = Object.freeze({
 	title: 1,
 	level: 1,
 	topic: 1,
 	scenario: 1,
 	createdAt: 1,
-	messages: 1,
+	"messages.order": 1,
 });
 
 function validateTopic(topic) {
@@ -469,6 +469,10 @@ export async function listDialogues({
 		search,
 		page,
 		limit,
+		// Default user-facing order: ascending level (beginner → intermediate → advanced),
+		// tiebreak createdAt desc (handled by buildLessonsListPromise level-rank sort).
+		sortBy: "level",
+		order: 1,
 	});
 
 	const statusByDialogueId = new Map();
