@@ -718,7 +718,36 @@ export async function aiGradeRewrite(
 
 // --- Exam (IELTS) grading ---
 
-const EXAM_PROMPT = (userAnswer, exam, wordCount) => {
+const EXAM_LEVEL_CRITERIA = {
+  beginner: `Level: BEGINNER — Target proficiency: CEFR A1-A2 / IELTS 3.0-4.5 / TOEIC 250-550.
+- Be encouraging; award credit for ANY on-topic content, even if underdeveloped
+- Accept simple sentence structures (S+V+O) and basic vocabulary
+- Do NOT penalize for missing articles, minor preposition errors, or simple tense slips when meaning is clear
+- Cohesive devices: simple linkers (and, but, then) are acceptable
+- Focus evaluation on: Did the student attempt the task? Is the core meaning understandable?
+- Score bands should sit in the 3-5 range; reaching band 5 requires consistent meaning conveyance
+- Spelling errors: penalize lightly, only if frequent (3+ misspellings per paragraph reduce band by 0.5)`,
+
+  intermediate: `Level: INTERMEDIATE — Target proficiency: CEFR B1-B2 / IELTS 5.0-6.5 / TOEIC 600-800.
+- Expect varied sentence structures (mix of simple, compound, and some complex)
+- Vocabulary should be reasonably wide; minor inappropriate word choices acceptable but flag them
+- Grammar: occasional errors OK if they do not impede meaning; consistent error patterns must be penalized
+- Cohesive devices used naturally (however, therefore, furthermore) — penalize mechanical/overuse
+- Argumentation: clear position with at least one supporting example/reason
+- Score bands should sit in the 5-7 range; reaching band 7 requires consistent control and topic-specific vocab
+- Spelling errors: penalize moderately (2-3 misspellings reduce lexical_resource band by 0.5)`,
+
+  advanced: `Level: ADVANCED — Target proficiency: CEFR C1-C2 / IELTS 7.0+ / TOEIC 850+.
+- Expect sophisticated vocabulary, idiomatic phrases, and appropriate academic/formal register
+- Complex sentence structures used naturally (subordination, nominalization, cleft sentences)
+- Cohesion and coherence should be polished — devices used flexibly without overuse
+- Argumentation must show critical thinking, nuanced position, and well-developed support
+- Grammar accuracy near-flawless; penalize even subtle errors (collocations, article usage, preposition choice)
+- Score bands should sit in the 7-9 range; band 7.5+ is the expected achievement target
+- Spelling errors: penalize heavily — any error is unacceptable at this level`,
+};
+
+const EXAM_PROMPT = (userAnswer, exam, wordCount, level) => {
   const isTask1 = exam.examType === "ielts_task1";
   const minWords = EXAM_MIN_WORDS[exam.examType];
   const taskLabel = isTask1 ? "Task 1 (Academic)" : "Task 2 (Essay)";
@@ -732,6 +761,8 @@ Evaluate whether they: identified key features, highlighted trends/comparisons, 
 Evaluate whether they: fully addressed all parts of the question, presented a clear position, supported ideas with examples, and met the 250-word minimum.`;
 
   return `You are an IELTS examiner grading a Vietnamese student's ${taskLabel} response.
+
+${EXAM_LEVEL_CRITERIA[level] || EXAM_LEVEL_CRITERIA.intermediate}
 
 ${taskContext}
 
@@ -834,16 +865,16 @@ const EXAM_GRADING_SCHEMA = {
   },
 };
 
-async function gradeExamWithClaude(userAnswer, exam, wordCount) {
+async function gradeExamWithClaude(userAnswer, exam, wordCount, level) {
   const isTask1 = exam.examType === "ielts_task1";
 
   const content =
     isTask1 && exam.imageUrl
       ? [
           { type: "image", source: { type: "url", url: exam.imageUrl } },
-          { type: "text", text: EXAM_PROMPT(userAnswer, exam, wordCount) },
+          { type: "text", text: EXAM_PROMPT(userAnswer, exam, wordCount, level) },
         ]
-      : [{ type: "text", text: EXAM_PROMPT(userAnswer, exam, wordCount) }];
+      : [{ type: "text", text: EXAM_PROMPT(userAnswer, exam, wordCount, level) }];
 
   const response = await claude.messages.create({
     model: "claude-haiku-4-5-20251001",
@@ -873,16 +904,16 @@ async function gradeExamWithClaude(userAnswer, exam, wordCount) {
   return toolBlock.input;
 }
 
-async function gradeExamWithGemini(userAnswer, exam, wordCount) {
+async function gradeExamWithGemini(userAnswer, exam, wordCount, level) {
   const isTask1 = exam.examType === "ielts_task1";
 
   const contents =
     isTask1 && exam.imageUrl
       ? [
-          { text: EXAM_PROMPT(userAnswer, exam, wordCount) },
+          { text: EXAM_PROMPT(userAnswer, exam, wordCount, level) },
           createPartFromUri(exam.imageUrl, getMimeType(exam.imageUrl)),
         ]
-      : [{ text: EXAM_PROMPT(userAnswer, exam, wordCount) }];
+      : [{ text: EXAM_PROMPT(userAnswer, exam, wordCount, level) }];
 
   const response = await genai.models.generateContent({
     model: "gemini-2.5-flash",
@@ -939,10 +970,11 @@ async function gradeExamWithGemini(userAnswer, exam, wordCount) {
  */
 export async function aiGradeExam(userAnswer, exam) {
   const wordCount = userAnswer.trim().split(/\s+/).filter(Boolean).length;
+  const level = exam.level || "intermediate";
   return withFallback(
     "grading-exam",
-    () => gradeExamWithClaude(userAnswer, exam, wordCount),
-    () => gradeExamWithGemini(userAnswer, exam, wordCount),
+    () => gradeExamWithClaude(userAnswer, exam, wordCount, level),
+    () => gradeExamWithGemini(userAnswer, exam, wordCount, level),
   );
 }
 
