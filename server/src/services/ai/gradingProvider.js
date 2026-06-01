@@ -603,11 +603,17 @@ Total = sum (0-100).
 
 3. "comment": Brief overall comment in Vietnamese (1-2 sentences max). If score is 100, give SHORT praise. If score < 100, briefly summarize what needs fixing. Keep it concise — no filler.
 
-4. "modelAnswer": One model paraphrase showing good technique. Different from student's version.
+4. "modelAnswer": A model paraphrase OF THE ORIGINAL SENTENCE — NOT a fixed version of the student's rewrite.
+   - Start from Original: "${targetSentence}" and produce ONE high-quality paraphrase
+   - Must NOT be identical to the Original AND must NOT be identical to the student's rewrite
+   - Use a clearly different paraphrase strategy than the student (e.g. if student only swapped synonyms, restructure clauses; if student used active, try passive/nominalization)
+   - Demonstrates the level-appropriate technique above
+   - Even if score is 100, still provide an ALTERNATIVE good paraphrase using a different strategy than the student's
 
 ═══ RULES ═══
 - Copy original exactly → structural_change = 0
-- Spelling errors: each misspelled word counts as a grammar error`;
+- Spelling errors: each misspelled word counts as a grammar error
+- modelAnswer must paraphrase the Original sentence, never echo the student's rewrite verbatim`;
 
 const RW_GRADING_SCHEMA = {
   score: { type: "number", description: "Total score 0-100" },
@@ -628,7 +634,7 @@ const RW_GRADING_SCHEMA = {
   modelAnswer: {
     type: "string",
     description:
-      "A model paraphrase demonstrating good technique, different from student's answer",
+      "A model paraphrase OF THE ORIGINAL sentence (not a fix of the student's rewrite), using a different paraphrase strategy than the student",
   },
 };
 
