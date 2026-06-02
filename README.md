@@ -28,8 +28,7 @@
 
 ### Vocabulary Module
 
-- **Personalized Flashcards** &mdash; A customizable flashcard system that adapts to each learner's vocabulary list and progress.
-- **Word Chain Game** &mdash; A timed word-linking game that reinforces lexical recall under pressure.
+- **Personalized Flashcards** &mdash; A customizable flashcard system that adapts to each learner's vocabulary list and progress. Supports creating practice quizzes to reinforce flashcard memorization.
 
 ### System Management
 
@@ -92,11 +91,12 @@ cp .env.example .env
 
 Available scripts (defined in `server/package.json`):
 
-| Command           | Description                                                                           |
-| ----------------- | ------------------------------------------------------------------------------------- |
-| `pnpm dev`        | Builds with Babel and runs the server in watch mode using `concurrently` + `--watch`. |
-| `pnpm production` | Builds the project and starts the compiled server from `lib/index.js`.                |
-| `pnpm test`       | Runs the Jest test suite in verbose mode.                                             |
+| Command      | Description                                                                                                                        |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`   | Cleans `lib/`, compiles `src/` with Babel, then runs Babel in watch mode alongside `node --watch lib/index.js` via `concurrently`. |
+| `pnpm build` | Cleans `lib/` and compiles `src/` to `lib/` with Babel (production build output).                                                  |
+| `pnpm start` | Starts the compiled server from `lib/index.js` (run `pnpm build` first if `lib/` is missing or outdated).                          |
+| `pnpm test`  | Runs the Jest test suite in verbose mode (`tests/**/*.test.js`).                                                                   |
 
 Start the development server:
 
