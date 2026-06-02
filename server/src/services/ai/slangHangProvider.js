@@ -51,6 +51,7 @@ Rules:
 - Each message ≤ ${SLANG_HANG_LIMITS.MAX_MESSAGE_LENGTH} chars, sounds spoken (not written).
 - Include slang/colloquial expressions scaled to dialogue length: 2-5 messages → 2-4 total; 6+ messages → 4-8 total. Distribute naturally (≤ ${SLANG_HANG_LIMITS.MAX_SLANG_PER_MESSAGE} per message). Mix common slang with mildly regional/generational variants. NEVER invent slang that isn't actually used.
 - For each slang term, provide: meaning, part of speech, an example sentence in a different context, and register (informal | very informal | regional).
+- IMPORTANT: write the "meaning" field in Vietnamese (natural, learner-friendly Vietnamese). Keep EVERY other field — term, partOfSpeech, example, register, scenario, persona, and all message "text" — in English. Do NOT translate anything except "meaning".
 - Scenario must be specific and unexpected when possible.`;
 
 const GENERATE_SCHEMA = {
@@ -84,7 +85,11 @@ const GENERATE_SCHEMA = {
 							properties: {
 								term: { type: Type.STRING },
 								partOfSpeech: { type: Type.STRING },
-								meaning: { type: Type.STRING },
+								meaning: {
+									type: Type.STRING,
+									description:
+										"Vietnamese explanation of the slang term (write this field in Vietnamese, NOT English).",
+								},
 								example: { type: Type.STRING },
 								register: { type: Type.STRING },
 							},
