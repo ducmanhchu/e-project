@@ -97,16 +97,14 @@ export function ConversationLine({
 }: ConversationLineProps) {
 	const isLearner = speakerKey === "B";
 	const segments = buildTextSegments(text, slang);
-	const { isPlaying, toggle: toggleAudio } = useAzureTTS({
-		enabled: !isLearner,
-	});
+	const { isPlaying, toggle: toggleAudio } = useAzureTTS();
 
 	const isClickable = isLearner && hasAttempt && !!onSelect;
 
 	return (
 		<div
 			className={cn(
-				"flex flex-col gap-1 max-w-[85%] mb-1.5",
+				"flex flex-col gap-1 max-w-[85%]",
 				isLearner ? "self-end" : "self-start",
 			)}
 		>
@@ -119,22 +117,23 @@ export function ConversationLine({
 				<p
 					className={cn(
 						"text-secondary-black text-sm",
-						isLearner ? "text-yellow-700 font-medium order-last mb-1.5" : "",
+						isLearner ? "text-yellow-700 font-medium order-last" : "",
 					)}
 				>
 					{speakerName}
 				</p>
-				{!isLearner && (
-					<Button
-						type="button"
-						variant="ghost"
-						size="icon"
-						onClick={() => toggleAudio(text)}
-						aria-label={isPlaying ? "Dừng phát âm" : "Phát âm câu thoại"}
-					>
-						<HugeiconsIcon icon={isPlaying ? PauseIcon : VolumeHighIcon} />
-					</Button>
-				)}
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon"
+					onClick={(e) => {
+						e.stopPropagation();
+						void toggleAudio(text);
+					}}
+					aria-label={isPlaying ? "Dừng phát âm" : "Phát âm câu thoại"}
+				>
+					<HugeiconsIcon icon={isPlaying ? PauseIcon : VolumeHighIcon} />
+				</Button>
 			</div>
 			<div
 				className={cn(

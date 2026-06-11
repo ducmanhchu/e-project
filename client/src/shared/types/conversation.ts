@@ -28,18 +28,22 @@ export type SyllableAssessment = {
 	Duration?: number;
 };
 
+export type PronunciationWordError =
+	| "None"
+	| "Mispronunciation"
+	| "Omission"
+	| "Insertion";
+
+export type BreakWordError = "None" | "MissingBreak" | "UnexpectedBreak";
+
 export type WordAssessment = {
 	Word: string;
 	AccuracyScore: number;
-	ErrorType:
-		| "None"
-		| "Omission"
-		| "Insertion"
-		| "Mispronunciation"
-		| "UnexpectedBreak"
-		| "MissingBreak";
+	pronunciationError: PronunciationWordError;
+	breakError: BreakWordError;
 	Phonemes?: PhonemeAssessment[];
 	Syllables?: SyllableAssessment[];
+	BreakLength?: number;
 	UnexpectedBreak?: { Confidence: number };
 	MissingBreak?: { Confidence: number };
 };
