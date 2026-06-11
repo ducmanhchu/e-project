@@ -15,6 +15,7 @@ import {
 	resolveSort,
 } from "@server/helpers/writing/listLessonsQuery";
 import { chargeForSubmit } from "@server/helpers/chargeForSubmit";
+import { buildDialogueStatusFilter } from "@server/helpers/attemptHelper";
 
 /** Projection dùng khi list có sort (aggregate hoặc find). Chỉ lấy messages.order vì list chỉ cần messageCount. */
 const DIALOGUE_LIST_PROJECTION = Object.freeze({
@@ -362,6 +363,7 @@ async function queryDialoguesPaginated({
 	limit = 12,
 	sortBy,
 	order,
+	statusFilter,
 }) {
 	const p = Math.max(1, Number(page));
 	const l = Math.min(Math.max(1, Number(limit)), 50);
@@ -372,6 +374,7 @@ async function queryDialoguesPaginated({
 	if (Array.isArray(topic) && topic.length) query.topic = { $in: topic };
 	const titleFilter = buildTitleSearch(search);
 	if (titleFilter) query.title = titleFilter;
+	if (statusFilter) Object.assign(query, statusFilter);
 
 	const dialoguesPromise =
 		sortBy !== undefined
@@ -455,9 +458,14 @@ export async function listDialogues({
 	level,
 	topic,
 	search,
+	status,
 	page = 1,
 	limit = 12,
 }) {
+	const statusFilter = await buildDialogueStatusFilter({
+		userId,
+		statuses: status,
+	});
 	const {
 		dialogues,
 		total,
@@ -469,6 +477,7 @@ export async function listDialogues({
 		search,
 		page,
 		limit,
+		statusFilter,
 		// Default user-facing order: ascending level (beginner → intermediate → advanced),
 		// tiebreak createdAt desc (handled by buildLessonsListPromise level-rank sort).
 		sortBy: "level",

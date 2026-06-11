@@ -115,12 +115,13 @@ export async function generate(req, res, next) {
  */
 export async function list(req, res, next) {
 	try {
-		const { level, topic, search, page = 1, limit = 12 } = req.query;
+		const { level, topic, search, status, page = 1, limit = 12 } = req.query;
 		const result = await slangHangService.listDialogues({
 			userId: req.user?._id,
 			level: parseQueryList(level),
 			topic: parseQueryList(topic),
 			search,
+			status: parseQueryList(status),
 			page,
 			limit,
 		});
