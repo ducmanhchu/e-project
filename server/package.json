@@ -6,6 +6,7 @@
 		"dev": "rm -rf lib && babel src --out-dir lib --copy-files --source-maps --include-dotfiles && concurrently \"babel src --out-dir lib --copy-files --source-maps --include-dotfiles --watch\" \"node --watch lib/index.js\"",
 		"build": "rm -rf lib && babel src --out-dir lib --copy-files --include-dotfiles",
 		"start": "node lib/index.js",
+		"lint": "eslint .",
 		"test": "jest --verbose"
 	},
 	"dependencies": {
@@ -33,6 +34,7 @@
 		"@babel/core": "^7.29.7",
 		"@babel/eslint-parser": "^7.28.6",
 		"@babel/preset-env": "^7.29.7",
+		"@eslint/js": "^10.0.1",
 		"@types/jest": "^30.0.0",
 		"babel-jest": "^30.3.0",
 		"babel-plugin-module-resolver": "^5.0.3",
