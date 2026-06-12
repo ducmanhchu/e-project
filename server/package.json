@@ -10,7 +10,7 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.78.0",
-		"@google/genai": "^1.44.0",
+		"@google/genai": "^1.52.0",
 		"an-array-of-english-words": "^2.0.0",
 		"bcrypt": "^6.0.0",
 		"cloudinary": "^2.9.0",
@@ -29,19 +29,19 @@
 		"yup": "^1.7.1"
 	},
 	"devDependencies": {
-		"@babel/cli": "^7.22.10",
-		"@babel/core": "^7.22.10",
+		"@babel/cli": "^7.29.7",
+		"@babel/core": "^7.29.7",
 		"@babel/eslint-parser": "^7.28.6",
-		"@babel/preset-env": "^7.22.10",
+		"@babel/preset-env": "^7.29.7",
 		"@types/jest": "^30.0.0",
 		"babel-jest": "^30.3.0",
-		"babel-plugin-module-resolver": "^5.0.0",
+		"babel-plugin-module-resolver": "^5.0.3",
 		"concurrently": "^9.2.1",
-		"eslint": "^10.0.3",
+		"eslint": "^10.4.1",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-prettier": "^5.5.5",
 		"globals": "^17.4.0",
-		"jest": "^30.3.0",
+		"jest": "^30.4.2",
 		"prettier": "^3.8.1"
 	},
 	"jest": {
