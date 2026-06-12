@@ -8,7 +8,6 @@ import {
 	findOrCreateAttempt,
 	submitAndUpdateProgress,
 	getLastSubmissions,
-	getSubmissions,
 	buildStatusFilter,
 } from "@server/helpers/attemptHelper";
 import { COMPLETION_THRESHOLD } from "@server/const/exercise";
@@ -411,4 +410,3 @@ export async function adminGetLesson(lessonId) {
 		updatedAt: lesson.updatedAt,
 	};
 }
-

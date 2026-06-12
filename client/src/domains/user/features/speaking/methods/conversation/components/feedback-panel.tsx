@@ -1,9 +1,16 @@
 import { useMemo } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 
 import type { PronunciationResultPayload } from "@shared/types/conversation";
 import { cn } from "@shared/lib/utils";
 import { ShimmerText } from "@user/components/shimmer-text";
 
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@shared/components/ui/tooltip";
 import { AssessedText } from "./assessed-text";
 
 function getScoreColor(score: number) {
@@ -67,7 +74,7 @@ function ScoreGauge({ score, label }: { score: number; label: string }) {
 	);
 }
 
-function ScoreBar({ score, label }: { score: number; label: string }) {
+function ScoreBar({ score = 0, label }: { score: number; label: string }) {
 	return (
 		<div className="flex flex-col gap-1">
 			<div className="flex justify-between items-center">
@@ -90,20 +97,39 @@ const ERROR_LEGEND: {
 	key: string;
 	label: string;
 	colorClass: string;
+	explanation: string;
 }[] = [
 	{
 		key: "Mispronunciation",
 		label: "Phát âm sai",
-		colorClass: "bg-yellow-200",
+		colorClass: "bg-yellow-300",
+		explanation: "Từ được phát âm không chính xác.",
 	},
-	{ key: "Omission", label: "Bỏ sót", colorClass: "bg-neutral-300" },
-	{ key: "Insertion", label: "Đọc thừa", colorClass: "bg-red-200" },
+	{
+		key: "Omission",
+		label: "Bỏ sót",
+		colorClass: "bg-stone-300",
+		explanation: "Từ nằm trong lời thoại nhưng không được phát âm.",
+	},
+	{
+		key: "Insertion",
+		label: "Đọc thừa",
+		colorClass: "bg-red-300",
+		explanation: "Từ không có trong lời thoại.",
+	},
 	{
 		key: "UnexpectedBreak",
-		label: "Ngắt nghỉ không mong đợi",
-		colorClass: "bg-pink-200",
+		label: "Ngắt nghỉ thừa",
+		colorClass: "bg-pink-300",
+		explanation: "Ngắt nghỉ không phù hợp giữa các từ trong cùng một câu.",
 	},
-	{ key: "MissingBreak", label: "Thiếu ngắt nghỉ", colorClass: "bg-neutral-300" },
+	{
+		key: "MissingBreak",
+		label: "Thiếu ngắt nghỉ",
+		colorClass: "bg-slate-300",
+		explanation:
+			"Thiếu ngắt nghỉ giữa các từ khi có dấu câu xuất hiện ở giữa chúng.",
+	},
 ];
 
 function ConversationFeedbackAssessing() {
@@ -127,7 +153,8 @@ function ConversationFeedbackContent({
 			ERROR_LEGEND.map((item) => [item.key, 0]),
 		) as Record<string, number>;
 		for (const w of feedback.words) {
-			if (w.ErrorType !== "None") counts[w.ErrorType]++;
+			if (w.pronunciationError !== "None") counts[w.pronunciationError]++;
+			if (w.breakError !== "None") counts[w.breakError]++;
 		}
 		return counts;
 	}, [feedback.words]);
@@ -160,7 +187,7 @@ function ConversationFeedbackContent({
 				<h3 className="text-sm font-medium text-secondary-black">Chú thích</h3>
 				<div className="flex flex-col gap-1.5">
 					{ERROR_LEGEND.map((item) => (
-						<div key={item.key} className="flex items-center gap-2">
+						<div key={item.key} className="flex items-center gap-1.5">
 							<span
 								className={cn(
 									"inline-flex items-center justify-center size-5 rounded text-xs font-medium",
@@ -172,6 +199,17 @@ function ConversationFeedbackContent({
 							<span className="text-xs text-muted-foreground">
 								{item.label}
 							</span>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<HugeiconsIcon
+										icon={InformationCircleIcon}
+										className="size-3 text-muted-foreground"
+									/>
+								</TooltipTrigger>
+								<TooltipContent className="p-3" align="center">
+									<span className="text-xs text-white">{item.explanation}</span>
+								</TooltipContent>
+							</Tooltip>
 						</div>
 					))}
 				</div>

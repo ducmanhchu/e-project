@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -14,6 +14,7 @@ import {
 } from "@shared/api/see-and-write";
 import type { SAWAdminExercise } from "@shared/types/see-and-write";
 import type { WritingExerciseTopic } from "@shared/types/utils";
+import { sanitizeImageSrc } from "@shared/lib/sanitize-image-src";
 import { baseFilterSections } from "@shared/lib/utils";
 import { Button } from "@shared/components/ui/button";
 import {
@@ -172,7 +173,8 @@ function SAWEditForm({ exercise, exerciseId, onOpenChange }: SAWEditFormProps) {
 		defaultValues: exerciseToFormValues(exercise),
 	});
 
-	const imageSource = form.watch("imageSource");
+	const imageSource = useWatch({ control: form.control, name: "imageSource" });
+	const imageUrl = useWatch({ control: form.control, name: "imageUrl" });
 
 	const resetImageFile = useCallback(() => {
 		if (imagePreview?.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
@@ -245,9 +247,8 @@ function SAWEditForm({ exercise, exerciseId, onOpenChange }: SAWEditFormProps) {
 	};
 
 	const displayImage =
-		imagePreview ??
-		(imageSource === "url" ? form.watch("imageUrl") : null) ??
-		originalImage;
+		imagePreview ?? (imageSource === "url" ? imageUrl : null) ?? originalImage;
+	const safeDisplayImage = sanitizeImageSrc(displayImage);
 
 	const onSubmit = form.handleSubmit((values) => {
 		if (values.imageSource === "upload" && !imageFile) {
@@ -383,9 +384,9 @@ function SAWEditForm({ exercise, exerciseId, onOpenChange }: SAWEditFormProps) {
 
 				<Field>
 					<FieldLabel>Ảnh</FieldLabel>
-					{displayImage && (
+					{safeDisplayImage && (
 						<img
-							src={displayImage}
+							src={safeDisplayImage}
 							alt={exercise.title}
 							className="mb-2 h-32 w-full rounded-lg border object-cover"
 						/>

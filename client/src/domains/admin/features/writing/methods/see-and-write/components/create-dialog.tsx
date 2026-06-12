@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -9,6 +9,7 @@ import { Loading02Icon } from "@hugeicons/core-free-icons";
 
 import { createSAWExercise, uploadSAWImage } from "@shared/api/see-and-write";
 import type { ExerciseLevel, WritingExerciseTopic } from "@shared/types/utils";
+import { sanitizeImageSrc } from "@shared/lib/sanitize-image-src";
 import { baseFilterSections } from "@shared/lib/utils";
 import { Button } from "@shared/components/ui/button";
 import {
@@ -157,8 +158,8 @@ export function SAWCreateDialog({ open, onOpenChange }: SAWCreateDialogProps) {
 		defaultValues,
 	});
 
-	const imageSource = form.watch("imageSource");
-	const level = form.watch("level");
+	const imageSource = useWatch({ control: form.control, name: "imageSource" });
+	const level = useWatch({ control: form.control, name: "level" });
 
 	useEffect(() => {
 		const wc = WORD_COUNT_BY_LEVEL[level];
@@ -179,9 +180,13 @@ export function SAWCreateDialog({ open, onOpenChange }: SAWCreateDialogProps) {
 		resetImageFile();
 	}, [form, resetImageFile]);
 
-	useEffect(() => {
-		if (!open) resetAll();
-	}, [open, resetAll]);
+	const handleOpenChange = useCallback(
+		(nextOpen: boolean) => {
+			if (!nextOpen) resetAll();
+			onOpenChange(nextOpen);
+		},
+		[onOpenChange, resetAll],
+	);
 
 	const createMutation = useMutation({
 		mutationFn: async (values: SAWCreateFormValues) => {
@@ -211,7 +216,7 @@ export function SAWCreateDialog({ open, onOpenChange }: SAWCreateDialogProps) {
 				queryKey: ADMIN_SAW_LIST_QUERY_KEY,
 			});
 			toast.success("Tạo bài tập thành công");
-			onOpenChange(false);
+			handleOpenChange(false);
 		},
 		onError: (error) => {
 			if (error instanceof Error && error.message === "FILE_REQUIRED") {
@@ -254,9 +259,10 @@ export function SAWCreateDialog({ open, onOpenChange }: SAWCreateDialogProps) {
 	});
 
 	const isPending = createMutation.isPending;
+	const safeImagePreview = sanitizeImageSrc(imagePreview);
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent
 				showCloseButton
 				className="sm:max-w-3xl max-h-[90vh] overflow-y-auto no-scrollbar"
@@ -390,9 +396,9 @@ export function SAWCreateDialog({ open, onOpenChange }: SAWCreateDialogProps) {
 										onChange={onImageFileChange}
 										aria-invalid={!!fileError}
 									/>
-									{imagePreview && (
+									{safeImagePreview && (
 										<img
-											src={imagePreview}
+											src={safeImagePreview}
 											alt="Xem trước"
 											className="h-32 w-full rounded-lg border object-cover"
 										/>
@@ -539,7 +545,7 @@ export function SAWCreateDialog({ open, onOpenChange }: SAWCreateDialogProps) {
 							type="button"
 							variant="outline"
 							disabled={isPending}
-							onClick={() => onOpenChange(false)}
+							onClick={() => handleOpenChange(false)}
 						>
 							Hủy
 						</Button>
