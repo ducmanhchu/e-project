@@ -1,4 +1,4 @@
-import { Type, claude, genai, withFallback } from "@server/services/ai/client";
+import { Type, genai, withFallback, GEMINI_MODEL, claude } from "@server/services/ai/client";
 import { LEVEL_BAND } from "@server/services/ai/levelBand";
 
 export const PART_OF_SPEECH_VALUES = [
@@ -25,7 +25,7 @@ function buildContextBlock(context) {
     type && `- Writing type: ${type}`,
     contentType && `- Content type: ${contentType} (tone hint)`,
     level &&
-      `- Student level: ${level} (${LEVEL_BAND[level] ?? "unspecified band"})`,
+    `- Student level: ${level} (${LEVEL_BAND[level] ?? "unspecified band"})`,
     topic && `- Topic: ${topic.replace(/_/g, " ")}`,
     title && `- Lesson title: "${title}"`,
     description && `- Description: "${description}"`,
@@ -300,7 +300,7 @@ async function extractWithClaude(sentences, context) {
 
 async function extractWithGemini(sentences, context) {
   const response = await genai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: GEMINI_MODEL,
     contents: buildVocabExtractPrompt(sentences, context),
     config: {
       responseMimeType: "application/json",

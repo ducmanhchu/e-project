@@ -1,4 +1,4 @@
-import { Type, claude, genai, withFallback } from "./client";
+import { Type, genai, withFallback, GEMINI_MODEL, claude } from "./client";
 
 const PART_OF_SPEECH_VALUES = [
   "noun",
@@ -313,7 +313,7 @@ async function enrichWithClaude(word, context) {
 
 async function enrichWithGemini(word, context) {
   const response = await genai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: GEMINI_MODEL,
     contents: buildEnrichPrompt(word, context),
     config: {
       responseMimeType: "application/json",
