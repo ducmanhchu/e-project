@@ -1,8 +1,8 @@
-import { Type, genai } from "@server/services/ai/client";
+import { Type, genai, GEMINI_MODEL } from "@server/services/ai/client";
 import { ApiError } from "@server/helpers/ApiError";
 import { SLANG_HANG_LIMITS, SLANG_HANG_RETRY } from "@server/const/slangHang";
 
-const MODEL = "gemini-2.5-flash";
+const MODEL = GEMINI_MODEL;
 
 function sleep(ms) {
 	return new Promise((resolve) => setTimeout(resolve, ms));

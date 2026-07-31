@@ -1,4 +1,4 @@
-import { Type, claude, genai, withFallback } from "./client";
+import { Type, genai, withFallback, GEMINI_MODEL, claude } from "./client";
 import { createPartFromUri } from "@google/genai";
 import { EXAM_MIN_WORDS } from "@server/const/exercise";
 
@@ -212,7 +212,7 @@ async function gradeWithGemini(
   contentType,
 ) {
   const response = await genai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: GEMINI_MODEL,
     contents: GRADING_PROMPT(
       userAnswer,
       referenceAnswer,
@@ -476,7 +476,7 @@ async function gradeSeeWriteWithClaude(userAnswer, lesson, wordCount, level) {
 
 async function gradeSeeWriteWithGemini(userAnswer, lesson, wordCount, level) {
   const response = await genai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: GEMINI_MODEL,
     contents: [
       { text: SEE_WRITE_PROMPT(userAnswer, lesson, wordCount, level) },
       createPartFromUri(lesson.image, getMimeType(lesson.image)),
@@ -674,7 +674,7 @@ async function gradeRewriteWithClaude(userAnswer, targetSentence, level) {
 
 async function gradeRewriteWithGemini(userAnswer, targetSentence, level) {
   const response = await genai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: GEMINI_MODEL,
     contents: REWRITE_PROMPT(userAnswer, targetSentence, level),
     config: {
       responseMimeType: "application/json",
@@ -781,11 +781,10 @@ ${userAnswer}
 ═══ BAND SCORING — 4 IELTS criteria, each Band 1-9 ═══
 
 1. **${criterion1Name}** (Band 1-9):
-   ${
-     isTask1
-       ? `Did they describe key features? Overview present? Data accurately reported? ${wordCount < minWords ? `PENALIZE: only ${wordCount}/${minWords} words.` : ""}`
-       : `Did they address all parts? Clear position throughout? Ideas supported? ${wordCount < minWords ? `PENALIZE: only ${wordCount}/${minWords} words.` : ""}`
-   }
+   ${isTask1
+      ? `Did they describe key features? Overview present? Data accurately reported? ${wordCount < minWords ? `PENALIZE: only ${wordCount}/${minWords} words.` : ""}`
+      : `Did they address all parts? Clear position throughout? Ideas supported? ${wordCount < minWords ? `PENALIZE: only ${wordCount}/${minWords} words.` : ""}`
+    }
 
 2. **coherence_cohesion** (Band 1-9):
    Logical paragraph structure? Cohesive devices used naturally (not mechanically)? Clear progression of ideas?
@@ -871,9 +870,9 @@ async function gradeExamWithClaude(userAnswer, exam, wordCount, level) {
   const content =
     isTask1 && exam.imageUrl
       ? [
-          { type: "image", source: { type: "url", url: exam.imageUrl } },
-          { type: "text", text: EXAM_PROMPT(userAnswer, exam, wordCount, level) },
-        ]
+        { type: "image", source: { type: "url", url: exam.imageUrl } },
+        { type: "text", text: EXAM_PROMPT(userAnswer, exam, wordCount, level) },
+      ]
       : [{ type: "text", text: EXAM_PROMPT(userAnswer, exam, wordCount, level) }];
 
   const response = await claude.messages.create({
@@ -910,13 +909,13 @@ async function gradeExamWithGemini(userAnswer, exam, wordCount, level) {
   const contents =
     isTask1 && exam.imageUrl
       ? [
-          { text: EXAM_PROMPT(userAnswer, exam, wordCount, level) },
-          createPartFromUri(exam.imageUrl, getMimeType(exam.imageUrl)),
-        ]
+        { text: EXAM_PROMPT(userAnswer, exam, wordCount, level) },
+        createPartFromUri(exam.imageUrl, getMimeType(exam.imageUrl)),
+      ]
       : [{ text: EXAM_PROMPT(userAnswer, exam, wordCount, level) }];
 
   const response = await genai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: GEMINI_MODEL,
     contents,
     config: {
       responseMimeType: "application/json",

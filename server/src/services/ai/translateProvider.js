@@ -1,4 +1,4 @@
-import { Type, claude, genai, withFallback } from "@server/services/ai/client";
+import { Type, genai, withFallback, GEMINI_MODEL, claude } from "@server/services/ai/client";
 import { LEVEL_BAND } from "@server/services/ai/levelBand";
 
 function buildContextBlock(context) {
@@ -8,7 +8,7 @@ function buildContextBlock(context) {
     type && `- Writing type: ${type}`,
     contentType && `- Content type: ${contentType} (tone hint)`,
     level &&
-      `- Student level: ${level} (${LEVEL_BAND[level] ?? "unspecified band"})`,
+    `- Student level: ${level} (${LEVEL_BAND[level] ?? "unspecified band"})`,
     topic && `- Topic: ${topic.replace(/_/g, " ")}`,
     title && `- Lesson title: "${title}"`,
     description && `- Description: "${description}"`,
@@ -141,7 +141,7 @@ async function translateWithClaude(paragraph, context) {
 
 async function translateWithGemini(paragraph, context) {
   const response = await genai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: GEMINI_MODEL,
     contents: buildTranslatePrompt(paragraph, context),
     config: {
       responseMimeType: "application/json",
