@@ -13,7 +13,7 @@ export const env = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   GEMINI_MODEL: process.env.GEMINI_MODEL || "gemini-2.5-flash",
   CLAUDE_API_KEY: process.env.CLAUDE_API_KEY,
-  AI_PRIMARY_PROVIDER: process.env.AI_PRIMARY_PROVIDER || "gemini",
+  AI_PRIMARY_PROVIDER: process.env.AI_PRIMARY_PROVIDER || "vertex",
 
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
